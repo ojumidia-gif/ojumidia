@@ -1,0 +1,2 @@
+import { EditorialFrontPublic } from "@/components/EditorialFrontPublic";
+export default function DocumentariesPublic() { return <EditorialFrontPublic front={{ kind: "Documentário", eyebrow: "Narrativas audiovisuais", title: "Documentários", description: "Filmes e peças documentais que unem pesquisa, imagem, som e memória coletiva.", empty: "Os primeiros Documentários estão em preparação." }} />; }

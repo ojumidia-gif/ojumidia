@@ -1,0 +1,371 @@
+# Project TODO
+
+- [x] Modelar os papéis criador, editor, aprovador e administrador, com permissões por etapa editorial.
+- [x] Implementar o ciclo sequencial Rascunho → Em revisão → Aprovada → Publicada → Arquivada.
+- [x] Registrar autoria, edição, aprovação, datas e equipe responsável em cada publicação.
+- [x] Implementar taxonomia multidimensional para tipo de conteúdo, tema, localização, território, pessoa/organização, evento e data.
+- [x] Implementar critérios de destaque editorial por relevância, localização, atualidade, tipo, patrocínio e curadoria manual, sem ocultar outras regiões.
+- [x] Implementar cadastro documental de direitos para fotos e vídeos, com origem, crédito, autorização, finalidade, permissão e vínculo de cobertura.
+- [x] Implementar busca avançada por tema, território, tipo de conteúdo, período e palavra-chave.
+- [x] Construir o portal público responsivo da Ojú Mídia com home editorial, conteúdo e navegação taxonômica.
+- [x] Construir o painel administrativo para publicações, usuários, taxonomias, direitos de mídia e destaques.
+- [x] Aplicar a marca Ojú Mídia e a direção visual editorial sofisticada em toda a experiência.
+- [x] Criar testes automatizados para regras de status, permissões e busca.
+- [x] Validar os fluxos principais, a responsividade e a apresentação visual.
+- [x] Organizar o Centro Administrativo em Painel Central, Conteúdos, Acervo, Territórios, Curadoria, Solicitações, Contratos e Configurações.
+- [x] Permitir criação e operação editorial de Histórias, Coberturas, Documentários e Projetos sem editar código.
+- [x] Adicionar visualização de conteúdo antes da publicação e visualização específica da Home.
+- [x] Tratar conteúdos despublicados como itens armazenados, fora do portal público, sem exclusão de dados.
+- [x] Controlar a elegibilidade de mídia e conteúdo para destaque, recomendações e fundo vivo da Home.
+- [x] Sincronizar imediatamente os estados publicados e a curadoria administrativa com o portal público.
+- [x] Exigir equipe responsável e permitir edição detalhada dos metadados editoriais em cada publicação.
+- [x] Implementar atualização contínua por evento entre o Centro Administrativo e o portal público, com reconexão segura.
+- [x] Atribuir automaticamente o papel administrador ao e-mail ojumidia@gmail.com após o login local.
+- [x] Mover a autorização local de teste para configuração isolada no servidor, sem identidade administrativa hardcoded.
+- [x] Adicionar um atalho discreto para o Centro Administrativo no rodapé público, mantendo /admin acessível diretamente.
+- [x] Exibir mensagem específica para usuário autenticado sem autorização administrativa.
+- [x] Verificar o fluxo Admin → API → banco → site público sem duplicação de dados ou acesso inseguro.
+- [x] Permitir informar crédito livre de equipe responsável ao criar ou editar uma publicação, sem bloquear o fluxo quando não houver equipe cadastrada.
+- [x] Simplificar o crédito responsável para evitar redundância entre equipe cadastrada e crédito livre.
+- [x] Permitir anexar, enviar ou selecionar fotos, vídeos e capa durante a criação e edição de uma Cobertura.
+- [x] Explicar cada próxima etapa do fluxo editorial com ações nomeadas para Rascunho, Em revisão, Aprovada, Publicada e Arquivada.
+- [x] Estruturar a navegação administrativa pelos fluxos de Conteúdos, Acervo, Territórios, Curadoria e solicitações de contratação.
+- [x] Adicionar ao portal público os caminhos “Conheça a Ojú”, “Contrate sua cobertura” e “Entre em contato”.
+- [x] Aceitar referências internas de arquivo retornadas pelo armazenamento no cadastro de mídia de uma Cobertura.
+- [x] Criar o tipo Fotografia documental, com publicação de até cinco fotos, título, descrição, data e local.
+- [x] Permitir biografia viva e comentário contextual em cada fotografia documental.
+- [x] Permitir escolher foto ou miniclipe como capa principal dos destaques e conteúdos no portal.
+- [x] Criar página pública de Fotografia documental, separada de Histórias e Acervo.
+- [x] Permitir editar conteúdos publicados no Centro Administrativo, registrando autor, data, motivo e versão da revisão.
+- [x] Exibir ações diretas e visíveis de edição e revisão para cada conteúdo na listagem e na prévia administrativa.
+- [x] Organizar taxonomias por território, localização, tipo de evento, pessoa/organização e tema para uso direto em Coberturas.
+- [x] Criar fluxo de Cobertura institucional com casa/organização, local, evento, contrato de divulgação, mídia principal e limites de fotos e vídeos.
+- [x] Permitir transformar uma Cobertura institucional contratada em cartão público de serviço com contato, serviços, período de anúncio e renovação.
+- [x] Identificar de forma transparente no portal conteúdos e cartões vinculados a divulgação contratada.
+- [x] Criar módulo independente de anúncios e cartões de serviço, separado das Coberturas editoriais.
+- [x] Gerenciar contratante, formato, período de veiculação, renovação, contato e status de cada anúncio.
+- [x] Exibir anúncios ativos no portal com identificação explícita de divulgação contratada.
+- [x] Registrar em cada anúncio o administrador captador, o valor contratado, o percentual da Ojú e o percentual/comissão do captador.
+- [x] Exibir demonstrativo de receita e comissão por administrador, mantendo os dados financeiros separados do conteúdo editorial.
+- [x] Permitir editar status, data de renovação e dados comerciais de cada anúncio após a criação.
+- [x] Exibir demonstrativo financeiro por administrador captador, com total captado, comissão e situação de pagamento.
+- [x] Permitir editar no painel todos os dados comerciais de um anúncio já criado, incluindo contratante, contato, formato, valor e percentuais.
+- [x] Exibir situação financeira consolidada por captador, distinguindo comissão paga, parcial e pendente.
+- [x] Permitir selecionar e persistir território, localização, evento, pessoa/organização e tema diretamente na criação e edição de Coberturas.
+- [x] Exibir os vínculos taxonômicos institucionais na prévia administrativa e no portal público da Cobertura.
+- [x] Permitir editar, relacionar, arquivar e excluir taxonomias de Território com confirmação e rastreabilidade.
+- [x] Exibir em Territórios as Coberturas, fotos e vídeos relacionados, com atalhos para editar, revisar, despublicar e arquivar o conteúdo vinculado.
+- [x] Tornar a criação e a edição de Tipo de conteúdo, Tema, Localização, Território, Pessoa/organização, Evento e Data claramente acessíveis no menu Territórios.
+- [x] Permitir anexar ou selecionar imagem e vídeo de apresentação em cada Território, com créditos e direitos registrados no Acervo.
+- [x] Expor autorização, permissão de publicação, termos e validade no upload de mídia de Territórios, sem valores fixos.
+- [x] Criar o papel de administrador principal para visualizar o consolidado de anúncios, captações e comissões de toda a equipe.
+- [x] Restringir cada administrador à visualização e edição das próprias captações, anúncios e comissões, sem acesso aos dados financeiros dos demais.
+- [x] Manter o fluxo editorial colaborativo entre administradores, separado da visibilidade financeira comercial.
+- [x] Revalidar a persistência do papel administrador principal no banco e na sessão de login sem erro de upsert.
+- [x] Aplicar escopo individual também às solicitações comerciais e aos contratos, preservando apenas o fluxo editorial compartilhado.
+- [x] Cobrir em teste a listagem, edição e pagamento de anúncios para administrador principal e administrador comum.
+- [x] Comprovar por consulta de banco e sessão ativa a persistência do papel administrador principal após o login.
+- [x] Cobrir as procedures de listagem, edição e pagamento de anúncios com cenários de principal e administrador não proprietário.
+- [x] Comprovar via sessão autenticada que auth.me retorna administrador principal após o login.
+- [x] Executar testes de integração das procedures commercial.listAds, commercial.updateAd e commercial.updatePayout para principal, proprietário e não proprietário.
+- [x] Comprovar em teste que listAds filtra anúncios de outro captador para administrador comum e entrega o consolidado ao principal.
+- [x] Comprovar em teste o sucesso de updateAd para o proprietário e o bloqueio para administrador não proprietário.
+- [x] Ampliar a solicitação pública para acolher formatos, horários, estado, WhatsApp e necessidade aberta sem pacote fixo.
+- [x] Estruturar o fluxo comercial da solicitação até proposta, aceite, contrato, execução, entrega e publicação opcional.
+- [x] Separar material entregue ao contratante da autorização editorial para reaproveitamento e publicação no portal.
+- [x] Registrar entregas, propostas e histórico operacional em cada contratação sem expor documentos ou dados comerciais no portal público.
+- [x] Adicionar etapas comerciais explícitas de conversa, proposta, aceite, produção e entrega, além de solicitação, contratação e arquivamento.
+- [x] Permitir registrar proposta, observações internas, entrega ao cliente e autorização editorial em uma contratação.
+- [x] Garantir que material contratado permaneça privado por padrão e só possa ser aproveitado editorialmente após autorização expressa.
+- [x] Exibir na carteira comercial os campos de proposta, valor, entrega privada e autorização editorial já modelados no banco.
+- [x] Adicionar um registro explícito e editável de entrega privada ao cliente, separado das observações internas.
+- [x] Adicionar uma trilha operacional privada por contratação, com eventos de status, proposta, contrato, entrega e autorização editorial.
+- [x] Cobrir em testes que os endpoints públicos não retornam identificador de contratação, proposta, entrega, contrato ou outros dados comerciais privados.
+- [x] Adicionar testes dos payloads finais de search, featured, bySlug, photoDocumentary e activeAds contra vazamento de dados comerciais privados.
+- [x] Ampliar os asserts de serialização pública para bloquear referências de contrato, documento, marcos privados e observações internas.
+- [x] Permitir anexar vários novos uploads de mídia na mesma criação ou edição de um Conteúdo, com feedback de quantidade e limite aplicável.
+- [x] Aplicar e tornar explícitos os limites documentais de fotos e vídeos para Coberturas, Eventos e Histórias, sem transformar o portal em portfólio.
+- [x] Manter a chamada “Jornalismo documental” e ajustar o título principal da Home para “Histórias que olham para o território.”
+- [x] Criar uma área administrativa exclusiva para adicionar, selecionar e remover miniclipes elegíveis ao fundo vivo da Home.
+- [x] Deixar preparada a ativação do primeiro miniclipe de fundo vivo no teste local; o vídeo real, a origem e o crédito serão enviados pelo usuário posteriormente.
+- [x] Comprovar em teste e interface que Eventos taxonomicamente relacionados recebem os mesmos limites documentais de mídia.
+- [x] Comprovar em teste a manutenção da chamada “Jornalismo documental” e do título “Histórias que olham para o território.” na Home.
+- [x] Comprovar no fluxo real que uma Cobertura ou História vinculada à taxonomia Evento permanece sujeita aos seus limites de foto e vídeo.
+- [x] Exibir no editor os limites ativos de um conteúdo quando ele estiver relacionado a Evento, sem alterar a regra documental existente.
+- [x] Testar a procedure real de anexação de mídia para Cobertura vinculada à taxonomia Evento, cobrindo limites de foto e vídeo.
+- [x] Exibir coleções de Fotografia documental como frente editorial visível e proporcional às Histórias no portal.
+- [x] Estruturar a página pública de Fotografia para crescer com muitos eventos e coleções sem perder hierarquia, leitura ou desempenho visual.
+- [x] Integrar coleções fotográficas publicadas à seleção editorial da Home com equilíbrio de formatos e sem misturar fotos individuais com histórias.
+- [x] Integrar coleções de Fotografia documental à própria seleção editorial da Home com equilíbrio explícito entre Histórias, Coberturas e Fotografia.
+- [x] Cobrir em teste a composição equilibrada dos destaques sem tratar fotos individuais como Histórias.
+- [x] Testar a procedure editorial.featured com História, Cobertura e Fotografia documental publicadas no mesmo cenário.
+- [x] Comprovar no payload final de destaque que Fotografia documental é uma coleção editorial e não serializa fotos individuais como História.
+- [x] Remover a duplicação da marca no cabeçalho público e manter somente o logotipo fornecido pelo usuário em tamanho ampliado.
+- [x] Padronizar Orçamentos para contato exclusivo pelo WhatsApp (92) 9200-19527 e Instagram @ojumidia.
+- [x] Corrigir a exibição do WhatsApp oficial para o formato (92) 92001-9527 em Orçamentos.
+- [x] Criar uma prévia temporária e claramente identificada de grade fotográfica na Home para validar volume, proporções e responsividade sem persistir matérias fictícias.
+- [x] Criar prévias técnicas temporárias para Histórias, Territórios, Fotografia e Acervo, demonstrando hierarquia e volume sem persistir conteúdo editorial fictício.
+- [x] Remover “Jornalismo documental” do hero e manter “Histórias que olham para o território.” como abertura principal da Home.
+- [x] Posicionar a prévia de galeria e as futuras publicações na faixa central entre o hero e a seleção editorial.
+- [x] Reduzir e tornar adaptáveis os cartões da Seleção editorial para comportar várias matérias publicadas sem dominar a Home.
+- [x] Redesenhar o portal público com navegação, hero, destaques e chamadas visuais fiéis à referência escura e cinematográfica fornecida.
+- [x] Preservar os fluxos editoriais, a identificação comercial e os dados reais enquanto a apresentação visual é substituída.
+- [x] Usar o miniclipe selecionado no Centro Administrativo como fundo vivo do hero cinematográfico, sem depender de imagem fixa.
+- [x] Restaurar na Home redesenhada a vitrine pública de anúncios ativos com identificação explícita de divulgação contratada.
+- [x] Substituir controles inativos do hero por interações reais ou removê-los até que haja comportamento implementado.
+- [x] Cobrir em teste a preservação da identificação comercial e a ausência de controles mortos no redesign cinematográfico.
+- [x] Auditar e padronizar os fluxos administrativos de Histórias, Coberturas, Documentários, Projetos, Territórios, Fotografia e Acervo.
+- [x] Garantir que toda frente pública tenha criação, edição, revisão, publicação e gestão de texto, foto, vídeo e miniclipe no Centro Administrativo.
+- [x] Padronizar a linguagem visual das páginas públicas conforme a interface cinematográfica da Home.
+- [x] Diferenciar as rotas públicas de Coberturas, Documentários e Projetos com apresentação própria, sem tratar todas como uma busca genérica.
+- [x] Padronizar visualmente as rotas públicas de Orçamentos, Contato e território por slug na interface cinematográfica.
+- [x] Tornar explícito no Centro Administrativo que miniclipes são geridos no módulo da Home e que fotos/vídeos por frente são anexados pelo Acervo no ciclo editorial.
+- [x] Comprovar por testes as rotas públicas padronizadas e a matriz de mídia por frente editorial.
+- [x] Criar uma rota pública de Contato cinematográfica com os canais oficiais de WhatsApp e Instagram.
+- [x] Cobrir em teste as rotas públicas de Orçamentos e Contato com sua apresentação e canais oficiais.
+- [x] Tornar o acesso público ao Centro Administrativo discreto, sem chamadas visuais ostensivas, mantendo a rota protegida para administradores autorizados.
+- [x] Adicionar um gesto reservado na marca do rodapé para abrir o Centro Administrativo sem digitar a rota, mantendo o acesso protegido por sessão e papel.
+- [x] Vincular o gesto reservado ao logotipo oficial da marca no rodapé, em vez do texto de copyright, e cobrir essa associação em teste.
+- [x] Criar apoio institucional a séries, projetos e territórios, com identificação pública separada da curadoria editorial.
+- [x] Criar solicitação pública e gestão privada de licenciamento de fotos e vídeos do Acervo, respeitando direitos de mídia.
+- [x] Criar perfil institucional documental e Evento vivo, conectando organizações, territórios, agenda, conteúdos, fotos e vídeos reais.
+- [x] Criar coleções temáticas editoriais e oficinas como Projetos documentais, com gestão comercial por carteira.
+- [x] Garantir que o administrador principal consolide apoios, licenças, oficinas e captações; administradores comuns acessam somente suas próprias carteiras.
+- [x] Auditar as rotas públicas e administrativas nos tamanhos de celular, tablet e desktop.
+- [x] Corrigir transbordamentos, densidade excessiva e controles pouco confortáveis para toque nas telas responsivas.
+- [x] Validar a navegação, os formulários e a leitura editorial em navegadores móveis antes do próximo checkpoint.
+- [x] Criar perfis institucionais documentais para casas, comunidades e iniciativas, com localização controlada e autorização de visibilidade.
+- [x] Criar agenda comunitária de Eventos vivos, com envio, revisão e publicação somente após autorização administrativa.
+- [x] Criar Memórias orais com texto, áudio ou vídeo, consentimento de registro, níveis de acesso e possibilidade de retirada.
+- [x] Adicionar níveis de acesso público, comunitário, pesquisa mediante análise e preservação restrita para materiais sensíveis do Acervo.
+- [x] Criar páginas públicas de Instituições, Agenda, Memórias e Política de cuidado e consentimento.
+- [x] Integrar os novos recursos ao Centro Administrativo com distribuição de carteira pelo administrador principal e acesso individual para administradores.
+- [x] Criar uma entrada reservada de solicitação de proteção documental, sem expor informações sensíveis no portal.
+- [x] Conectar oficinas à frente de Projetos documentais e à carteira privada de receitas.
+- [x] Cobrir os novos fluxos em testes de autorização, consentimento, privacidade e serialização pública.
+- [x] Destacar visualmente o consentimento e as regras de visibilidade no cadastro de perfis institucionais.
+- [x] Implementar upload de áudio ou vídeo para memória oral com termo obrigatório de consentimento antes do envio.
+- [x] Criar painel administrativo de notificações e respostas privadas para pedidos de acolhimento reservado.
+- [x] Cobrir os novos envios, notificações e respostas em testes de privacidade e validar a interface em celular e desktop.
+- [x] Criar busca e filtros públicos de memórias orais por palavra-chave, tema e território.
+- [x] Criar protocolo seguro de acompanhamento público para pedidos de acolhimento, sem expor dados ou detalhes sensíveis.
+- [x] Adicionar coordenadas aproximadas e autorizadas aos perfis institucionais para mapa interativo responsivo.
+- [x] Criar mapa público de instituições que exiba somente registros com localização pública autorizada.
+- [x] Cobrir busca, protocolo de acompanhamento e serialização geográfica em testes de privacidade e responsividade.
+- [x] Adicionar formulário administrativo para cadastrar territórios reais e coordenadas de referência autorizadas.
+- [x] Integrar territórios ao mapa institucional respeitando níveis de visibilidade e dados públicos autorizados.
+- [x] Adicionar agrupamento de marcadores e ícones personalizados por tipo de instituição no mapa interativo.
+- [x] Integrar transcrição e resumo assistidos por IA para áudios e vídeos de memórias orais, mantendo revisão humana antes de qualquer publicação.
+- [x] Validar permissões, responsividade e fluxos das novas ferramentas territoriais e de memória.
+- [x] Criar painel administrativo para revisar, editar e aprovar transcrições e resumos assistidos antes da publicação.
+- [x] Adicionar filtros interativos de tipo institucional e território no mapa público.
+- [x] Adicionar compartilhamento seguro das memórias orais públicas para redes sociais e cópia de link.
+- [x] Cobrir revisão, filtros e compartilhamento em testes de privacidade e responsividade.
+- [x] Aplicar limite global de até cinco fotos e dois vídeos curtos por registro documental.
+- [x] Validar vídeos enviados com duração máxima de sessenta segundos em todos os fluxos administrativos.
+- [x] Permitir links externos opcionais para álbum completo e vídeo completo sem substituir a mídia documental do portal.
+- [x] Restringir o fundo vivo a um único miniclipe curto ativo por vez.
+- [x] Atualizar mensagens de interface e testes para os limites uniformes de mídia.
+- [x] Consolidar as regras de segurança, acesso por papel, privacidade e uso de dados em documentação operacional do projeto.
+- [x] Revisar a configuração de execução para garantir que segredos não sejam versionados e que o ambiente local use variáveis explícitas.
+- [x] Criar arquivo de modelo de variáveis de ambiente e guia completo para abrir, instalar, configurar, testar e executar no Cursor.
+- [x] Criar configuração Docker opcional para execução reproduzível sem credenciais embutidas.
+- [x] Validar o projeto preparado e gerar novo ZIP completo, sem dependências instaladas ou segredos.
+- [x] Adicionar acesso administrativo local habilitado somente em desenvolvimento e por variável explícita de ambiente.
+- [x] Garantir que o acesso local não exista em produção e seja protegido por segredo local dedicado.
+- [x] Documentar os comandos de Cursor para criar o `.env` local e entrar como administrador principal de teste sem OAuth.
+- [x] Cobrir a proteção do acesso local em testes e gerar um novo ZIP completo atualizado.
+- [x] Simplificar o acesso local interno para entrada automática como administrador principal, sem OAuth e sem senha na tela.
+- [x] Manter o modo automático estritamente indisponível fora de desenvolvimento e documentar sua ativação local.
+- [x] Validar a simplificação de acesso e salvar novo checkpoint para testes internos.
+- [x] Adicionar notificações visuais de sucesso e erro ao salvar, editar e excluir conteúdos no Centro Administrativo.
+- [x] Validar o feedback visual das mutações editoriais e salvar novo checkpoint.
+- [x] Gerar e entregar o ZIP completo atualizado para testes locais no PC, sem dependências, segredos ou dados privados.
+- [x] Entregar o ZIP completo como anexo direto, com nome amigável para download no PC.
+- [x] Preparar e vincular o vídeo fornecido como miniclipe administrável do fundo vivo da seção Histórias que precisam ser registradas.
+- [x] Validar a reprodução responsiva do miniclipe e salvar a atualização do portal.
+- [x] Ampliar o cadastro institucional com categoria editável e opções para casas de tradição, comunidades, coletivos, iniciativas e lideranças religiosas.
+- [x] Criar uma camada separada de visibilidade institucional renovável, sem converter perfis documentais em anúncio automático.
+- [x] Implementar vigência, vencimento, renovação e ocultação automática de visibilidade institucional expirada.
+- [x] Validar os novos fluxos e apresentar recomendação comercial inicial para a visibilidade institucional.
+- [x] Criar planos institucionais de piloto, visibilidade e parceiro com valores, vigência e estado de renovação administráveis.
+- [x] Registrar e exibir a divisão líquida de receita entre Ojú, desenvolvimento/manutenção e captação/atendimento.
+- [x] Garantir que a visibilidade institucional não altere curadoria, publicação ou destaque editorial.
+- [x] Criar uma camada única e incremental de configuração Firebase sem substituir o banco, API ou armazenamento existentes.
+- [x] Promover aquinopratesr@gmail.com a administrador principal e alinhar o acesso local de testes a essa conta.
+- [x] Adicionar visualização proporcional da divisão de receitas no painel de visibilidade institucional.
+- [x] Adicionar filtro e alertas para vigências próximas do vencimento no painel administrativo.
+- [x] Validar a nova camada Firebase e os refinamentos de receita e vencimento.
+- [x] Preservar ojumidia@gmail.com como canal público de contato, separado da conta de administrador principal.
+- [x] Documentar e exibir a regra de que o e-mail comercial não confere privilégios administrativos.
+- [x] Formalizar o fluxo futuro de contas Google autorizadas individualmente para administradores e colaboradores.
+- [x] Criar cadastro administrativo de colaboradores por e-mail/conta Google autorizada e papel individual.
+- [x] Exibir claramente as permissões de cada papel e impedir que o e-mail comercial receba acesso.
+- [x] Permitir ao administrador principal revisar, alterar ou revogar permissões de colaboradores.
+- [x] Validar a gestão de colaboradores e salvar novo checkpoint.
+- [x] Adicionar formulário público de contato para dúvidas, sugestões, solicitações e parcerias direcionado a ojumidia@gmail.com.
+- [x] Validar o encaminhamento do formulário e salvar novo checkpoint.
+- [x] Formalizar a política definitiva de que contratação não implica autorização de publicação editorial.
+- [x] Criar autorização granular para fotos, vídeos, nome, localização, história, identificação de pessoas e canais de uso.
+- [x] Implementar estados de entrega privada, autorização pendente, autorização parcial, autorização editorial e revogação.
+- [x] Bloquear a publicação e a curadoria de material contratado sem autorização editorial válida.
+- [x] Registrar responsável, data, prazo, restrições culturais e trilha de auditoria da autorização.
+- [x] Validar o fluxo de contratação documental e salvar novo checkpoint.
+- [x] Formalizar que os termos de autorização editorial devem ser assinados exclusivamente via gov.br.
+- [x] Gerar PDF do termo de autorização editorial para cada contratação elegível.
+- [x] Permitir anexar e gerenciar o PDF assinado via gov.br em cada cobertura contratada.
+- [x] Destacar no painel as coberturas que aguardam autorização editorial ou termo assinado.
+- [x] Validar os termos, anexos e alertas de pendência e salvar novo checkpoint.
+- [x] Formalizar que o Super Admin possui visão e governança global sobre todas as publicações, contratos, autorizações, mídias, receitas e carteiras.
+- [x] Restringir administradores e colaboradores às próprias carteiras e permissões individuais em todos os módulos aplicáveis.
+- [x] Criar termo de responsabilidade obrigatório para novos administradores e registrar sua assinatura via gov.br.
+- [x] Registrar divisão por fechamento para que a maior parcela permaneça com o administrador responsável e a Ojú retenha taxa transparente de operação.
+- [x] Validar a governança global e salvar novo checkpoint.
+- [x] Documentar regras de armazenamento, nomenclatura, privacidade, retenção e acesso para contratos, termos e documentos assinados.
+- [x] Restringir no servidor o acesso a arquivos contratuais e termos ao Super Admin ou ao administrador responsável pela carteira.
+- [x] Avaliar materiais de referência para refinar a proposta de visibilidade institucional monetizada.
+- [x] Definir modelo transparente de distribuição por visibilidade institucional entre administrador responsável, operação da Ojú e desenvolvimento da rede.
+- [x] Traduzir o modelo aprovado em regras, interface administrativa, alertas de renovação e documentação operacional.
+- [x] Criar painel de ganhos e status de repasse por captação para cada administrador.
+- [x] Criar gestão versionada de políticas comerciais exclusiva do Super Admin.
+- [x] Notificar o administrador responsável quando um repasse de captação for marcado como concluído.
+- [x] Inventariar tecnicamente arquitetura, rotas, modelos de dados e fluxos reais do projeto Ojú Mídia.
+- [x] Documentar o Modelo de Rede Ojú, distinguindo funcionalidades implementadas, parciais e planejadas sem aplicar percentuais econômicos em estudo.
+- [x] Registrar riscos, decisões jurídicas e contábeis pendentes, limites de mídia reais, concorrência e pontos que precisam de validação.
+- [x] Adicionar simulação visual não persistente de políticas comerciais para o Super Admin.
+- [x] Centralizar a promoção de papéis administrativos no fluxo de convite e termo assinado via gov.br.
+- [x] Corrigir no guia local a identidade correta do Super Admin e a separação do e-mail comercial público.
+- [x] Classificar os pontos de correção derivados da auditoria por prioridade e dependência externa.
+- [x] Implementar as correções técnicas seguras aprovadas no plano pós-auditoria.
+- [x] Documentar explicitamente as correções que dependem de decisão jurídica, infraestrutura, homologação ou operação externa.
+- [x] Modelar profissional executor independente de administrador e vinculá-lo à contratação sem criar pagamentos reais.
+- [x] Preparar fechamento financeiro versionado por contratação, com participações conceituais e sem integração bancária ou fiscal.
+- [x] Aplicar limite absoluto de 5 fotos, 2 vídeos de até 60 segundos e contadores claros em todas as interfaces de mídia afetadas.
+- [x] Garantir um único miniclip ativo e autorizado por contratação, com substituição rastreável e consulta segura pela Home.
+- [x] Implementar bloqueio otimista contra sobrescrita silenciosa de publicação em edição concorrente.
+- [x] Cobrir mídia, miniclipe, concorrência e sincronização Admin–portal com testes de regressão adicionais.
+- [x] Adicionar inspeção binária de duração de vídeo no servidor antes de aceitar uploads externos em escala de produção.
+- [x] Avaliar e documentar a arquitetura compatível para hospedagem de teste interno com Firebase, sem substituir MySQL, tRPC ou S3.
+- [x] Preparar configuração reversível de hospedagem de teste, sem publicar segredos nem realizar deploy sem confirmação do usuário.
+- [x] Verificar Firebase CLI, projeto Google Cloud/Firebase selecionado e pré-requisitos de Cloud Run para staging.
+- [x] Preparar artefatos de contêiner e configuração Firebase de staging sem valores de segredos.
+- [x] Transferir por decisão do usuário a autenticação do titular e a configuração externa para o terminal local, sem credenciais neste ambiente.
+- [x] Transferir por decisão do usuário o canal de prévia e o deploy Firebase para confirmação no terminal local.
+- [x] Consolidar no projeto o roteiro local de Firebase/Cloud Run e os modelos sem segredos para execução no computador do usuário.
+- [x] Gerar e verificar o ZIP completo de entrega, excluindo dependências, segredos, banco local, logs e arquivos privados.
+- [x] Diagnosticar a indisponibilidade da conta Cloud Billing no projeto Firebase ojumidia.
+- [x] Registrar alternativa de demonstração sem Cloud Run enquanto o faturamento não estiver disponível.
+- [x] Diagnosticar o bloqueio do Centro Administrativo no ambiente publicado e separar corretamente autenticação local, OAuth e deploy externo.
+- [x] Corrigir ou documentar a configuração necessária para autenticação administrativa segura em produção.
+- [x] Remover a URL literal de analytics com placeholder VITE_ANALYTICS_ENDPOINT na prévia Firebase estática.
+- [x] Evitar tentativas repetidas de tRPC e SSE quando a prévia não possui servidor de API configurado.
+- [x] Bloquear a tentativa de OAuth quando VITE_APP_ID ou VITE_OAUTH_PORTAL_URL não estiverem configurados no build publicado.
+- [x] Gerar pacote atualizado para substituir a prévia Firebase que contém placeholders de analytics e chamadas de API sem servidor.
+- [x] Localizar e validar o vídeo oficial de fundo para uso na prévia Firebase.
+- [x] Preparar o carregamento do vídeo de fundo no build estático sem introduzir dados fictícios ou dependência administrativa.
+- [x] Documentar que o Super Admin continua restrito ao ambiente com servidor autenticado e gerar ZIP corrigido para a prévia Firebase.
+- [x] Validar e documentar o acesso local automático de aquinopratesr@gmail.com como Super Admin para os testes ponta a ponta.
+- [x] Garantir que a marca oficial Ojú seja incluída e referenciada corretamente no build Firebase estático.
+- [x] Reconfigurar o build Firebase para procurar marca e vídeo dentro da própria pasta do projeto entregue.
+- [x] Gerar um ZIP único em que a pasta oju-midia já contenha os ativos oficiais necessários à publicação Firebase.
+- [x] Diagnosticar e corrigir a ausência da marca e do vídeo de fundo após o deploy no Firebase Hosting.
+- [x] Incluir firebase.json estático apontando exclusivamente para dist/public, evitando deploy de diretório incorreto.
+- [x] Documentar a sequência de redeploy e as URLs diretas de verificação da marca e do vídeo no Firebase Hosting.
+- [x] Corrigir build:firebase-preview para Windows, sem atribuição de variável de ambiente no formato Unix.
+- [x] Produzir diagnóstico estratégico de posicionamento, públicos, conversão, prova social, copy, SEO e funil comercial da Ojú.
+- [x] Transformar o diagnóstico estratégico em plano de evolução priorizado do portal público e da operação comercial.
+- [x] Reorganizar a navegação pública em Histórias, Memórias Documentais, Serviços, Comunidade e Sobre.
+- [x] Criar a página Memórias Documentais com estrutura para três casos reais autorizados, mídia de vídeo otimizada e detalhes documentais.
+- [x] Garantir que a área de Memórias Documentais não seja apresentada como portfólio, vitrine ou prova social fictícia.
+- [x] Criar a página Serviços e incorporar o método documental autoral da Ojú em linguagem própria.
+- [x] Refinar a página Sobre e a Home com o CTA “Planejar um registro”.
+- [x] Criar formulário público de planejamento de registro para captar novos clientes e encaminhá-los ao fluxo comercial.
+- [x] Validar as novas páginas em desktop e celular sem inserir casos, depoimentos ou clientes fictícios.
+- [x] Criar conteúdo institucional editável, reordenável, ocultável e excluível exclusivamente pelo Super Admin.
+- [x] Integrar Serviços, Método Ojú, CTAs e blocos institucionais ao conteúdo administrável, preservando valores-padrão seguros.
+- [x] Compactar o Método Ojú para reduzir a ocupação visual sem eliminar sua hierarquia de cuidado.
+- [x] Criar painel administrativo de Conteúdo do Portal com edição, visibilidade, ordem e exclusão auditável.
+- [x] Validar permissões de Super Admin e a atualização das páginas públicas sem depender de editor de código.
+- [x] Auditar o controle atual de miniclipes, permissões de administradores e textos ainda mantidos diretamente no código.
+- [x] Permitir que o Super Admin organize os miniclipes do fundo vivo, defina ativação e configure a duração de transição entre vídeos.
+- [x] Tornar administráveis os blocos institucionais públicos restantes que ainda dependem de código.
+- [x] Revisar gramática, clareza e linguagem dos textos públicos em alinhamento com a identidade afro-brasileira da Ojú.
+- [x] Documentar a matriz de autonomia: Super Admin, administradores, editores, aprovadores e criadores.
+- [x] Auditar por que conteúdos publicados não exibem ações claras de despublicar, arquivar ou excluir para o Super Admin.
+- [x] Implementar despublicação, arquivamento e exclusão lógica exclusiva do Super Admin, com confirmação e trilha de auditoria.
+- [x] Garantir que conteúdo removido deixe imediatamente de aparecer nas páginas públicas e possa ser restaurado quando apropriado.
+- [x] Validar os controles de remoção no Centro Administrativo em desktop e celular.
+- [x] Comparar a Home e o Acervo hospedados no Firebase com a interface atual para identificar elementos aprovados que foram removidos ou simplificados.
+- [x] Restaurar e integrar elementos visuais aprovados sem desfazer a arquitetura documental e administrável.
+- [x] Mapear, por área pública, os controles administrativos de criar, editar, pré-visualizar, publicar, despublicar, remover e restaurar conforme a permissão.
+- [x] Completar o ciclo administrativo de Instituições, Agenda e Memórias orais: editar, publicar, despublicar, arquivar, excluir logicamente e restaurar conforme a permissão.
+- [x] Garantir que o conteúdo comunitário removido deixe imediatamente de aparecer nas consultas públicas, preservando consentimentos, mídias e trilha de auditoria.
+- [x] Validar em celular e desktop as novas ações comunitárias e documentar a matriz final de cobertura pública.
+- [x] Modelar a Rede de Serviços e Saberes como perfil comercial comunitário, separado de casas e perfis documentais.
+- [x] Integrar categorias como floras, ateliês, aviários autorizados, artesanato e demais serviços comunitários ao diretório de Instituições e Territórios.
+- [x] Permitir busca territorial por tipo de perfil, categoria, bairro/localização autorizada e disponibilidade declarada, sem expor endereços não consentidos.
+- [x] Reutilizar a vigência comercial, renovação, carteira por captador e transparência de divulgação contratada para os novos perfis comerciais.
+- [x] Auditar Histórias, Coberturas, Documentários, Projetos, Territórios, Instituições, Agenda, Memórias, Acervo e Serviços contra o ciclo administrativo integral.
+- [x] Confirmar por frente a criação, gestão de foto, vídeo e miniclipe dentro das regras aplicáveis, pré-visualização, publicação, despublicação, arquivamento, lixeira e restauração.
+- [x] Completar qualquer controle administrativo ausente e documentar a matriz final de responsabilidades por menu público.
+- [x] Completar o Acervo com pré-visualização real, edição de metadados, remoção lógica e restauração sem apagar direitos ou vínculos documentais.
+- [x] Tornar a experiência pública de Territórios alimentada por dados reais e dar aos itens territoriais controles explícitos de visibilidade, prévia e restauração.
+- [x] Formalizar Serviços e Planejar um registro como blocos institucionais textuais administráveis; conteúdos visuais documentais, comerciais ou de fundo vivo permanecem vinculados ao Acervo e aos módulos próprios, sem URL de mídia privada presa ao CMS.
+- [x] Verificar os artefatos atuais de Firebase Hosting, Cloud Run, variáveis e autenticação de produção para o plano Blaze.
+- [x] Completar os arquivos seguros de implantação sem versionar URLs privadas, tokens, banco ou credenciais OAuth.
+- [x] Criar guia de ativação Blaze, configuração de serviços, deploy, domínio autorizado e login do Super Admin em produção.
+- [x] Gerar ZIP completo atualizado com código, migrações, guia de Blaze, marca e miniclipe oficiais.
+- [x] Auditar o contrato de cada rota pública e administrativa contra a procedure correspondente do servidor.
+- [x] Validar, por fluxo, permissões, autorização de mídia, publicação, despublicação, lixeira, restauração e atualização em tempo real.
+- [x] Corrigir e cobrir com regressão qualquer rota, ação ou sincronização que esteja ausente, inconsistente ou sem retorno explícito.
+- [x] Consolidar uma matriz de prontidão de produção antes de liberar o roteiro Blaze e o ZIP final.
+- [x] Substituir a prévia pública de Territórios por uma exploração real de taxonomias, relações, mídias autorizadas e conteúdos publicados.
+- [x] Substituir a prévia pública de Acervo por busca real de publicações e mídias elegíveis, com filtros documentais e proteção de direitos.
+- [x] Unificar a sincronização em tempo real de Instituições, Agenda, Memórias e Acervo com as atualizações editoriais já emitidas pelo servidor.
+- [x] Integrar seleção e upload de mídia autorizada a Instituições, Agenda e Memórias, com capa, prévia, direitos e limites aplicáveis por fluxo.
+- [x] Expor a seleção de mídia do Acervo também nos formulários iniciais do painel comunitário, sem obrigar o administrador a salvar o rascunho antes de escolher capa ou vídeo.
+- [x] Ler integralmente a especificação Multiadmin, Territórios, Parceiros, Permissões, Identidade e Monetização e convertê-la em critérios auditáveis.
+- [x] Inventariar o modelo atual de usuários, papéis, territórios, conteúdos, mídias, carteiras, contratos, executores e políticas comerciais.
+- [x] Auditar no backend a autorização por papel, proprietário, carteira e território, distinguindo comportamento implementado, parcial, planejado e não implementado.
+- [x] Mapear riscos de isolamento territorial, autoria, concorrência de upload, identidade de parceiros e repartição financeira sem modificar os fluxos existentes.
+- [x] Produzir diagnóstico e plano de evolução cirúrgico para aprovação antes de criar estruturas de Parceiro Ojú, escopo territorial ou novas permissões.
+- [x] Consolidar a especificação sênior de multiadmin em critérios de aceite para parceiro, território, upload, publicação, concorrência, Home e visibilidade.
+- [x] Criar Parceiro Ojú, associação de membro e associação territorial de forma aditiva, mantendo todos os dados históricos como operação central até classificação explícita.
+- [x] Vincular recursos novos a administrador, parceiro, território, conteúdo, contratação e autor quando aplicável, sem permitir novos arquivos órfãos.
+- [x] Aplicar no backend o isolamento por papel, parceiro, território e proprietário aos fluxos de conteúdo, Acervo, contratos, comercial e comunidade.
+- [x] Criar estados rastreáveis de upload e proteção contra duplicidade, sem expor upload como publicação pública.
+- [x] Preservar limites absolutos de 5 fotos, 2 vídeos de 60 segundos e 1 miniclipe por contratação em todas as validações de servidor.
+- [x] Reservar a curadoria da Home e as configurações globais ao Super Admin, mantendo identidade de parceiro somente em contexto territorial aprovado.
+- [x] Criar testes de regressão para negação de acesso, concorrência, upload, publicação, mídia e isolamento territorial antes de liberar a nova estrutura.
+- [x] Converter os treze critérios da segunda auditoria cirúrgica em uma matriz de evidências, lacunas e risco residual.
+- [x] Auditar no backend a impossibilidade de autoelevação de papel, acesso entre parceiros e alteração autônoma de vínculo territorial.
+- [x] Validar hierarquia territorial extensível, histórico de titularidade e preservação de autoria após transferência de território.
+- [x] Auditar o ciclo integral de upload, os metadados, os limites no servidor, o miniclipe distinto e a concorrência de publicação.
+- [x] Auditar a cadeia financeira imutável por transação, cenários de cancelamento e reembolso e o isolamento transversal de todos os recursos.
+- [x] Implementar as correções técnicas seguras identificadas na auditoria e cobri-las com regressão.
+- [x] Documentar a maturidade final, pendências externas e decisões necessárias antes de declarar a camada multiadmin pronta.
+- [x] Modelar política comercial versionada de solicitação de reembolso com prazo, motivos, teto inferior a 100% e retenção explícita de custos operacionais.
+- [x] Registrar cobrança, distribuição, reembolso parcial e ajuste como lançamentos financeiros imutáveis vinculados à contratação, sem reescrever o histórico original.
+- [x] Criar uma Lixeira Editorial administrativa visível, com publicação, responsável, data de exclusão e prazo de restauração.
+- [x] Definir retenção de 24 horas para conteúdo editorial excluído logicamente e impedir restauração após o vencimento.
+- [x] Implementar expurgo definitivo, auditável e idempotente para conteúdo que ultrapassar o prazo de retenção, sem apagar a trilha de auditoria.
+- [x] Preparar a rotina periódica de expurgo para o ambiente publicado e documentar a ativação após o deploy.
+- [x] Gerar e verificar o ZIP completo atualizado com a auditoria multiadmin, migrations recentes e Lixeira Editorial, sem segredos ou arquivos privados.
+- [x] Mapear pendências reais de revisão editorial, autorização, mídia, contratos, reembolsos, visibilidade institucional, lixeira e governança por papel.
+- [x] Criar uma consulta unificada de pendências que respeite Super Admin, parceiro, território, autoria e carteira.
+- [x] Criar o painel Central de Pendências Operacionais com prioridade, prazo, origem, responsável e ação de continuidade.
+- [x] Validar que cada pendência abre o fluxo original e não expõe registros de outro parceiro ou território.
+- [x] Atualizar e verificar o ZIP completo com a Central de Pendências Operacionais, sem segredos, logs, dependências ou builds descartáveis.
+- [x] Corrigir o aviso de depreciação de baseUrl no tsconfig e orientar a instalação local das dependências TypeScript no Windows.
+- [x] Substituir o comando de desenvolvimento com NODE_ENV Unix por inicialização multiplataforma compatível com PowerShell e Windows.
+- [x] Corrigir a referência local do miniclipe oficial para que o fundo vivo apareça ao executar o portal no Windows.
+- [x] Auditar runtime, rotas HTTP/tRPC, OAuth, cookies, RBAC, banco, storage, uploads, Firebase Preview e variáveis usadas de fato.
+- [x] Padronizar scripts Windows/Linux com cross-env, separar geração e aplicação de migrations e validar startup de produção.
+- [x] Criar endpoint público de health check, configuração Render sem segredos e estrutura segura de variáveis de ambiente.
+- [x] Criar documentação de deploy Render, OAuth, storage, banco, Super Admin e procedimentos de validação e rollback.
+- [x] Executar validações de TypeScript, testes, build, auditoria de dependências, health check e produção local.
+- [x] Gerar e verificar ZIP completo preparado para Render, sem secrets, dependências, builds ou logs privados.
+- [x] Comparar integralmente o roteiro final de staging Render com runtime, autenticação, banco, storage, RBAC, Parceiros Ojú e documentação já implementados.
+- [x] Corrigir somente lacunas comprovadas na prontidão Render sem alterar a arquitetura documental, comercial ou multiadmin existente.
+- [x] Consolidar o relatório final de arquivos alterados, variáveis, validações, riscos remanescentes e passos externos de deploy.
+- [x] Gerar e verificar o ZIP final completo da Ojú Mídia preparado para Render.

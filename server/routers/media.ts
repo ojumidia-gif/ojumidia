@@ -1,0 +1,211 @@
+import { TRPCError } from "@trpc/server";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { commercialMiniclips, mediaAssets, settings, uploadSessions, users } from "../../drizzle/schema";
+import { getDb } from "../db";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { publishEditorialEvent } from "../editorialEvents";
+import { activePartnerMemberships, assertPartnerScope, recordAuditEvent } from "../partnerScope";
+
+async function requireDb() {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
+  return db;
+}
+
+function requireAdmin(role: string) {
+  if (!["administrador", "administrador principal"].includes(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem executar esta ação." });
+}
+function requirePrincipal(role: string) {
+  if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode alterar a transição do fundo vivo." });
+}
+function requireSuperAdmin(role: string) {
+  if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode enviar uma mídia para a lixeira ou restaurá-la." });
+}
+export const heroTransitionSchema = z.object({ displaySeconds: z.number().int().min(5).max(60), transitionMilliseconds: z.number().int().min(300).max(3000) });
+export const defaultHeroTransition = { displaySeconds: 14, transitionMilliseconds: 1100 };
+function parseTransition(value?: string) {
+  try { return heroTransitionSchema.parse(JSON.parse(value || "")); } catch { return defaultHeroTransition; }
+}
+export function canActivateBackgroundClip(clip: Pick<typeof mediaAssets.$inferSelect, "mediaType" | "publicationAllowed" | "state">) {
+  return clip.mediaType === "vídeo" && clip.publicationAllowed && clip.state === "Ativo";
+}
+
+async function assertMediaScope(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actor: { id: number; role: string }, media: typeof mediaAssets.$inferSelect) {
+  if (actor.role === "administrador principal") return;
+  if (!media.partnerId) {
+    if (media.createdBy !== actor.id) throw new TRPCError({ code: "FORBIDDEN", message: "Esta mídia pertence a outro operador." });
+    return;
+  }
+  try {
+    await assertPartnerScope({ db, actor, partnerId: media.partnerId, territoryIds: media.territoryId ? [media.territoryId] : [], resourceLabel: "esta mídia", requirePartner: true });
+  } catch (error) {
+    throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo para esta mídia." });
+  }
+}
+
+export const mediaRouter = router({
+  homeBackgrounds: publicProcedure.query(async () => {
+    const db = await requireDb();
+    const commercial = await db.select().from(mediaAssets).innerJoin(commercialMiniclips, eq(mediaAssets.id, commercialMiniclips.mediaId)).where(and(eq(commercialMiniclips.status, "Ativo"), eq(commercialMiniclips.homeFeatured, true), eq(commercialMiniclips.authorizedForHome, true), eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(commercialMiniclips.updatedAt)).limit(1);
+    if (commercial[0]) return [commercial[0].mediaAssets];
+    return db.select().from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.backgroundPriority), desc(mediaAssets.createdAt)).limit(4);
+  }),
+  homeBackgroundConfig: publicProcedure.query(async () => {
+    const db = await requireDb();
+    const stored = (await db.select().from(settings).where(eq(settings.settingKey, "homeHeroVideoTransition")).limit(1))[0];
+    return parseTransition(stored?.settingValue);
+  }),
+  backgroundClips: protectedProcedure.query(async ({ ctx }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    return db.select().from(mediaAssets).where(and(eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.backgroundEligible), desc(mediaAssets.backgroundPriority), desc(mediaAssets.createdAt));
+  }),
+  list: protectedProcedure.query(async ({ ctx }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    if (ctx.user.role === "administrador principal") return db.select().from(mediaAssets).orderBy(desc(mediaAssets.createdAt));
+    const memberships = await activePartnerMemberships(db, ctx.user.id);
+    const partnerIds = memberships.map(item => item.partnerId);
+    const rows = await db.select().from(mediaAssets).orderBy(desc(mediaAssets.createdAt));
+    return rows.filter(media => media.createdBy === ctx.user.id || (media.partnerId !== null && partnerIds.includes(media.partnerId)));
+  }),
+  create: protectedProcedure.input(z.object({
+    mediaType: z.enum(["foto", "vídeo"]), assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/manus-storage\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência de mídia precisa ser uma URL válida ou um caminho interno do Acervo." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), publicationAllowed: z.boolean(), projectCoverage: z.string().max(280).optional(), terms: z.string().max(5000).optional(), usageExpiresAt: z.date().optional(), durationSeconds: z.number().int().min(1).max(60).optional(), backgroundEligible: z.boolean().optional(), backgroundPriority: z.number().int().min(0).max(99).optional(), uploadId: z.string().min(12).max(96).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const upload = input.uploadId ? (await db.select().from(uploadSessions).where(eq(uploadSessions.id, input.uploadId)).limit(1))[0] : null;
+    if (input.uploadId && (!upload || upload.userId !== ctx.user.id || !["Pronto", "Aprovado", "Publicado"].includes(upload.status) || !upload.assetUrl || !upload.storageKey)) throw new TRPCError({ code: "BAD_REQUEST", message: "Conclua um upload seu antes de registrá-lo no Acervo." });
+    if (upload && (upload.assetUrl !== input.assetUrl || upload.storageKey !== input.storageKey)) throw new TRPCError({ code: "BAD_REQUEST", message: "A referência da mídia não corresponde à sessão de upload concluída." });
+    const partnerId = upload?.partnerId ?? input.partnerId ?? null;
+    const territoryId = upload?.territoryId ?? input.territoryId ?? null;
+    if (partnerId || territoryId) {
+      try { await assertPartnerScope({ db, actor: ctx.user, partnerId, territoryIds: territoryId ? [territoryId] : [], resourceLabel: "este registro de mídia", requirePartner: Boolean(partnerId) }); }
+      catch (error) { throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo para registrar esta mídia." }); }
+    }
+    const durationSeconds = upload?.durationSeconds ?? input.durationSeconds;
+    if (input.mediaType === "vídeo" && !durationSeconds) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe a duração confirmada do vídeo. Vídeos documentais devem ter até 60 segundos." });
+    const { uploadId, partnerId: _partnerId, territoryId: _territoryId, ...values } = input;
+    const result = await db.insert(mediaAssets).values({ ...values, storageKey: upload?.storageKey ?? values.storageKey, filename: upload?.filename ?? values.filename, fileSize: upload?.fileSize ?? undefined, durationSeconds, partnerId, territoryId, uploadId: uploadId ?? null, checksum: upload?.checksum ?? null, uploadStatus: "Pronto", createdBy: ctx.user.id });
+    const id = Number(result[0].insertId);
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId, territoryId, resourceType: "media", resourceId: id, action: "media-registered", nextState: { uploadId: uploadId ?? null, mediaType: input.mediaType, publicationAllowed: input.publicationAllowed }, detail: "Mídia registrada no Acervo; publicação permanece dependente de autorização e curadoria." });
+    publishEditorialEvent("media-created", id);
+    return { id };
+  }),
+  approveUpload: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current || current.deletedAt) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
+    await assertMediaScope(db, ctx.user, current);
+    if (current.uploadStatus !== "Pronto" && current.uploadStatus !== "Aprovado") throw new TRPCError({ code: "BAD_REQUEST", message: "Somente uma mídia pronta pode ser aprovada para uso editorial." });
+    await db.update(mediaAssets).set({ uploadStatus: "Aprovado" }).where(eq(mediaAssets.id, current.id));
+    if (current.uploadId) await db.update(uploadSessions).set({ status: "Aprovado", approvedBy: ctx.user.id, approvedAt: new Date() }).where(eq(uploadSessions.id, current.uploadId));
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: current.id, action: "media-approved", previousState: { uploadStatus: current.uploadStatus }, nextState: { uploadStatus: "Aprovado" }, detail: "Mídia aprovada para vínculo editorial; aprovação não equivale a publicação." });
+    return { success: true };
+  }),
+  rejectUpload: protectedProcedure.input(z.object({ id: z.number().int().positive(), reason: z.string().trim().min(3).max(2000) })).mutation(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current || current.deletedAt) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
+    await assertMediaScope(db, ctx.user, current);
+    await db.update(mediaAssets).set({ uploadStatus: "Rejeitado", state: "Arquivado" }).where(eq(mediaAssets.id, current.id));
+    if (current.uploadId) await db.update(uploadSessions).set({ status: "Rejeitado", errorMessage: input.reason, rejectedBy: ctx.user.id, rejectedAt: new Date() }).where(eq(uploadSessions.id, current.uploadId));
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: current.id, action: "media-rejected", previousState: { uploadStatus: current.uploadStatus }, nextState: { uploadStatus: "Rejeitado" }, detail: input.reason });
+    return { success: true };
+  }),
+  update: protectedProcedure.input(z.object({ id: z.number().int().positive(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), projectCoverage: z.string().max(280).nullable().optional(), terms: z.string().max(5000).nullable().optional(), usageExpiresAt: z.date().nullable().optional(), publicationAllowed: z.boolean(), backgroundPriority: z.number().int().min(0).max(99).optional() })).mutation(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
+    if (current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "Restaure a mídia antes de editar seus metadados." });
+    await assertMediaScope(db, ctx.user, current);
+    const { id, ...values } = input;
+    const updated = await db.update(mediaAssets).set({ ...values, version: current.version + 1 }).where(and(eq(mediaAssets.id, id), eq(mediaAssets.version, current.version)));
+    if (!updated[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta mídia foi atualizada por outra pessoa. Reabra o Acervo antes de salvar." });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: id, action: "media-updated", previousState: { version: current.version }, nextState: { version: current.version + 1 }, detail: "Metadados e direitos da mídia atualizados." });
+    publishEditorialEvent("media-updated", id);
+    return { success: true };
+  }),
+  archive: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
+    if (current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "A mídia está na lixeira e deve ser restaurada pelo Super Admin." });
+    await assertMediaScope(db, ctx.user, current);
+    const archived = await db.update(mediaAssets).set({ state: "Arquivado", backgroundEligible: false, version: current.version + 1 }).where(and(eq(mediaAssets.id, input.id), eq(mediaAssets.version, current.version)));
+    if (!archived[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta mídia foi alterada por outra pessoa. Reabra o Acervo antes de arquivar." });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: input.id, action: "media-archived", previousState: { state: current.state }, nextState: { state: "Arquivado" }, detail: "Mídia arquivada e retirada de usos ativos." });
+    publishEditorialEvent("media-archived", input.id);
+    return { success: true };
+  }),
+  reactivate: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
+    if (current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "A mídia está na lixeira e deve ser restaurada pelo Super Admin." });
+    await db.update(mediaAssets).set({ state: "Ativo" }).where(eq(mediaAssets.id, input.id)); publishEditorialEvent("media-reactivated", input.id);
+    return { success: true };
+  }),
+  delete: protectedProcedure.input(z.object({ id: z.number().int().positive(), note: z.string().trim().min(3).max(5000) })).mutation(async ({ ctx, input }) => {
+    requireSuperAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
+    if (current.deletedAt) return { success: true };
+    await db.update(mediaAssets).set({ state: "Arquivado", backgroundEligible: false, deletedAt: new Date(), deletedBy: ctx.user.id, deletionNote: input.note }).where(eq(mediaAssets.id, input.id)); publishEditorialEvent("media-trashed", input.id);
+    return { success: true };
+  }),
+  restore: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    requireSuperAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
+    await db.update(mediaAssets).set({ state: "Arquivado", deletedAt: null, deletedBy: null, deletionNote: null }).where(eq(mediaAssets.id, input.id)); publishEditorialEvent("media-restored", input.id);
+    return { success: true };
+  }),
+  createBackgroundClip: protectedProcedure.input(z.object({
+    assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/manus-storage\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência do vídeo precisa ser válida." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), durationSeconds: z.number().int().min(1).max(60), priority: z.number().int().min(0).max(99),
+  })).mutation(async ({ ctx, input }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const activeCount = await db.select({ id: mediaAssets.id }).from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.state, "Ativo")));
+    if (activeCount.length >= 4) throw new TRPCError({ code: "BAD_REQUEST", message: "A sequência do fundo vivo comporta até quatro miniclipes. Remova um da sequência antes de adicionar outro." });
+    const result = await db.insert(mediaAssets).values({ mediaType: "vídeo", assetUrl: input.assetUrl, storageKey: input.storageKey, filename: input.filename, origin: input.origin, credit: input.credit, authorization: input.authorization, purpose: input.purpose, publicationAllowed: true, backgroundEligible: true, backgroundPriority: input.priority, durationSeconds: input.durationSeconds, createdBy: ctx.user.id });
+    const id = Number(result[0].insertId); publishEditorialEvent("background-clip-created", id);
+    return { id };
+  }),
+  setBackgroundClip: protectedProcedure.input(z.object({ id: z.number().int().positive(), active: z.boolean(), priority: z.number().int().min(0).max(99).optional() })).mutation(async ({ ctx, input }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current || current.mediaType !== "vídeo") throw new TRPCError({ code: "NOT_FOUND", message: "Miniclipe não encontrado." });
+    if (input.active && (!canActivateBackgroundClip(current) || !current.durationSeconds || current.durationSeconds > 60)) throw new TRPCError({ code: "BAD_REQUEST", message: "O miniclipe precisa estar ativo, autorizado e ter no máximo 60 segundos." });
+    if (input.active && !current.backgroundEligible) {
+      const activeCount = await db.select({ id: mediaAssets.id }).from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.state, "Ativo")));
+      if (activeCount.length >= 4) throw new TRPCError({ code: "BAD_REQUEST", message: "A sequência do fundo vivo comporta até quatro miniclipes. Remova um da sequência antes de ativar outro." });
+    }
+    await db.update(mediaAssets).set({ backgroundEligible: input.active, backgroundPriority: input.active ? (input.priority ?? current.backgroundPriority) : 0 }).where(eq(mediaAssets.id, input.id)); publishEditorialEvent("background-clip-updated", input.id);
+    return { success: true };
+  }),
+  saveHomeBackgroundConfig: protectedProcedure.input(heroTransitionSchema).mutation(async ({ ctx, input }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const settingValue = JSON.stringify(input);
+    const existing = (await db.select({ id: settings.id }).from(settings).where(eq(settings.settingKey, "homeHeroVideoTransition")).limit(1))[0];
+    if (existing) await db.update(settings).set({ settingValue, updatedBy: ctx.user.id }).where(eq(settings.id, existing.id));
+    else await db.insert(settings).values({ settingKey: "homeHeroVideoTransition", settingValue, updatedBy: ctx.user.id });
+    publishEditorialEvent("home-background-config-updated");
+    return input;
+  }),
+  users: protectedProcedure.query(async ({ ctx }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, lastSignedIn: users.lastSignedIn }).from(users).orderBy(users.name);
+  }),
+});

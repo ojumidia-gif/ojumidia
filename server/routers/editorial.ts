@@ -1,0 +1,585 @@
+import { TRPCError } from "@trpc/server";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or } from "drizzle-orm";
+import { z } from "zod";
+import { commercialEditorialAuthorizations, editorialActivities, highlightSuggestions, mediaAssets, publicationMedia, publicationRelations, publicationTaxonomies, publications, taxonomies, taxonomyMedia, teams, users } from "../../drizzle/schema";
+import { canAdvanceStatus, canEditPublication, CONTENT_STATUS, EDITORIAL_ROLES, nextEditorialStatus, type ContentStatus, type EditorialRole } from "../editorialPolicy";
+import { getDb } from "../db";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { publishEditorialEvent } from "../editorialEvents";
+import { canUseCommercialLocation, canUseCommercialMedia, canUseCommercialNarrative, canUseOnPortal, type CommercialEditorialAuthorization } from "../commercialEditorialAuthorization";
+import { activePartnerMemberships, assertPartnerScope, recordAuditEvent } from "../partnerScope";
+import { editorialTrashDeadline, isEditorialTrashExpired, permanentlyPurgePublication } from "../editorialTrash";
+
+function slugify(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+async function resolveTeamId(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  teamId?: number | null,
+  teamCredit?: string | null,
+) {
+  if (teamId) return teamId;
+  const name = teamCredit?.trim();
+  if (!name) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe ou selecione a equipe responsável." });
+  const slug = `${slugify(name)}-${Date.now().toString(36)}`;
+  const created = await db.insert(teams).values({ name, slug });
+  return Number(created[0].insertId);
+}
+
+async function requireDb() {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." });
+  return db;
+}
+
+function assertAdmin(role: EditorialRole) {
+  if (!["administrador", "administrador principal"].includes(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem executar esta ação." });
+}
+function assertPrincipal(role: EditorialRole) {
+  if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode excluir ou restaurar conteúdos." });
+}
+
+async function publicationTerritoryIds(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, publicationId: number) {
+  const links = await db.select({ taxonomyId: publicationTaxonomies.taxonomyId }).from(publicationTaxonomies).where(eq(publicationTaxonomies.publicationId, publicationId));
+  if (!links.length) return [];
+  const rows = await db.select({ id: taxonomies.id }).from(taxonomies).where(and(inArray(taxonomies.id, links.map(link => link.taxonomyId)), eq(taxonomies.dimension, "Território")));
+  return rows.map(row => row.id);
+}
+
+async function assertPublicationScope(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actor: { id: number; role: string }, publication: typeof publications.$inferSelect, label: string) {
+  if (actor.role === "administrador principal") return;
+  if (!publication.partnerId) return;
+  const territoryIds = await publicationTerritoryIds(db, publication.id);
+  try { await assertPartnerScope({ db, actor, partnerId: publication.partnerId, territoryIds, resourceLabel: label, requirePartner: true }); }
+  catch (error) { throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo territorial para esta publicação." }); }
+}
+
+async function getMatchingPublicationIds(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, taxonomyIds: number[]) {
+  if (!taxonomyIds.length) return null;
+  const groups = await Promise.all(taxonomyIds.map(id => db.select({ publicationId: publicationTaxonomies.publicationId }).from(publicationTaxonomies).where(eq(publicationTaxonomies.taxonomyId, id))));
+  const first = groups[0]?.map(row => row.publicationId) ?? [];
+  return first.filter(id => groups.every(group => group.some(row => row.publicationId === id)));
+}
+
+type PortalPublication = Pick<typeof publications.$inferSelect, "status" | "isPublic" | "commercialRequestId">;
+
+export function requiresCommercialEditorialAuthorization(publication: Pick<PortalPublication, "commercialRequestId">) {
+  return publication.commercialRequestId !== null;
+}
+
+export function canExposeOnPublicPortal(publication: PortalPublication, authorization?: boolean | CommercialEditorialAuthorization | null) {
+  const authorized = typeof authorization === "boolean" ? authorization : canUseOnPortal(authorization);
+  return publication.status === "Publicada" && publication.isPublic && (!requiresCommercialEditorialAuthorization(publication) || authorized);
+}
+
+export function canAttachWithinMediaLimit(input: { contentKind: string; mediaType: "foto" | "vídeo"; photoLimit: number | null; videoLimit: number | null; attachedPhotoCount: number; attachedVideoCount: number; hasEventRelation?: boolean }) {
+  if (input.contentKind === "Fotografia documental") return input.mediaType === "foto" && input.attachedPhotoCount < 5;
+  if (input.mediaType === "foto") return input.attachedPhotoCount < 5;
+  return input.attachedVideoCount < 2;
+}
+
+export function balanceFeaturedPublications<T extends { contentKind: string }>(orderedPublications: T[], maximum = 6) {
+  const firstOfEachKind: T[] = [];
+  const remaining: T[] = [];
+  for (const publication of orderedPublications) (firstOfEachKind.some(item => item.contentKind === publication.contentKind) ? remaining : firstOfEachKind).push(publication);
+  return [...firstOfEachKind, ...remaining].slice(0, maximum);
+}
+
+export function toPortalPublication<T extends typeof publications.$inferSelect>(publication: T, authorization: CommercialEditorialAuthorization | null) {
+  const { commercialRequestId: _commercialRequestId, teamId: _teamId, createdBy: _createdBy, editedBy: _editedBy, approvedBy: _approvedBy, unpublishedAt: _unpublishedAt, unpublishedBy: _unpublishedBy, deletedAt: _deletedAt, deletedBy: _deletedBy, deletionNote: _deletionNote, version: _version, ...safePublication } = publication;
+  return {
+    ...safePublication,
+    editorialAuthorization: requiresCommercialEditorialAuthorization(publication)
+      ? {
+          materialFromCommercialCoverage: true as const,
+          status: authorization?.status ?? "Pendente",
+          authorized: canUseOnPortal(authorization),
+          authorizedAt: authorization?.authorizedAt ?? null,
+        }
+      : null,
+  };
+}
+
+async function commercialAuthorizationByRequestId(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  requestId: number | null,
+) {
+  if (!requestId) return null;
+  return (await db.select().from(commercialEditorialAuthorizations).where(eq(commercialEditorialAuthorizations.requestId, requestId)).limit(1))[0] ?? null;
+}
+
+async function portalAuthorizedPublications(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  records: (typeof publications.$inferSelect)[],
+) {
+  const requestIds = Array.from(new Set(records.flatMap(record => record.commercialRequestId ? [record.commercialRequestId] : [])));
+  const authorizations = requestIds.length
+    ? await db.select().from(commercialEditorialAuthorizations).where(inArray(commercialEditorialAuthorizations.requestId, requestIds))
+    : [];
+  const byRequestId = new Map(authorizations.map(authorization => [authorization.requestId, authorization]));
+  return records
+    .map(publication => ({ publication, authorization: publication.commercialRequestId ? (byRequestId.get(publication.commercialRequestId) ?? null) : null }))
+    .filter(({ publication, authorization }) => canExposeOnPublicPortal(publication, authorization));
+}
+
+async function assertCommercialPublicationCanPublish(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, publication: typeof publications.$inferSelect) {
+  const authorization = await commercialAuthorizationByRequestId(db, publication.commercialRequestId);
+  if (!requiresCommercialEditorialAuthorization(publication)) return authorization;
+  if (!canUseOnPortal(authorization)) throw new TRPCError({ code: "BAD_REQUEST", message: "Este trabalho contratado permanece privado. Registre uma autorização editorial válida, com uso no portal e escopo de conteúdo, antes de publicar." });
+  const links = await db.select().from(publicationMedia).where(eq(publicationMedia.publicationId, publication.id));
+  const ids = links.map(link => link.mediaId);
+  const media = ids.length ? await db.select().from(mediaAssets).where(inArray(mediaAssets.id, ids)) : [];
+  if (media.some(item => !canUseCommercialMedia(authorization, item.mediaType))) throw new TRPCError({ code: "BAD_REQUEST", message: "A autorização editorial não permite o tipo de mídia vinculado a esta publicação." });
+  if (links.some(link => link.location?.trim()) && !canUseCommercialLocation(authorization)) throw new TRPCError({ code: "BAD_REQUEST", message: "A autorização editorial não permite divulgar localização nesta publicação." });
+  const hasNarrative = Boolean(publication.summary?.trim() || publication.body?.trim() || links.some(link => link.caption?.trim() || link.biography?.trim()));
+  if (hasNarrative && !canUseCommercialNarrative(authorization)) throw new TRPCError({ code: "BAD_REQUEST", message: "A autorização editorial não permite divulgar descrição, história ou biografia neste material." });
+  return authorization;
+}
+
+export const searchInput = z.object({
+  query: z.string().trim().max(160).optional(),
+  themeId: z.number().int().positive().optional(),
+  territoryId: z.number().int().positive().optional(),
+  contentTypeId: z.number().int().positive().optional(),
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
+});
+export const photoDocumentaryInput = z.object({
+  limit: z.number().int().min(1).max(24).default(8),
+  offset: z.number().int().min(0).default(0),
+});
+
+export const editorialRouter = router({
+  taxonomies: publicProcedure.query(async () => {
+    const db = await requireDb();
+    return db.select().from(taxonomies).orderBy(taxonomies.dimension, taxonomies.name);
+  }),
+
+  publicTerritories: publicProcedure.query(async () => {
+    const db = await requireDb();
+    const territories = await db.select().from(taxonomies).where(eq(taxonomies.dimension, "Território")).orderBy(taxonomies.name);
+    if (!territories.length) return [];
+    const territoryIds = territories.map(item => item.id);
+    const relations = await db.select().from(publicationTaxonomies).where(inArray(publicationTaxonomies.taxonomyId, territoryIds));
+    const relationPublicationIds = Array.from(new Set(relations.map(item => item.publicationId)));
+    const published = relationPublicationIds.length ? await db.select({ id: publications.id }).from(publications).where(and(inArray(publications.id, relationPublicationIds), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt))) : [];
+    const publishedIds = new Set(published.map(item => item.id));
+    const mediaLinks = await db.select().from(taxonomyMedia).where(inArray(taxonomyMedia.taxonomyId, territoryIds)).orderBy(desc(taxonomyMedia.isPrimary), taxonomyMedia.displayOrder);
+    const mediaIds = Array.from(new Set(mediaLinks.map(item => item.mediaId)));
+    const assets = mediaIds.length ? await db.select().from(mediaAssets).where(and(inArray(mediaAssets.id, mediaIds), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))) : [];
+    return territories.map(territory => {
+      const territoryMedia = mediaLinks.filter(link => link.taxonomyId === territory.id).map(link => assets.find(asset => asset.id === link.mediaId)).find(Boolean);
+      const contentCount = relations.filter(link => link.taxonomyId === territory.id && publishedIds.has(link.publicationId)).length;
+      return { id: territory.id, name: territory.name, slug: territory.slug, description: territory.description, contentCount, media: territoryMedia ? { id: territoryMedia.id, assetUrl: territoryMedia.assetUrl, mediaType: territoryMedia.mediaType, credit: territoryMedia.credit } : null };
+    });
+  }),
+
+  search: publicProcedure.input(searchInput).query(async ({ input }) => {
+    const db = await requireDb();
+    const taxonomyIds = [input.themeId, input.territoryId, input.contentTypeId].filter((id): id is number => Boolean(id));
+    const matchingIds = await getMatchingPublicationIds(db, taxonomyIds);
+    if (matchingIds && matchingIds.length === 0) return [];
+    const conditions = [];
+    conditions.push(and(eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt))!);
+    if (matchingIds) conditions.push(inArray(publications.id, matchingIds));
+    if (input.query) {
+      const term = `%${input.query}%`;
+      conditions.push(or(like(publications.title, term), like(publications.summary, term), like(publications.body, term))!);
+    }
+    if (input.startDate) conditions.push(gte(publications.publishedAt, input.startDate));
+    if (input.endDate) conditions.push(lte(publications.publishedAt, input.endDate));
+    const records = await db.select().from(publications).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(publications.publishedAt), desc(publications.createdAt));
+    return (await portalAuthorizedPublications(db, records)).map(({ publication, authorization }) => toPortalPublication(publication, authorization));
+  }),
+
+  featured: publicProcedure.input(z.object({ territoryId: z.number().int().positive().optional() })).query(async ({ input }) => {
+    const db = await requireDb();
+    const territoryIds = input.territoryId ? await getMatchingPublicationIds(db, [input.territoryId]) : null;
+    const geographicTaxonomies = await db.select({ id: taxonomies.id }).from(taxonomies).where(or(eq(taxonomies.dimension, "Território"), eq(taxonomies.dimension, "Localização")));
+    const geographicIds = geographicTaxonomies.map(item => item.id);
+    const geographicLinks = geographicIds.length ? await db.select().from(publicationTaxonomies).where(inArray(publicationTaxonomies.taxonomyId, geographicIds)) : [];
+    const geographicPublicationIds = new Set(geographicLinks.map(link => link.publicationId));
+    const conditions = [eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt)];
+    const records = await db.select().from(publications).where(and(...conditions)).orderBy(desc(publications.manualFeatured), desc(publications.relevance), publications.sponsored, desc(publications.publishedAt));
+    const permitted = await portalAuthorizedPublications(db, records);
+    const authorizationByPublicationId = new Map(permitted.map(item => [item.publication.id, item.authorization]));
+    const permittedPublications = permitted.map(item => item.publication);
+    const placementRank: Record<string, number> = { "Destaque principal": 0, "Destaque secundário": 1, "Recomendado": 2, "Nenhum": 3 };
+    const curated = permittedPublications.sort((a, b) => (placementRank[a.homePlacement] - placementRank[b.homePlacement]) || (a.homeOrder - b.homeOrder) || Number(b.manualFeatured) - Number(a.manualFeatured) || b.relevance - a.relevance);
+    const territoryPrioritized = curated.sort((a, b) => (territoryIds?.length ? Number(territoryIds.includes(b.id)) - Number(territoryIds.includes(a.id)) : 0) || Number(geographicPublicationIds.has(b.id)) - Number(geographicPublicationIds.has(a.id)));
+    const selected = balanceFeaturedPublications(territoryPrioritized);
+    return Promise.all(selected.map(async publication => {
+      const link = (await db.select().from(publicationMedia).where(eq(publicationMedia.publicationId, publication.id)).orderBy(publicationMedia.displayOrder).limit(1))[0];
+      const cover = link ? (await db.select().from(mediaAssets).where(and(eq(mediaAssets.id, link.mediaId), isNull(mediaAssets.deletedAt))).limit(1))[0] : null;
+      return { ...toPortalPublication(publication, authorizationByPublicationId.get(publication.id) ?? null), coverUrl: cover?.assetUrl ?? null, coverType: cover?.mediaType ?? null, coverCredit: cover?.credit ?? null };
+    }));
+  }),
+
+  photoDocumentary: publicProcedure.input(photoDocumentaryInput).query(async ({ input }) => {
+    const db = await requireDb();
+    const photos = await db.select().from(publications).where(and(eq(publications.contentKind, "Fotografia documental"), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt))).orderBy(desc(publications.publishedAt));
+    const permitted = await portalAuthorizedPublications(db, photos);
+    const page = permitted.slice(input.offset, input.offset + input.limit);
+    const collections = await Promise.all(page.map(async ({ publication, authorization }) => {
+      const links = await db.select().from(publicationMedia).where(eq(publicationMedia.publicationId, publication.id)).orderBy(publicationMedia.displayOrder);
+      const ids = links.map(link => link.mediaId); const media = ids.length ? await db.select().from(mediaAssets).where(and(inArray(mediaAssets.id, ids), isNull(mediaAssets.deletedAt))) : [];
+      return { ...toPortalPublication(publication, authorization), photos: links.map(link => ({ ...media.find(item => item.id === link.mediaId), caption: link.caption, biography: link.biography, location: link.location, capturedAt: link.capturedAt })) };
+    }));
+    return { collections, total: permitted.length, hasMore: input.offset + collections.length < permitted.length };
+  }),
+
+  bySlug: publicProcedure.input(z.object({ slug: z.string().min(1) })).query(async ({ input }) => {
+    const db = await requireDb();
+    const result = await db.select().from(publications).where(and(eq(publications.slug, input.slug), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt))).limit(1);
+    if (!result[0]) return null;
+    const authorization = await commercialAuthorizationByRequestId(db, result[0].commercialRequestId);
+    if (!canExposeOnPublicPortal(result[0], authorization)) return null;
+    const links = await db.select().from(publicationMedia).where(eq(publicationMedia.publicationId, result[0].id));
+    const mediaIds = links.map(link => link.mediaId);
+    const media = mediaIds.length ? await db.select().from(mediaAssets).where(and(inArray(mediaAssets.id, mediaIds), isNull(mediaAssets.deletedAt))) : [];
+    const taxonomyLinks = await db.select().from(publicationTaxonomies).where(eq(publicationTaxonomies.publicationId, result[0].id));
+    const taxonomyIds = taxonomyLinks.map(link => link.taxonomyId);
+    const publicationTaxonomy = taxonomyIds.length ? await db.select().from(taxonomies).where(inArray(taxonomies.id, taxonomyIds)) : [];
+    return { ...toPortalPublication(result[0], authorization), media: media.sort((a, b) => (links.find(link => link.mediaId === a.id)?.displayOrder ?? 0) - (links.find(link => link.mediaId === b.id)?.displayOrder ?? 0)), taxonomies: publicationTaxonomy };
+  }),
+
+  adminList: protectedProcedure.query(async ({ ctx }) => {
+    const db = await requireDb();
+    const rows = await db.select().from(publications).orderBy(desc(publications.updatedAt));
+    if (ctx.user.role === "administrador principal") return rows;
+    const scoped = await Promise.all(rows.map(async publication => {
+      try { await assertPublicationScope(db, ctx.user, publication, "esta publicação"); return publication; }
+      catch { return null; }
+    }));
+    return scoped.filter((publication): publication is typeof rows[number] => Boolean(publication));
+  }),
+
+  trashList: protectedProcedure.query(async ({ ctx }) => {
+    assertPrincipal(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const rows = await db.select().from(publications).where(isNotNull(publications.deletedAt)).orderBy(desc(publications.deletedAt));
+    const deletedByIds = Array.from(new Set(rows.map(row => row.deletedBy).filter((id): id is number => typeof id === "number")));
+    const actors = deletedByIds.length ? await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, deletedByIds)) : [];
+    const byActor = new Map(actors.map(actor => [actor.id, actor.name || actor.email || "Super Admin"]));
+    const now = new Date();
+    return rows.map(row => ({ ...row, deletedByName: row.deletedBy ? byActor.get(row.deletedBy) || "Super Admin" : null, restoreUntil: row.deletedAt ? editorialTrashDeadline(row.deletedAt) : null, expired: row.deletedAt ? isEditorialTrashExpired(row.deletedAt, now) : false }));
+  }),
+
+  preview: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const result = await db.select().from(publications).where(eq(publications.id, input.id)).limit(1);
+    if (!result[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    await assertPublicationScope(db, ctx.user, result[0], "a prévia desta publicação");
+    const personIds = [result[0].createdBy, result[0].editedBy, result[0].approvedBy].filter((id): id is number => typeof id === "number");
+    const contributors = personIds.length ? await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, personIds)) : [];
+    const links = await db.select().from(publicationMedia).where(eq(publicationMedia.publicationId, input.id));
+    const mediaIds = links.map(link => link.mediaId);
+    const media = mediaIds.length ? await db.select().from(mediaAssets).where(inArray(mediaAssets.id, mediaIds)) : [];
+    const taxonomyLinks = await db.select().from(publicationTaxonomies).where(eq(publicationTaxonomies.publicationId, input.id));
+    const taxonomyIds = taxonomyLinks.map(link => link.taxonomyId);
+    const publicationTaxonomy = taxonomyIds.length ? await db.select().from(taxonomies).where(inArray(taxonomies.id, taxonomyIds)) : [];
+    const team = result[0].teamId ? await db.select().from(teams).where(eq(teams.id, result[0].teamId)).limit(1) : [];
+    const commercialAuthorization = await commercialAuthorizationByRequestId(db, result[0].commercialRequestId);
+    return { ...result[0], teamCredit: team[0]?.name || null, contributors, media: media.sort((a, b) => (links.find(link => link.mediaId === a.id)?.displayOrder ?? 0) - (links.find(link => link.mediaId === a.id)?.displayOrder ?? 0)), taxonomies: publicationTaxonomy, commercialEditorial: result[0].commercialRequestId ? { requiresAuthorization: true as const, authorized: canUseOnPortal(commercialAuthorization), authorizedAt: commercialAuthorization?.authorizedAt ?? null, status: commercialAuthorization?.status ?? "Pendente", authorization: commercialAuthorization } : null };
+  }),
+
+  create: protectedProcedure.input(z.object({ title: z.string().min(4).max(280), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]), subtitle: z.string().max(420).optional(), summary: z.string().max(2000).optional(), body: z.string().max(30000).optional(), teamId: z.number().int().positive().optional(), teamCredit: z.string().min(2).max(160).optional(), photoLimit: z.number().int().min(0).max(200).optional(), videoLimit: z.number().int().min(0).max(80).optional() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const role = ctx.user.role as EditorialRole;
+    if (!["criador", "editor", "administrador", "administrador principal"].includes(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode criar publicações." });
+    const base = slugify(input.title) || "publicacao";
+    const slug = `${base}-${Date.now().toString(36)}`;
+    const teamId = await resolveTeamId(db, input.teamId, input.teamCredit);
+    const { teamCredit: _teamCredit, ...publicationInput } = input;
+    const result = await db.insert(publications).values({ ...publicationInput, photoLimit: input.contentKind === "Fotografia documental" ? 5 : input.photoLimit, videoLimit: input.contentKind === "Fotografia documental" ? 0 : input.videoLimit, teamId, slug, createdBy: ctx.user.id, status: "Rascunho", isPublic: false });
+    const publicationId = Number(result[0].insertId);
+    await db.insert(editorialActivities).values({ publicationId, actorId: ctx.user.id, toStatus: "Rascunho", note: "Publicação criada." });
+    publishEditorialEvent("publication-created", publicationId);
+    return { id: publicationId, slug };
+  }),
+
+  update: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), title: z.string().min(4).max(280).optional(), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]).optional(), subtitle: z.string().max(420).nullable().optional(), summary: z.string().max(2000).nullable().optional(), body: z.string().max(30000).nullable().optional(), teamId: z.number().int().positive().nullable().optional(), teamCredit: z.string().min(2).max(160).nullable().optional(), revisionNote: z.string().max(1000).optional(), sponsored: z.boolean().optional(), sponsorDisclosure: z.string().max(280).nullable().optional(), commercialRequestId: z.number().int().positive().nullable().optional(), photoLimit: z.number().int().min(0).max(200).nullable().optional(), videoLimit: z.number().int().min(0).max(80).nullable().optional(), externalAlbumUrl: z.string().url().nullable().optional(), externalVideoUrl: z.string().url().nullable().optional(), taxonomyIds: z.array(z.number().int().positive()).optional() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const current = await db.select().from(publications).where(eq(publications.id, input.id)).limit(1);
+    if (!current[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    await assertPublicationScope(db, ctx.user, current[0], "esta publicação");
+    const role = ctx.user.role as EditorialRole;
+    if (!canEditPublication(role, current[0].status as ContentStatus)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode editar nesta etapa." });
+    const { id, taxonomyIds, expectedVersion, teamCredit, revisionNote, ...values } = input;
+    if (current[0].version !== expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de salvar." });
+    const resolvedTeamId = teamCredit ? await resolveTeamId(db, values.teamId, teamCredit) : values.teamId;
+    const updateValues: Partial<typeof publications.$inferInsert> = { ...values };
+    let heldForEditorialAuthorization = false;
+    if (updateValues.commercialRequestId !== undefined && updateValues.commercialRequestId !== null) {
+      const authorization = await commercialAuthorizationByRequestId(db, updateValues.commercialRequestId);
+      if (!canUseOnPortal(authorization) && current[0].isPublic) {
+        updateValues.isPublic = false;
+        updateValues.unpublishedAt = new Date();
+        updateValues.unpublishedBy = ctx.user.id;
+        heldForEditorialAuthorization = true;
+      }
+    }
+    const updateResult = await db.update(publications).set({ ...updateValues, ...(resolvedTeamId ? { teamId: resolvedTeamId } : {}), editedBy: ctx.user.id, version: current[0].version + 1 }).where(and(eq(publications.id, id), eq(publications.version, expectedVersion)));
+    if (!updateResult[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de salvar." });
+    if (current[0].status === "Publicada") await db.insert(editorialActivities).values({ publicationId: id, actorId: ctx.user.id, fromStatus: "Publicada", toStatus: "Publicada", note: heldForEditorialAuthorization ? "Conteúdo retirado do portal até que a autorização editorial expressa seja registrada na contratação." : revisionNote?.trim() || "Revisão editorial após publicação." });
+    if (taxonomyIds) {
+      await db.delete(publicationTaxonomies).where(eq(publicationTaxonomies.publicationId, id));
+      if (taxonomyIds.length) await db.insert(publicationTaxonomies).values(taxonomyIds.map(taxonomyId => ({ publicationId: id, taxonomyId })));
+    }
+    publishEditorialEvent("publication-updated", id);
+    return { success: true };
+  }),
+
+  attachMedia: protectedProcedure.input(z.object({ publicationId: z.number().int().positive(), mediaId: z.number().int().positive(), caption: z.string().max(1000).optional(), biography: z.string().max(5000).optional(), location: z.string().max(280).optional(), capturedAt: z.date().optional(), asCover: z.boolean().optional() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const publication = await db.select().from(publications).where(eq(publications.id, input.publicationId)).limit(1);
+    if (!publication[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    await assertPublicationScope(db, ctx.user, publication[0], "esta publicação");
+    if (!canEditPublication(ctx.user.role as EditorialRole, publication[0].status as ContentStatus)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode anexar mídias nesta etapa." });
+    const media = await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.mediaId)).limit(1);
+    if (!media[0] || !media[0].publicationAllowed || media[0].state !== "Ativo" || !["Aprovado", "Publicado"].includes(media[0].uploadStatus)) throw new TRPCError({ code: "BAD_REQUEST", message: "Esta mídia precisa estar ativa, autorizada e aprovada antes do vínculo editorial." });
+    if (publication[0].partnerId && media[0].partnerId !== publication[0].partnerId) throw new TRPCError({ code: "FORBIDDEN", message: "A mídia precisa pertencer ao mesmo Parceiro Ojú da publicação." });
+    const existing = await db.select().from(publicationMedia).where(eq(publicationMedia.publicationId, input.publicationId));
+    const existingIds = existing.map(link => link.mediaId);
+    const existingMedia = existingIds.length ? await db.select().from(mediaAssets).where(inArray(mediaAssets.id, existingIds)) : [];
+    const relationLinks = await db.select().from(publicationTaxonomies).where(eq(publicationTaxonomies.publicationId, input.publicationId));
+    const relatedTaxonomies = relationLinks.length ? await db.select().from(taxonomies).where(inArray(taxonomies.id, relationLinks.map(link => link.taxonomyId))) : [];
+    const hasEventRelation = relatedTaxonomies.some(taxonomy => taxonomy.dimension === "Evento");
+    const withinLimit = canAttachWithinMediaLimit({ contentKind: publication[0].contentKind, mediaType: media[0].mediaType, photoLimit: publication[0].photoLimit, videoLimit: publication[0].videoLimit, attachedPhotoCount: existingMedia.filter(item => item.mediaType === "foto").length, attachedVideoCount: existingMedia.filter(item => item.mediaType === "vídeo").length, hasEventRelation });
+    if (!withinLimit) throw new TRPCError({ code: "BAD_REQUEST", message: publication[0].contentKind === "Fotografia documental" ? "Fotografia documental permite no máximo cinco imagens e não aceita vídeos." : `Este conteúdo atingiu o limite de ${media[0].mediaType === "foto" ? "fotografias" : "vídeos"} definido pela equipe editorial.` });
+    if (publication[0].contentKind === "Fotografia documental" && (!input.caption?.trim() || !input.location?.trim() || !input.capturedAt || !input.biography?.trim())) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe título, data, local e biografia viva para cada fotografia documental." });
+    if (existing.some(link => link.mediaId === input.mediaId)) return { success: true };
+    if (input.asCover) await db.update(publicationMedia).set({ displayOrder: 1 }).where(eq(publicationMedia.publicationId, input.publicationId));
+    await db.insert(publicationMedia).values({ publicationId: input.publicationId, mediaId: input.mediaId, caption: input.caption, biography: input.biography, location: input.location, capturedAt: input.capturedAt, displayOrder: input.asCover ? 0 : existing.length + 1 });
+    publishEditorialEvent("media-attached", input.publicationId);
+    return { success: true };
+  }),
+
+  detachMedia: protectedProcedure.input(z.object({ publicationId: z.number().int().positive(), mediaId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const publication = (await db.select().from(publications).where(eq(publications.id, input.publicationId)).limit(1))[0];
+    if (!publication) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    await assertPublicationScope(db, ctx.user, publication, "esta publicação");
+    if (!canEditPublication(ctx.user.role as EditorialRole, publication.status as ContentStatus)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode remover mídias nesta etapa." });
+    const link = (await db.select().from(publicationMedia).where(and(eq(publicationMedia.publicationId, input.publicationId), eq(publicationMedia.mediaId, input.mediaId))).limit(1))[0];
+    if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "A mídia não está vinculada a esta publicação." });
+    await db.delete(publicationMedia).where(eq(publicationMedia.id, link.id));
+    publishEditorialEvent("media-detached", input.publicationId);
+    return { success: true };
+  }),
+
+  advanceStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const current = await db.select().from(publications).where(eq(publications.id, input.id)).limit(1);
+    if (!current[0] || current[0].deletedAt) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    await assertPublicationScope(db, ctx.user, current[0], "esta publicação");
+    if (current[0].version !== input.expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de alterar a etapa." });
+    const previous = current[0].status as ContentStatus;
+    const next = nextEditorialStatus(previous);
+    const role = ctx.user.role as EditorialRole;
+    if (!next || !canAdvanceStatus(role, previous)) throw new TRPCError({ code: "FORBIDDEN", message: "A transição solicitada não é permitida para seu papel." });
+    const values: Partial<typeof publications.$inferInsert> = { status: next, version: current[0].version + 1 };
+    if (next === "Aprovada") values.approvedBy = ctx.user.id;
+    if (next === "Publicada") {
+      await assertCommercialPublicationCanPublish(db, current[0]);
+      values.publishedAt = new Date();
+      values.isPublic = true;
+      values.unpublishedAt = null;
+      values.unpublishedBy = null;
+    }
+    if (next === "Arquivada") {
+      values.isPublic = false;
+      values.unpublishedAt = new Date();
+      values.unpublishedBy = ctx.user.id;
+    }
+    const changed = await db.update(publications).set(values).where(and(eq(publications.id, input.id), eq(publications.version, input.expectedVersion)));
+    if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de alterar a etapa." });
+    await db.insert(editorialActivities).values({ publicationId: input.id, actorId: ctx.user.id, fromStatus: previous, toStatus: next, note: input.note });
+    publishEditorialEvent("status-changed", input.id);
+    return { status: next };
+  }),
+
+  setFeatured: protectedProcedure.input(z.object({ id: z.number().int().positive(), manualFeatured: z.boolean(), relevance: z.number().int().min(0).max(100), homePlacement: z.enum(["Nenhum", "Destaque principal", "Destaque secundário", "Recomendado"]), homeOrder: z.number().int().min(0).max(99) })).mutation(async ({ ctx, input }) => {
+    if (ctx.user.role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "A curadoria da Home nacional é exclusiva do Super Admin." });
+    const db = await requireDb();
+    const current = (await db.select().from(publications).where(eq(publications.id, input.id)).limit(1))[0];
+    if (!current || current.deletedAt) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    const updated = await db.update(publications).set({ manualFeatured: input.manualFeatured, relevance: input.relevance, homePlacement: input.homePlacement, homeOrder: input.homeOrder, version: current.version + 1 }).where(and(eq(publications.id, input.id), eq(publications.version, current.version)));
+    if (!updated[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "A publicação foi atualizada por outra pessoa. Reabra-a antes de alterar a curadoria." });
+    publishEditorialEvent("curation-updated", input.id);
+    return { success: true };
+  }),
+
+  suggestHighlight: protectedProcedure.input(z.object({ publicationId: z.number().int().positive(), note: z.string().trim().min(3).max(2000).optional() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const publication = (await db.select().from(publications).where(eq(publications.id, input.publicationId)).limit(1))[0];
+    if (!publication || publication.deletedAt) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    await assertPublicationScope(db, ctx.user, publication, "a sugestão de destaque");
+    if (!publication.partnerId && ctx.user.role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente conteúdo territorial de parceiro pode ser sugerido por administração regional." });
+    const territoryIds = await publicationTerritoryIds(db, publication.id);
+    const existing = (await db.select().from(highlightSuggestions).where(and(eq(highlightSuggestions.publicationId, publication.id), eq(highlightSuggestions.status, "Sugerida"))).limit(1))[0];
+    if (existing) throw new TRPCError({ code: "CONFLICT", message: "Já existe uma sugestão pendente para esta publicação." });
+    const result = await db.insert(highlightSuggestions).values({ publicationId: publication.id, partnerId: publication.partnerId, territoryId: territoryIds[0] ?? null, note: input.note?.trim() || null, suggestedBy: ctx.user.id });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: publication.partnerId, territoryId: territoryIds[0] ?? null, resourceType: "highlight-suggestion", resourceId: Number(result[0].insertId), action: "highlight-suggested", nextState: { publicationId: publication.id }, detail: "Parceiro submeteu conteúdo para curadoria nacional; a Home não foi alterada automaticamente." });
+    return { id: Number(result[0].insertId) };
+  }),
+
+  highlightSuggestions: protectedProcedure.query(async ({ ctx }) => {
+    const db = await requireDb();
+    const rows = await db.select().from(highlightSuggestions).orderBy(desc(highlightSuggestions.createdAt));
+    if (ctx.user.role === "administrador principal") return rows;
+    const memberships = await activePartnerMemberships(db, ctx.user.id);
+    const partnerIds = memberships.map(item => item.partnerId);
+    return rows.filter(row => row.partnerId !== null && partnerIds.includes(row.partnerId));
+  }),
+
+  decideHighlightSuggestion: protectedProcedure.input(z.object({ id: z.number().int().positive(), approved: z.boolean(), decisionNote: z.string().trim().min(3).max(2000).optional(), homePlacement: z.enum(["Destaque principal", "Destaque secundário", "Recomendado"]).optional(), homeOrder: z.number().int().min(0).max(99).optional() })).mutation(async ({ ctx, input }) => {
+    assertPrincipal(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const suggestion = (await db.select().from(highlightSuggestions).where(eq(highlightSuggestions.id, input.id)).limit(1))[0];
+    if (!suggestion || suggestion.status !== "Sugerida") throw new TRPCError({ code: "BAD_REQUEST", message: "Esta sugestão não está disponível para decisão." });
+    const publication = (await db.select().from(publications).where(eq(publications.id, suggestion.publicationId)).limit(1))[0];
+    if (!publication || publication.deletedAt) throw new TRPCError({ code: "NOT_FOUND", message: "A publicação sugerida não está disponível." });
+    const now = new Date();
+    if (input.approved) {
+      const changed = await db.update(publications).set({ manualFeatured: true, homePlacement: input.homePlacement ?? "Recomendado", homeOrder: input.homeOrder ?? publication.homeOrder, version: publication.version + 1 }).where(and(eq(publications.id, publication.id), eq(publications.version, publication.version)));
+      if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "A publicação foi atualizada antes da decisão de curadoria." });
+    }
+    await db.update(highlightSuggestions).set({ status: input.approved ? "Aprovada" : "Recusada", decidedBy: ctx.user.id, decidedAt: now, decisionNote: input.decisionNote?.trim() || null }).where(eq(highlightSuggestions.id, suggestion.id));
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: suggestion.partnerId, territoryId: suggestion.territoryId, resourceType: "highlight-suggestion", resourceId: suggestion.id, action: input.approved ? "highlight-approved" : "highlight-rejected", previousState: { status: "Sugerida" }, nextState: { status: input.approved ? "Aprovada" : "Recusada" }, detail: "Decisão nacional de curadoria registrada pelo Super Admin." });
+    publishEditorialEvent("curation-updated", publication.id);
+    return { success: true };
+  }),
+
+  unpublish: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const role = ctx.user.role as EditorialRole;
+    if (!["editor", "administrador", "administrador principal"].includes(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode despublicar conteúdos." });
+    const current = await db.select().from(publications).where(eq(publications.id, input.id)).limit(1);
+    if (!current[0] || current[0].deletedAt || current[0].status !== "Publicada") throw new TRPCError({ code: "BAD_REQUEST", message: "Somente conteúdos publicados podem ser despublicados." });
+    await assertPublicationScope(db, ctx.user, current[0], "esta publicação");
+    if (current[0].version !== input.expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de despublicar." });
+    const changed = await db.update(publications).set({ isPublic: false, unpublishedAt: new Date(), unpublishedBy: ctx.user.id, version: current[0].version + 1 }).where(and(eq(publications.id, input.id), eq(publications.version, input.expectedVersion)));
+    if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de despublicar." });
+    await db.insert(editorialActivities).values({ publicationId: input.id, actorId: ctx.user.id, fromStatus: "Publicada", toStatus: "Publicada", note: input.note || "Conteúdo despublicado." });
+    publishEditorialEvent("publication-unpublished", input.id);
+    return { success: true };
+  }),
+
+  republish: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const role = ctx.user.role as EditorialRole;
+    if (!["editor", "administrador", "administrador principal"].includes(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode republicar conteúdos." });
+    const current = await db.select().from(publications).where(eq(publications.id, input.id)).limit(1);
+    if (!current[0] || current[0].deletedAt || current[0].status !== "Publicada") throw new TRPCError({ code: "BAD_REQUEST", message: "Este conteúdo não está pronto para republicação." });
+    await assertPublicationScope(db, ctx.user, current[0], "esta publicação");
+    if (current[0].version !== input.expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de republicar." });
+    await assertCommercialPublicationCanPublish(db, current[0]);
+    const changed = await db.update(publications).set({ isPublic: true, unpublishedAt: null, unpublishedBy: null, version: current[0].version + 1 }).where(and(eq(publications.id, input.id), eq(publications.version, input.expectedVersion)));
+    if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de republicar." });
+    await db.insert(editorialActivities).values({ publicationId: input.id, actorId: ctx.user.id, fromStatus: "Publicada", toStatus: "Publicada", note: "Conteúdo republicado." });
+    publishEditorialEvent("publication-republished", input.id);
+    return { success: true };
+  }),
+
+  archive: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+    const role = ctx.user.role as EditorialRole;
+    assertAdmin(role);
+    const db = await requireDb();
+    const current = (await db.select().from(publications).where(eq(publications.id, input.id)).limit(1))[0];
+    if (!current || current.deletedAt) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    await assertPublicationScope(db, ctx.user, current, "esta publicação");
+    if (current.status === "Arquivada" && !current.isPublic) return { success: true };
+    if (current.version !== input.expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de arquivar." });
+    const changed = await db.update(publications).set({ status: "Arquivada", isPublic: false, unpublishedAt: new Date(), unpublishedBy: ctx.user.id, version: current.version + 1 }).where(and(eq(publications.id, input.id), eq(publications.version, input.expectedVersion)));
+    if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de arquivar." });
+    await db.insert(editorialActivities).values({ publicationId: input.id, actorId: ctx.user.id, fromStatus: current.status, toStatus: "Arquivada", note: input.note || "Conteúdo arquivado e retirado do portal." });
+    publishEditorialEvent("publication-archived", input.id);
+    return { success: true };
+  }),
+
+  delete: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), note: z.string().min(3).max(1000) })).mutation(async ({ ctx, input }) => {
+    const role = ctx.user.role as EditorialRole;
+    assertPrincipal(role);
+    const db = await requireDb();
+    const current = (await db.select().from(publications).where(eq(publications.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    if (current.deletedAt) return { success: true };
+    if (current.version !== input.expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de excluir." });
+    const now = new Date();
+    const changed = await db.update(publications).set({ status: "Arquivada", isPublic: false, unpublishedAt: now, unpublishedBy: ctx.user.id, deletedAt: now, deletedBy: ctx.user.id, deletionNote: input.note, version: current.version + 1 }).where(and(eq(publications.id, input.id), eq(publications.version, input.expectedVersion)));
+    if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de excluir." });
+    await db.insert(editorialActivities).values({ publicationId: input.id, actorId: ctx.user.id, fromStatus: current.status, toStatus: "Arquivada", note: `Exclusão lógica pelo Super Admin: ${input.note}` });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: null, resourceType: "publication", resourceId: current.id, action: "publication-trashed", previousState: { status: current.status, version: current.version }, nextState: { status: "Arquivada", deletedAt: now.toISOString(), restoreUntil: editorialTrashDeadline(now).toISOString() }, detail: input.note });
+    publishEditorialEvent("publication-deleted", input.id);
+    return { success: true, restoreUntil: editorialTrashDeadline(now) };
+  }),
+
+  restore: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), note: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+    const role = ctx.user.role as EditorialRole;
+    assertPrincipal(role);
+    const db = await requireDb();
+    const current = (await db.select().from(publications).where(eq(publications.id, input.id)).limit(1))[0];
+    if (!current || !current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "Esta publicação não está na lixeira editorial." });
+    if (isEditorialTrashExpired(current.deletedAt)) throw new TRPCError({ code: "BAD_REQUEST", message: "O prazo de 24 horas para restauração expirou; esta publicação aguarda ou já recebeu expurgo definitivo." });
+    if (current.version !== input.expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de restaurar." });
+    const changed = await db.update(publications).set({ deletedAt: null, deletedBy: null, deletionNote: null, status: "Arquivada", isPublic: false, version: current.version + 1 }).where(and(eq(publications.id, input.id), eq(publications.version, input.expectedVersion)));
+    if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de restaurar." });
+    await db.insert(editorialActivities).values({ publicationId: input.id, actorId: ctx.user.id, fromStatus: "Arquivada", toStatus: "Arquivada", note: input.note || "Publicação restaurada para o Acervo privado." });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: null, resourceType: "publication", resourceId: current.id, action: "publication-restored-from-trash", previousState: { deletedAt: current.deletedAt.toISOString() }, nextState: { status: "Arquivada", deletedAt: null }, detail: input.note || "Restauração dentro da janela de 24 horas." });
+    publishEditorialEvent("publication-restored", input.id);
+    return { success: true };
+  }),
+
+  purgeTrash: protectedProcedure.input(z.object({ id: z.number().int().positive(), confirmation: z.string().trim().min(1).max(280) })).mutation(async ({ ctx, input }) => {
+    assertPrincipal(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const current = (await db.select().from(publications).where(eq(publications.id, input.id)).limit(1))[0];
+    if (!current || !current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "Esta publicação não está disponível para expurgo definitivo." });
+    if (input.confirmation !== current.title) throw new TRPCError({ code: "BAD_REQUEST", message: "Digite o título exato da publicação para confirmar a exclusão definitiva." });
+    await permanentlyPurgePublication(db, current, ctx.user.id, "Expurgo definitivo confirmado manualmente pelo Super Admin na Lixeira Editorial.");
+    publishEditorialEvent("publication-permanently-purged", input.id);
+    return { success: true };
+  }),
+
+  createTaxonomy: protectedProcedure.input(z.object({ dimension: z.enum(["Tipo de conteúdo", "Tema", "Localização", "Território", "Pessoa/organização", "Evento", "Data"]), name: z.string().min(2).max(180), description: z.string().max(1000).optional(), parentId: z.number().int().positive().optional(), latitude: z.string().regex(/^-?\d{1,2}(\.\d{1,7})?$/).optional(), longitude: z.string().regex(/^-?\d{1,3}(\.\d{1,7})?$/).optional(), mapVisibility: z.enum(["Não divulgar", "Aproximada", "Pública"]).optional() })).mutation(async ({ ctx, input }) => {
+    assertAdmin(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const slug = `${slugify(input.name)}-${Date.now().toString(36)}`;
+    const result = await db.insert(taxonomies).values({ ...input, slug });
+    publishEditorialEvent("taxonomy-updated");
+    return { id: Number(result[0].insertId), slug };
+  }),
+  updateTaxonomy: protectedProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().min(2).max(180), description: z.string().max(1000).nullable().optional(), parentId: z.number().int().positive().nullable().optional(), latitude: z.string().regex(/^-?\d{1,2}(\.\d{1,7})?$/).nullable().optional(), longitude: z.string().regex(/^-?\d{1,3}(\.\d{1,7})?$/).nullable().optional(), mapVisibility: z.enum(["Não divulgar", "Aproximada", "Pública"]).optional() })).mutation(async ({ ctx, input }) => {
+    assertAdmin(ctx.user.role as EditorialRole); const db = await requireDb(); const current = await db.select().from(taxonomies).where(eq(taxonomies.id, input.id)).limit(1); if (!current[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Taxonomia não encontrada." }); await db.update(taxonomies).set({ name: input.name, description: input.description, parentId: input.parentId, latitude: input.latitude, longitude: input.longitude, mapVisibility: input.mapVisibility }).where(eq(taxonomies.id, input.id)); publishEditorialEvent("taxonomy-updated"); return { success: true };
+  }),
+  removeTaxonomy: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    assertAdmin(ctx.user.role as EditorialRole); const db = await requireDb(); await db.delete(publicationTaxonomies).where(eq(publicationTaxonomies.taxonomyId, input.id)); await db.update(taxonomies).set({ parentId: null }).where(eq(taxonomies.parentId, input.id)); await db.delete(taxonomies).where(eq(taxonomies.id, input.id)); publishEditorialEvent("taxonomy-updated"); return { success: true };
+  }),
+  taxonomyRelations: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => {
+    const db = await requireDb(); const links = await db.select().from(publicationTaxonomies).where(eq(publicationTaxonomies.taxonomyId, input.id)); const ids = links.map(link => link.publicationId); const related = ids.length ? await db.select().from(publications).where(inArray(publications.id, ids)) : []; return related;
+  }),
+  taxonomyMedia: protectedProcedure.input(z.object({ taxonomyId: z.number().int().positive() })).query(async ({ input }) => {
+    const db = await requireDb(); const links = await db.select().from(taxonomyMedia).where(eq(taxonomyMedia.taxonomyId, input.taxonomyId)).orderBy(desc(taxonomyMedia.isPrimary), taxonomyMedia.displayOrder); const ids = links.map(link => link.mediaId); const assets = ids.length ? await db.select().from(mediaAssets).where(inArray(mediaAssets.id, ids)) : []; return links.map(link => ({ ...assets.find(asset => asset.id === link.mediaId)!, linkId: link.id, isPrimary: link.isPrimary, displayOrder: link.displayOrder })).filter(Boolean);
+  }),
+  attachTaxonomyMedia: protectedProcedure.input(z.object({ taxonomyId: z.number().int().positive(), mediaId: z.number().int().positive(), isPrimary: z.boolean().optional() })).mutation(async ({ ctx, input }) => {
+    assertAdmin(ctx.user.role as EditorialRole); const db = await requireDb(); const media = await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.mediaId)).limit(1); if (!media[0] || !media[0].publicationAllowed || media[0].state !== "Ativo") throw new TRPCError({ code: "BAD_REQUEST", message: "A mídia precisa estar ativa e autorizada no Acervo." }); if (input.isPrimary) await db.update(taxonomyMedia).set({ isPrimary: false }).where(eq(taxonomyMedia.taxonomyId, input.taxonomyId)); const existing = await db.select().from(taxonomyMedia).where(and(eq(taxonomyMedia.taxonomyId, input.taxonomyId), eq(taxonomyMedia.mediaId, input.mediaId))).limit(1); if (existing[0]) { await db.update(taxonomyMedia).set({ isPrimary: input.isPrimary ?? existing[0].isPrimary }).where(eq(taxonomyMedia.id, existing[0].id)); } else { await db.insert(taxonomyMedia).values({ taxonomyId: input.taxonomyId, mediaId: input.mediaId, isPrimary: input.isPrimary ?? false }); } publishEditorialEvent("taxonomy-updated"); return { success: true };
+  }),
+  removeTaxonomyMedia: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    assertAdmin(ctx.user.role as EditorialRole); const db = await requireDb(); await db.delete(taxonomyMedia).where(eq(taxonomyMedia.id, input.id)); publishEditorialEvent("taxonomy-updated"); return { success: true };
+  }),
+
+  teams: protectedProcedure.query(async () => {
+    const db = await requireDb();
+    return db.select().from(teams).orderBy(teams.name);
+  }),
+
+  createTeam: protectedProcedure.input(z.object({ name: z.string().min(2).max(160), description: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
+    assertAdmin(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const slug = `${slugify(input.name)}-${Date.now().toString(36)}`;
+    const result = await db.insert(teams).values({ ...input, slug });
+    return { id: Number(result[0].insertId) };
+  }),
+});

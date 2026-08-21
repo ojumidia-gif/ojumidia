@@ -1,0 +1,2 @@
+ALTER TABLE `commercialMiniclips` ADD `activeRequestKey` varchar(64);--> statement-breakpoint
+ALTER TABLE `commercialMiniclips` ADD CONSTRAINT `commercialMiniclips_activeRequestKey_unique` UNIQUE(`activeRequestKey`);

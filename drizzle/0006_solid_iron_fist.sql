@@ -1,0 +1,1 @@
+ALTER TABLE `advertisements` ADD `sourcePublicationId` int;

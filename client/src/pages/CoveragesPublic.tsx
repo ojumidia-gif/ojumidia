@@ -1,0 +1,2 @@
+import { EditorialFrontPublic } from "@/components/EditorialFrontPublic";
+export default function CoveragesPublic() { return <EditorialFrontPublic front={{ kind: "Cobertura", eyebrow: "Registros em campo", title: "Coberturas", description: "Eventos, celebrações e encontros registrados com contexto, equipe, mídias e relações territoriais.", empty: "As próximas Coberturas estão em preparação." }} />; }

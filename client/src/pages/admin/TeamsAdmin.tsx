@@ -1,0 +1,15 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { AdminPage, EmptyAdmin } from "./_shared";
+
+export default function TeamsAdmin() {
+  const { user } = useAuth(); const principal = user?.role === "administrador principal"; const utils = trpc.useUtils();
+  const { data: teams } = trpc.editorial.teams.useQuery(undefined, { refetchInterval: 5000 }); const { data: users } = trpc.media.users.useQuery(undefined, { refetchInterval: 5000 }); const [name, setName] = useState("");
+  const create = trpc.editorial.createTeam.useMutation({ onSuccess: () => { toast.success("Equipe criada."); setName(""); utils.editorial.teams.invalidate(); }, onError: error => toast.error(error.message) });
+  return <AdminPage eyebrow="Equipes e créditos" title="Pessoas, papéis e cobertura."><p className="mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">Equipes organizam créditos e coberturas. Papéis administrativos não são alterados nesta tela: o Super Admin usa o fluxo de Colaboradores, que registra o convite e exige termo de responsabilidade assinado via gov.br antes de ativar um administrador.</p><div className="grid gap-6 xl:grid-cols-[.8fr_1.2fr]"><section className="admin-card p-6"><p className="font-serif text-2xl">Equipes responsáveis</p><form onSubmit={event => { event.preventDefault(); create.mutate({ name }); }} className="mt-5 flex gap-2"><Input required value={name} onChange={event => setName(event.target.value)} placeholder="Nome da equipe" /><Button disabled={create.isPending} className="bg-[#242017] text-white">Criar</Button></form><div className="mt-6 grid gap-2">{teams?.length ? teams.map(team => <div key={team.id} className="rounded-xl bg-[#eee9dc] px-4 py-3 text-sm font-medium">{team.name}</div>) : <p className="text-sm text-[#655e52]">Nenhuma equipe cadastrada.</p>}</div></section><section className="admin-card overflow-hidden"><div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#242017]/10 px-6 py-5"><div><p className="font-serif text-2xl">Pessoas da equipe</p><p className="mt-1 text-sm text-[#655e52]">Papéis atuais são apenas informativos nesta área.</p></div>{principal ? <Link href="/admin/colaboradores" className="inline-flex h-9 items-center rounded-md bg-[#242017] px-3 text-sm font-medium text-white">Gerenciar colaboradores</Link> : null}</div>{users?.length ? <div>{users.map(person => <div key={person.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[#242017]/7 px-6 py-4"><div><p className="font-medium">{person.name || person.email || "Membro da equipe"}</p><p className="mt-1 text-xs text-[#655e52]">{person.email}</p></div><span className="rounded-full bg-[#eee9dc] px-3 py-1 text-sm capitalize">{person.role}</span></div>)}</div> : <div className="p-6"><EmptyAdmin text="Os membros aparecem nesta área após fazerem login no Centro Administrativo." /></div>}</section></div></AdminPage>;
+}

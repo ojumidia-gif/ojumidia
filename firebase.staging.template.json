@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "SUBSTITUA_PELO_SERVICO_CLOUD_RUN_DE_STAGING",
+          "region": "southamerica-east1",
+          "pinTag": true
+        }
+      }
+    ]
+  }
+}

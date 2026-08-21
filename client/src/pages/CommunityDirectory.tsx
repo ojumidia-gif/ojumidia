@@ -1,0 +1,29 @@
+import { CalendarDays, Landmark, Mic2 } from "lucide-react";
+import { Link } from "wouter";
+import { PublicHeader } from "@/components/PublicHeader";
+import { useEditorialLive } from "@/hooks/useEditorialLive";
+import { trpc } from "@/lib/trpc";
+
+type View = "instituicoes" | "agenda" | "memorias";
+const config = {
+  instituicoes: { eyebrow: "Instituições e territórios", title: "Casas, comunidades e iniciativas que autorizaram ser encontradas.", icon: Landmark },
+  agenda: { eyebrow: "Agenda comunitária", title: "Encontros que podem ser compartilhados com cuidado.", icon: CalendarDays },
+  memorias: { eyebrow: "Memórias orais", title: "Vozes que permanecem, no tempo e no território.", icon: Mic2 },
+} as const;
+
+function Visual({ media, label }: { media: { assetUrl: string; mediaType?: "foto" | "vídeo" } | null; label: string }) {
+  if (!media) return null;
+  return <div className="h-48 bg-[#17130f]">{media.mediaType === "foto" ? <img src={media.assetUrl} alt={label} className="h-full w-full object-cover" /> : <video src={media.assetUrl} aria-label={label} className="h-full w-full object-cover" muted playsInline preload="metadata" />}</div>;
+}
+
+export default function CommunityDirectory({ view }: { view: View }) {
+  const utils = trpc.useUtils();
+  const institutions = trpc.community.publicInstitutions.useQuery(undefined, { enabled: view === "instituicoes" });
+  const events = trpc.community.publicEvents.useQuery(undefined, { enabled: view === "agenda" });
+  const memories = trpc.community.publicMemories.useQuery(undefined, { enabled: view === "memorias" });
+  useEditorialLive(() => { utils.community.publicInstitutions.invalidate(); utils.community.publicEvents.invalidate(); utils.community.publicMemories.invalidate(); });
+  const item = config[view]; const Icon = item.icon;
+  const hasItems = view === "instituicoes" ? Boolean(institutions.data?.length) : view === "agenda" ? Boolean(events.data?.length) : Boolean(memories.data?.length);
+  const description = view === "instituicoes" ? "A Ojú não expõe localização ou contato sem autorização expressa. Cada perfil decide o que pode ser compartilhado." : view === "agenda" ? "A agenda reúne somente eventos autorizados. A presença, a divulgação e o registro respeitam as orientações de cada comunidade." : "Memórias são publicadas apenas com consentimento e podem ter o acesso alterado ou retirado a qualquer momento.";
+  return <div className="min-h-screen bg-[#070605] text-white"><PublicHeader cinematic /><main className="container pb-20 pt-32"><section className="max-w-4xl border-b border-white/10 pb-10"><Icon className="h-8 w-8 text-[#ef9e59]" /><p className="mt-8 text-[10px] font-bold uppercase tracking-[.16em] text-[#ef9e59]">{item.eyebrow}</p><h1 className="mt-5 max-w-3xl font-serif text-5xl leading-[.95] sm:text-7xl">{item.title}</h1><p className="mt-6 max-w-2xl text-base leading-7 text-white/65">{description}</p></section>{hasItems ? <section className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{view === "instituicoes" ? institutions.data?.map(row => <article key={row.id} className="rounded border border-white/15 bg-[#100d0a] p-6"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ef9e59]">{row.institutionType}</p><h2 className="mt-4 font-serif text-3xl">{row.name}</h2>{row.description && <p className="mt-4 text-sm leading-6 text-white/65">{row.description}</p>}{row.locationText && <p className="mt-5 text-xs text-white/55">Localização {row.locationVisibility.toLowerCase()}: {row.locationText}</p>}{row.contactText && <p className="mt-3 text-xs text-[#ef9e59]">Contato institucional: {row.contactText}</p>}</article>) : view === "agenda" ? events.data?.map(row => <article key={row.id} className="overflow-hidden rounded border border-white/15 bg-[#100d0a]"><Visual media={row.coverMedia} label={`Capa autorizada de ${row.title}`} /><div className="p-6"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ef9e59]">{new Date(row.startsAt).toLocaleDateString("pt-BR", { dateStyle: "long" })}</p><h2 className="mt-4 font-serif text-3xl">{row.title}</h2>{row.description && <p className="mt-4 text-sm leading-6 text-white/65">{row.description}</p>}{row.locationText && <p className="mt-5 text-xs text-white/55">Localização {row.locationVisibility.toLowerCase()}: {row.locationText}</p>}</div></article>) : memories.data?.map(row => <article key={row.id} className="overflow-hidden rounded border border-white/15 bg-[#100d0a]"><Visual media={row.videoMedia ? { assetUrl: row.videoMedia.assetUrl, mediaType: "vídeo" } : null} label={`Vídeo autorizado de ${row.title}`} /><div className="p-6"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ef9e59]">Memória oral</p><h2 className="mt-4 font-serif text-3xl">{row.title}</h2>{row.speakerName && <p className="mt-3 text-xs text-[#ef9e59]">Voz: {row.speakerName}</p>}{row.summary && <p className="mt-4 text-sm leading-6 text-white/65">{row.summary}</p>}{row.audioUrl && <audio controls className="mt-5 w-full" src={row.audioUrl} />}</div></article>)}</section> : <section className="mt-10 rounded border border-white/15 bg-[#100d0a] p-10 text-center"><p className="font-serif text-3xl">Este espaço será preenchido somente com registros reais e autorizados.</p><p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-white/60">A Ojú não cria perfis, eventos ou memórias fictícias. Quando houver autorização, os registros poderão ser publicados com o nível de visibilidade definido pela própria comunidade.</p></section>}<section className="mt-12 flex flex-wrap gap-4 border-t border-white/10 pt-8 text-xs font-bold uppercase tracking-[.1em] text-[#ef9e59]"><Link href="/instituicoes">Instituições</Link><Link href="/agenda">Agenda</Link><Link href="/memorias">Memórias</Link><Link href="/cuidado-e-consentimento">Cuidado e consentimento</Link></section></main></div>;
+}
