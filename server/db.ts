@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { administratorResponsibilityTerms, collaboratorAccessGrants, InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import { isAuthorizedSuperAdmin } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -70,9 +70,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.role = "administrador principal";
       values.adminAccess = true;
       updateSet.adminAccess = true;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'administrador principal';
-      updateSet.role = 'administrador principal';
+    } else if (isAuthorizedSuperAdmin(user.openId, user.email)) {
+      values.role = "administrador principal";
+      updateSet.role = "administrador principal";
       values.adminAccess = true;
       updateSet.adminAccess = true;
     } else if (grant && (grant.role !== "administrador" || activeResponsibilityTerm)) {

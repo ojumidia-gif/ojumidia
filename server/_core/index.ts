@@ -194,7 +194,12 @@ async function startServer() {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT deve ser um número válido entre 1 e 65535.");
   server.listen(port, "0.0.0.0", () => {
     const runtime = process.env.NODE_ENV || "development";
-    const oauthConfigured = Boolean(process.env.OAUTH_SERVER_URL && process.env.VITE_APP_ID && process.env.VITE_OAUTH_PORTAL_URL);
+    const oauthConfigured = Boolean(
+      process.env.GOOGLE_CLIENT_ID &&
+        process.env.GOOGLE_CLIENT_SECRET &&
+        process.env.GOOGLE_OAUTH_REDIRECT_URI &&
+        process.env.JWT_SECRET
+    );
     const storageConfigured = Boolean((process.env.BUILT_IN_FORGE_API_URL && process.env.BUILT_IN_FORGE_API_KEY) || (process.env.S3_BUCKET && (process.env.S3_REGION || process.env.AWS_REGION)));
     console.info(`[Runtime] Ojú Mídia iniciado em modo ${runtime}; porta ${port}; OAuth ${oauthConfigured ? "configurado" : "pendente"}; storage ${storageConfigured ? "configurado" : "pendente"}.`);
   });

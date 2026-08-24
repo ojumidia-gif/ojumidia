@@ -11,9 +11,7 @@ export const firebasePreviewAssets = {
 } as const;
 
 export function hasOAuthConfiguration() {
-  const appId = import.meta.env.VITE_APP_ID;
-  const portalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
-  return Boolean(appId && portalUrl && !appId.includes("%") && !portalUrl.includes("%"));
+  return !isStaticFirebasePreview;
 }
 
 export function hasAnalyticsConfiguration(endpoint?: string, websiteId?: string) {
