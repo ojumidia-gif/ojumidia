@@ -11,12 +11,13 @@ OJU_PUBLIC_BASE_URL=https://SEU-SERVICO.onrender.com
 # Banco MySQL/TiDB
 DATABASE_URL=mysql://USER:PASS@HOST:3306/DB_NAME
 
-# OAuth, sessão e Super Admin
+# OAuth Google no servidor, sessão e Super Admin
 JWT_SECRET=GERAR_UM_SEGREDO_LONGO
-VITE_APP_ID=
-OAUTH_SERVER_URL=
-VITE_OAUTH_PORTAL_URL=
-OWNER_OPEN_ID=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_OAUTH_REDIRECT_URI=https://SEU-SERVICO.onrender.com/api/auth/google/callback
+GOOGLE_SUPER_ADMIN_EMAILS=ojumidia@gmail.com,aquinopratesr@gmail.com
+GOOGLE_SUPER_ADMIN_SUBS=
 
 # Desenvolvimento local apenas; nunca habilitar no Render
 OJU_LOCAL_DEV_LOGIN_ENABLED=false
@@ -54,7 +55,7 @@ VITE_FIREBASE_STORAGE_BUCKET=
 | ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Banco                                | Sim                                         | `DATABASE_URL` deve usar MySQL/TiDB compatível com o schema Drizzle atual.           |
 | Sessão e OAuth                       | Sim para acesso administrativo real         | Sem essas chaves, o portal público pode responder, mas login e sessão não funcionam. |
-| Super Admin                          | Sim na primeira ativação                    | `OWNER_OPEN_ID` é o identificador OAuth real do titular, não o e-mail público.       |
+| Super Admin                          | Sim na primeira ativação                    | `GOOGLE_SUPER_ADMIN_EMAILS` promove os titulares; depois do primeiro acesso, grave `google:<sub>` em `GOOGLE_SUPER_ADMIN_SUBS`. |
 | Storage                              | Sim para uploads                            | Configure Forge **ou** S3 compatível; não armazene mídias no disco do Render.        |
 | Cron editorial                       | Sim se o expurgo automático estiver ativado | O mesmo segredo deve ser usado somente pelo Web Service e pelo Cron Job.             |
 | Firebase, analytics e Forge frontend | Condicional                                 | Só informe quando a integração correspondente estiver ativa.                         |

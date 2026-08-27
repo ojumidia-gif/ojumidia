@@ -35,10 +35,11 @@
 | ----------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
 | `DATABASE_URL`                                                                            | Sim fora da prévia estática     | MySQL/TiDB para Drizzle, usuários, conteúdo, parceiros e auditoria. | Render Web Service.                        |
 | `JWT_SECRET`                                                                              | Sim                             | Assina e valida sessão.                                             | Render Web Service; usar valor gerado.     |
-| `VITE_APP_ID`                                                                             | Sim para OAuth                  | Identificador público da aplicação OAuth.                           | Render antes do build.                     |
-| `OAUTH_SERVER_URL`                                                                        | Sim para OAuth                  | Exchange de código e dados da conta.                                | Render Web Service.                        |
-| `VITE_OAUTH_PORTAL_URL`                                                                   | Sim para OAuth                  | Portal que inicia o login.                                          | Render antes do build.                     |
-| `OWNER_OPEN_ID`                                                                           | Sim para o primeiro Super Admin | Identificador OAuth real do titular.                                | Render Web Service.                        |
+| `GOOGLE_CLIENT_ID`                                                                        | Sim para OAuth                  | Cliente Google OAuth no servidor.                                   | Render Web Service.                        |
+| `GOOGLE_CLIENT_SECRET`                                                                    | Sim para OAuth                  | Segredo Google; nunca com prefixo `VITE_`.                          | Render Web Service.                        |
+| `GOOGLE_OAUTH_REDIRECT_URI`                                                               | Sim para OAuth                  | Callback exato cadastrado no Google Cloud.                          | Render Web Service.                        |
+| `GOOGLE_SUPER_ADMIN_EMAILS`                                                               | Sim para o primeiro Super Admin | Lista de e-mails titulares autorizados.                             | Render Web Service.                        |
+| `GOOGLE_SUPER_ADMIN_SUBS`                                                                 | Depois do primeiro acesso       | Identificadores `google:<sub>` dos titulares.                       | Render Web Service.                        |
 | `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`                                        | Uma alternativa de storage      | Forge Storage existente.                                            | Ambiente gerenciado, quando disponível.    |
 | `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`                      | Uma alternativa de storage      | Bucket S3/compatível para mídias externas.                          | Render Web Service.                        |
 | `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`                                                      | Condicional                     | Provedores S3 compatíveis que exigem endpoint próprio.              | Render Web Service.                        |
@@ -51,7 +52,7 @@ O modelo sem valores está em `docs/ENVIRONMENT_RENDER_TEMPLATE.md`. Ele substit
 
 ## Autenticação, Super Admin e isolamento
 
-O callback usa `https://SEU-SERVICO.onrender.com/api/oauth/callback`, nonce de uso único e cookie seguro. A primeira conta administrativa depende exclusivamente de `OWNER_OPEN_ID`; e-mail público, parâmetros do navegador e usuários autenticados sem concessão não recebem privilégio. O acesso local de desenvolvimento retorna 404 fora de `NODE_ENV=development`.
+O callback usa `https://SEU-SERVICO.onrender.com/api/auth/google/callback`, `state`/`nonce` de uso único e cookie seguro. O Super Admin depende de `GOOGLE_SUPER_ADMIN_EMAILS` e, após o primeiro acesso, de `GOOGLE_SUPER_ADMIN_SUBS`. Usuários autenticados sem essa autorização ou concessão de colaborador não recebem privilégio. O acesso local de desenvolvimento retorna 404 fora de `NODE_ENV=development`.
 
 Os testes existentes continuam cobrindo separação de parceiros/territórios, RBAC, lixeira, upload rastreável, concorrência otimista, curadoria nacional, comercial e reembolsos. O deploy não substitui esses guards por regras de frontend.
 
@@ -76,8 +77,8 @@ Esses itens não foram atualizados de modo forçado porque exigiriam migração 
 ## Pendências externas reais
 
 1. Provisionar MySQL/TiDB acessível pelo Render e realizar backup antes da primeira migration.
-2. Cadastrar no OAuth o callback da URL `onrender.com` e depois o domínio próprio.
-3. Informar valores reais de OAuth, sessão, `OWNER_OPEN_ID` e uma alternativa de storage no Render.
+2. Cadastrar no Google Cloud o callback da URL `onrender.com` e depois o domínio próprio.
+3. Informar valores reais de Google OAuth, sessão, `GOOGLE_SUPER_ADMIN_EMAILS` e uma alternativa de storage no Render.
 4. Criar o Cron Job do Render para expurgo editorial após a URL pública responder.
 5. Homologar com contas OAuth reais: Super Admin e pelo menos dois parceiros de territórios distintos.
 

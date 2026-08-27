@@ -28,15 +28,15 @@ Faça backup do banco antes da primeira aplicação e nunca rode `db:generate` d
 
 ## 3. OAuth, sessão e Super Admin
 
-O login real usa `VITE_APP_ID`, `OAUTH_SERVER_URL`, `VITE_OAUTH_PORTAL_URL` e `JWT_SECRET`. A Home inicia o login com `window.location.origin`, portanto o callback esperado é:
+O login real usa `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` e `JWT_SECRET`. O navegador só abre a rota própria do servidor; o callback cadastrado no Google Cloud deve ser:
 
 ```text
-https://SEU-SERVICO.onrender.com/api/oauth/callback
+https://SEU-SERVICO.onrender.com/api/auth/google/callback
 ```
 
-Cadastre esta URL no provedor OAuth antes de testar o Centro Administrativo. O proxy HTTPS do Render é reconhecido pelo servidor e os cookies de sessão permanecem `httpOnly`, `Secure` e `SameSite=None` em HTTPS.
+Cadastre esta URL no Google Cloud antes de testar o Centro Administrativo. O proxy HTTPS do Render é reconhecido pelo servidor e os cookies de sessão permanecem `httpOnly`, `Secure` e `SameSite=None` em HTTPS.
 
-Para provisionar o primeiro Super Admin, preencha `OWNER_OPEN_ID` com o `openId` real da conta do titular **antes do primeiro login**. A promoção não é baseada em e-mail e nenhum usuário autenticado se torna administrador principal automaticamente.
+Para provisionar o Super Admin, preencha `GOOGLE_SUPER_ADMIN_EMAILS` com `ojumidia@gmail.com,aquinopratesr@gmail.com`. Depois que cada titular entrar uma vez, grave os identificadores `google:<sub>` em `GOOGLE_SUPER_ADMIN_SUBS`.
 
 ## 4. Storage persistente
 

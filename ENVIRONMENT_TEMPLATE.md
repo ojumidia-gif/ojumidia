@@ -11,11 +11,12 @@ JWT_SECRET=troque-por-uma-chave-longa-e-aleatoria-com-32-ou-mais-caracteres
 # Banco MySQL local
 DATABASE_URL=mysql://oju_local:troque-esta-senha@127.0.0.1:3306/oju_midia
 
-# OAuth necessário para o login administrativo completo
-VITE_APP_ID=
-OAUTH_SERVER_URL=
-VITE_OAUTH_PORTAL_URL=
-OWNER_OPEN_ID=
+# OAuth Google no servidor e sessão própria
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
+GOOGLE_SUPER_ADMIN_EMAILS=ojumidia@gmail.com,aquinopratesr@gmail.com
+GOOGLE_SUPER_ADMIN_SUBS=
 
 # Administrador principal local de desenvolvimento
 OJU_LOCAL_ADMIN_EMAIL=aquinopratesr@gmail.com

@@ -25,7 +25,7 @@ Não foram removidos Firebase Preview, regras editoriais, mídia documental, Par
 | ------------------- | ------------------------------- | ------------------------------------------------------------------------- |
 | Render Web Service  | Portal, API, admin e OAuth      | Conectar repositório privado e usar `render.yaml`.                        |
 | MySQL/TiDB          | Dados persistentes e migrations | Fornecer `DATABASE_URL` com acesso de staging.                            |
-| OAuth               | Login e sessão administrativa   | Registrar callback `https://SEU-SERVICO.onrender.com/api/oauth/callback`. |
+| OAuth               | Login e sessão administrativa   | Registrar callback `https://SEU-SERVICO.onrender.com/api/auth/google/callback`. |
 | Forge Storage ou S3 | Upload e Acervo                 | Configurar uma única alternativa de storage.                              |
 | Render Cron Job     | Expurgo automático da Lixeira   | Configurar depois que o Web Service responder publicamente.               |
 | Firebase            | Prévia visual, se desejada      | Mantido separado do staging full-stack.                                   |
@@ -48,7 +48,7 @@ O `render.yaml` contém somente o Web Service e chaves sem valores. Não informa
 
 Use `docs/ENVIRONMENT_RENDER_TEMPLATE.md` como o inventário de chaves. Ele contém somente exemplos seguros. Os valores reais pertencem ao painel **Environment** do Render e não devem ser enviados por chat, commit ou ZIP público.
 
-As chaves mínimas são `DATABASE_URL`, `JWT_SECRET`, `VITE_APP_ID`, `OAUTH_SERVER_URL`, `VITE_OAUTH_PORTAL_URL` e `OWNER_OPEN_ID`. Para upload, informe Forge Storage **ou** S3 compatível. Para expurgo, defina `EDITORIAL_TRASH_CRON_SECRET`.
+As chaves mínimas são `DATABASE_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` e `GOOGLE_SUPER_ADMIN_EMAILS`. Para upload, informe Forge Storage **ou** S3 compatível. Para expurgo, defina `EDITORIAL_TRASH_CRON_SECRET`.
 
 ## Banco e migrations
 
@@ -63,7 +63,7 @@ Faça backup antes da primeira migration de staging. As migrations são aplicada
 
 ## OAuth, sessão e Super Admin
 
-O callback é `/api/oauth/callback`. A aplicação usa nonce e cookie `httpOnly`; em HTTPS sob proxy, o cookie é marcado como seguro. O `OWNER_OPEN_ID` é o identificador OAuth do titular, não o e-mail de contato público.
+O callback é `/api/auth/google/callback`. A aplicação usa `state`, `nonce` e cookie `httpOnly`; em HTTPS sob proxy, o cookie é marcado como seguro. O Super Admin é promovido por `GOOGLE_SUPER_ADMIN_EMAILS` e, após o primeiro acesso, por `GOOGLE_SUPER_ADMIN_SUBS`.
 
 `OJU_LOCAL_DEV_LOGIN_ENABLED` deve estar ausente ou `false` no Render. As rotas locais de desenvolvimento respondem 404 fora de `NODE_ENV=development`.
 
@@ -95,7 +95,7 @@ A chamada usa `POST /api/scheduled/editorial-trash-purge` e é idempotente. Não
 1. Abra `/health`, depois `/ready`.
 2. Acesse a Home e uma rota direta, como `/admin`, para confirmar o fallback SPA.
 3. Inicie OAuth e valide callback, login, logout e sessão expirada.
-4. Confirme o Super Admin com a conta cujo `openId` corresponde a `OWNER_OPEN_ID`.
+4. Confirme o Super Admin com uma das contas em `GOOGLE_SUPER_ADMIN_EMAILS`.
 5. Crie ou ative dois Parceiros Ojú com territórios diferentes e confirme que cada administrador só vê o próprio escopo.
 6. Envie mídia real autorizada, valide checksum, estado técnico, aprovação, vínculo editorial e publicação separada.
 7. Teste edição concorrente da mesma publicação e confirme conflito, sem sobrescrita silenciosa.
@@ -105,7 +105,7 @@ A chamada usa `POST /api/scheduled/editorial-trash-purge` e é idempotente. Não
 
 | Sintoma                              | Causa provável                                              | Como resolver                                                                    |
 | ------------------------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `OAUTH_SERVER_URL is not configured` | Variáveis OAuth ausentes no build/runtime.                  | Preencher `VITE_APP_ID`, `OAUTH_SERVER_URL` e `VITE_OAUTH_PORTAL_URL`; redeploy. |
+| `google_oauth_not_configured`        | Variáveis Google OAuth ausentes no runtime.                 | Preencher `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI` e `JWT_SECRET`; redeploy. |
 | Login volta sem sessão               | Callback ou origin não registrado; cookie HTTPS não aceito. | Registrar o callback `onrender.com`, confirmar HTTPS e limpar cookies antigos.   |
 | `/ready` responde 503                | Banco inacessível ou URL incorreta.                         | Revisar `DATABASE_URL`, rede, SSL do provedor e migrations.                      |
 | Upload falha                         | Storage não configurado ou credencial inválida.             | Configurar Forge **ou** todas as chaves S3 exigidas.                             |

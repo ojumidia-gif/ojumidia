@@ -14,13 +14,15 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: VITE_APP_ID
+      - key: GOOGLE_CLIENT_ID
         sync: false
-      - key: OAUTH_SERVER_URL
+      - key: GOOGLE_CLIENT_SECRET
         sync: false
-      - key: VITE_OAUTH_PORTAL_URL
+      - key: GOOGLE_OAUTH_REDIRECT_URI
         sync: false
-      - key: OWNER_OPEN_ID
+      - key: GOOGLE_SUPER_ADMIN_EMAILS
+        sync: false
+      - key: GOOGLE_SUPER_ADMIN_SUBS
         sync: false
       - key: EDITORIAL_TRASH_CRON_SECRET
         sync: false

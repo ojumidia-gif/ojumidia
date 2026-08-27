@@ -1,4 +1,4 @@
-import { Menu, Search, X } from "lucide-react";
+﻿import { Menu, Search, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { portalContentDefaults, usePortalContent } from "@/lib/portalContent";
@@ -17,21 +17,21 @@ export function OjuMark({
   const image = (
     <img
       src={brandUrl}
-      alt="Ojú Mídia"
+      alt="OjÃº MÃ­dia"
       className={`${compact ? "h-9 w-28" : "h-12 w-40"} object-contain object-center ${cinematic ? "brightness-0 invert" : ""}`}
     />
   );
 
   if (onClick) {
     return (
-      <button onClick={onClick} className="inline-flex items-center" aria-label="Ojú Mídia">
+      <button onClick={onClick} className="inline-flex items-center" aria-label="OjÃº MÃ­dia">
         {image}
       </button>
     );
   }
 
   return (
-    <Link href="/" className="inline-flex items-center" aria-label="Ojú Mídia — início">
+    <Link href="/" className="inline-flex items-center" aria-label="OjÃº MÃ­dia â€” inÃ­cio">
       {image}
     </Link>
   );
@@ -79,11 +79,11 @@ export function PublicHeader({
           </Link>
           <button
             onClick={() => {
-              setOpen((value) => !value);
+              setOpen(value => !value);
               onMenuClick?.();
             }}
             className="rounded-full p-2 hover:bg-white/10 xl:hidden"
-            aria-label={open ? "Fechar navegação" : "Abrir navegação"}
+            aria-label={open ? "Fechar navegaÃ§Ã£o" : "Abrir navegaÃ§Ã£o"}
           >
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -123,3 +123,4 @@ export function PublicHeader({
     </header>
   );
 }
+

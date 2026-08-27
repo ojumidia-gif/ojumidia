@@ -3,7 +3,6 @@ import type { Express, Request, Response } from "express";
 import { COOKIE_NAME } from "@shared/const";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
-import { ENV } from "./env";
 import { sdk } from "./sdk";
 
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
@@ -38,7 +37,7 @@ export function registerLocalDevAuthRoutes(app: Express) {
       });
 
       const token = await sdk.signSession(
-        { openId, appId: ENV.appId || "local-development", name: "Administrador local de desenvolvimento" },
+        { openId, name: "Administrador local de desenvolvimento" },
         { expiresInMs: SESSION_DURATION_MS }
       );
       res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(req), maxAge: SESSION_DURATION_MS });

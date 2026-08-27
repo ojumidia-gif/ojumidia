@@ -88,7 +88,7 @@ No arquivo copiado, defina o `serviceId` como `oju-midia-production` e confirme 
 firebase hosting:channel:deploy interno --project ojumidia
 ```
 
-O rewrite deve encaminhar toda rota ao Cloud Run. Isso é necessário para que `/api/trpc`, `/api/editorial/events`, `/api/oauth/callback`, documentos protegidos e as rotas da aplicação cheguem ao Express, em vez de serem respondidos somente como arquivos estáticos.
+O rewrite deve encaminhar toda rota ao Cloud Run. Isso é necessário para que `/api/trpc`, `/api/editorial/events`, `/api/auth/google/start`, `/api/auth/google/callback`, documentos protegidos e as rotas da aplicação cheguem ao Express, em vez de serem respondidos somente como arquivos estáticos.
 
 ## 6. Configurar o login do Super Admin
 
@@ -105,14 +105,12 @@ Sessão assinada pelo Cloud Run
         ↓
 Verificação do papel no banco
         ↓
-aquinopratesr@gmail.com como administrador principal
+aquinopratesr@gmail.com e ojumidia@gmail.com como administradores principais
 ```
 
-Antes de testar, cadastre no provedor OAuth os domínios e callbacks efetivamente usados pelo ambiente, por exemplo o domínio de canal do Firebase e, depois da homologação, `ojumidia.web.app` e o domínio final. O callback deve ser HTTPS e apontar para a rota de callback que o servidor expõe.
+Antes de testar, cadastre no Google Cloud os domínios e o callback `https://SEU-DOMINIO/api/auth/google/callback`. O callback deve ser HTTPS e apontar para a rota que o servidor expõe.
 
-> Adicionar um domínio na tela do Firebase Authentication, isoladamente, **não cria** uma sessão válida para o Centro Administrativo atual. Se optar por Firebase Authentication, será necessária uma integração explícita no servidor para verificar tokens, localizar o usuário e aplicar os papéis Ojú. Não troque de provedor de autenticação durante o primeiro deploy sem essa implementação e homologação.
-
-Depois da primeira autenticação bem-sucedida, confira no banco se a conta Google principal possui o papel `administrador principal`. O e-mail `ojumidia@gmail.com` continua apenas como contato comercial público e não deve ser promovido automaticamente.
+Depois da primeira autenticação bem-sucedida, confira no banco se as contas titulares possuem o papel `administrador principal` e grave os `google:<sub>` em `GOOGLE_SUPER_ADMIN_SUBS`.
 
 ## 7. Roteiro de homologação antes do domínio final
 

@@ -537,7 +537,7 @@ export const editorialRouter = router({
     const db = await requireDb();
     const current = (await db.select().from(publications).where(eq(publications.id, input.id)).limit(1))[0];
     if (!current || !current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "Esta publicação não está disponível para expurgo definitivo." });
-    if (input.confirmation !== current.title) throw new TRPCError({ code: "BAD_REQUEST", message: "Digite o título exato da publicação para confirmar a exclusão definitiva." });
+    if (input.confirmation.trim().toLowerCase() !== current.title.trim().toLowerCase()) throw new TRPCError({ code: "BAD_REQUEST", message: "Digite o título exato da publicação para confirmar a exclusão definitiva." });
     await permanentlyPurgePublication(db, current, ctx.user.id, "Expurgo definitivo confirmado manualmente pelo Super Admin na Lixeira Editorial.");
     publishEditorialEvent("publication-permanently-purged", input.id);
     return { success: true };
@@ -583,3 +583,4 @@ export const editorialRouter = router({
     return { id: Number(result[0].insertId) };
   }),
 });
+
