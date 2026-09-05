@@ -2,7 +2,7 @@
 
 ## O que vem no projeto
 
-O pacote contém portal público, Centro Administrativo, fluxos editoriais, banco com migrações Drizzle, testes, documentação jurídica do piloto e apresentação executiva. O pacote **não** contém banco de produção, mídia privada, `node_modules`, sessões, tokens, credenciais OAuth, chaves Manus ou Firebase.
+O pacote contém portal público, Centro Administrativo, fluxos editoriais, banco com migrações Drizzle, testes, documentação jurídica do piloto e apresentação executiva. O pacote **não** contém banco de produção, mídia privada, `node_modules`, sessões, tokens, credenciais OAuth ou chaves de storage.
 
 Leia primeiro [`SECURITY_RULES.md`](./SECURITY_RULES.md). A configuração de Firebase é propositalmente posterior aos testes locais.
 

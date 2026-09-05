@@ -2,15 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  CheckCircle2,
   ImagePlus,
   Trash2,
   UploadCloud,
   Video,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { MediaAddButton, MediaStage, useMediaStage } from "@/components/MediaStage";
 
 const MAX_PHOTOS = 5;
 const MAX_VIDEOS = 2;
@@ -62,9 +62,7 @@ export function CoverageMediaPanel({
 }) {
   const utils = trpc.useUtils();
   const { data: library } = trpc.media.list.useQuery();
-  const input = useRef<HTMLInputElement>(null);
-
-  const [files, setFiles] = useState<File[]>([]);
+  const stage = useMediaStage();
   const [origin, setOrigin] = useState("");
   const [credit, setCredit] = useState("");
   const [purpose, setPurpose] = useState(
@@ -115,6 +113,9 @@ export function CoverageMediaPanel({
     (media) => media.mediaType === "vídeo"
   ).length;
 
+  const stagedPhotos = stage.items.filter(item => item.kind === "foto").length;
+  const stagedVideos = stage.items.filter(item => item.kind === "vídeo").length;
+
   const hasRoom = (
     mediaType: "foto" | "vídeo",
     additions = 1
@@ -127,7 +128,7 @@ export function CoverageMediaPanel({
   async function upload(event: React.FormEvent) {
     event.preventDefault();
 
-    if (!files.length) {
+    if (!stage.items.length) {
       return toast.error(
         documentaryPhotos
           ? "Selecione uma fotografia."
@@ -135,7 +136,7 @@ export function CoverageMediaPanel({
       );
     }
 
-    if (documentaryPhotos && files.length > 1) {
+    if (documentaryPhotos && stage.items.length > 1) {
       return toast.error(
         "Para preservar título, data, local e biografia próprios, a Fotografia documental recebe uma imagem por vez."
       );
@@ -143,22 +144,17 @@ export function CoverageMediaPanel({
 
     if (
       documentaryPhotos &&
-      !files[0].type.startsWith("image/")
+      stage.items[0].kind !== "foto"
     ) {
       return toast.error(
         "Fotografia documental aceita apenas imagens."
       );
     }
 
-    const photoFiles = files.filter((file) =>
-      file.type.startsWith("image/")
-    ).length;
+    const photoFiles = stage.items.filter(item => item.kind === "foto").length;
+    const videoFiles = stage.items.filter(item => item.kind === "vídeo").length;
 
-    const videoFiles = files.filter((file) =>
-      file.type.startsWith("video/")
-    ).length;
-
-    if (photoFiles + videoFiles !== files.length) {
+    if (photoFiles + videoFiles !== stage.items.length) {
       return toast.error(
         "Selecione somente imagens ou vídeos."
       );
@@ -176,10 +172,8 @@ export function CoverageMediaPanel({
     const durations = new Map<File, number>();
 
     try {
-      for (const file of files.filter((item) =>
-        item.type.startsWith("video/")
-      )) {
-        const duration = await videoDuration(file);
+      for (const item of stage.items.filter(entry => entry.kind === "vídeo")) {
+        const duration = await videoDuration(item.file);
 
         if (
           !Number.isFinite(duration) ||
@@ -187,11 +181,11 @@ export function CoverageMediaPanel({
           duration > MAX_VIDEO_SECONDS
         ) {
           return toast.error(
-            `${file.name} excede o máximo de ${MAX_VIDEO_SECONDS} segundos.`
+            `${item.file.name} excede o máximo de ${MAX_VIDEO_SECONDS} segundos.`
           );
         }
 
-        durations.set(file, duration);
+        durations.set(item.file, duration);
       }
     } catch (error) {
       return toast.error(
@@ -206,30 +200,15 @@ export function CoverageMediaPanel({
     try {
       for (
         let index = 0;
-        index < files.length;
+        index < stage.items.length;
         index += 1
       ) {
-        const file = files[index];
-        const duration = durations.get(file);
+        const item = stage.items[index];
+        const duration = durations.get(item.file);
 
-        // 1. Faz o upload físico
-        const response = await fetch("/api/media/upload", {
-          method: "POST",
-          headers: {
-            "Content-Type": file.type,
-            "x-file-name": file.name,
-          },
-          body: file,
-        });
-
-        const uploaded = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            uploaded.message ||
-              "O envio não foi concluído."
-          );
-        }
+        const uploaded = item.status === "Pronto" && item.result
+          ? item.result
+          : await stage.uploadOne(item);
 
         if (
           !uploaded.uploadId ||
@@ -246,9 +225,7 @@ export function CoverageMediaPanel({
 
         // 2. Registra a mídia no Acervo
         const media = await create.mutateAsync({
-          mediaType: file.type.startsWith("video/")
-            ? "vídeo"
-            : "foto",
+          mediaType: item.kind === "vídeo" ? "vídeo" : "foto",
           assetUrl: uploaded.url,
           storageKey: uploaded.key,
           filename: uploaded.filename,
@@ -284,24 +261,20 @@ export function CoverageMediaPanel({
       }
 
       toast.success(
-        `${files.length} ${
-          files.length === 1
+        `${stage.items.length} ${
+          stage.items.length === 1
             ? "material vinculado"
             : "materiais vinculados"
         } ao conteúdo.`
       );
 
-      setFiles([]);
+      stage.clear();
       setOrigin("");
       setCredit("");
       setCaption("");
       setBiography("");
       setLocation("");
       setCapturedAt("");
-
-      if (input.current) {
-        input.current.value = "";
-      }
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -428,12 +401,11 @@ export function CoverageMediaPanel({
 
           <div className="mt-3 flex flex-wrap gap-2">
             <p className="inline-flex rounded-full bg-[#eee9dc] px-3 py-1 text-xs font-bold text-[#655e52]">
-              Fotos: {photoCount} de {MAX_PHOTOS}
+              Fotos {photoCount} / {MAX_PHOTOS}
             </p>
 
             <p className="inline-flex rounded-full bg-[#eee9dc] px-3 py-1 text-xs font-bold text-[#655e52]">
-              Vídeos: {videoCount} de{" "}
-              {documentaryPhotos ? 0 : MAX_VIDEOS}
+              Vídeos {videoCount} / {documentaryPhotos ? 0 : MAX_VIDEOS}
             </p>
           </div>
 
@@ -451,41 +423,42 @@ export function CoverageMediaPanel({
         onSubmit={upload}
         className="mt-6 grid gap-4 md:grid-cols-2"
       >
-        <label className="grid gap-2 text-sm font-medium md:col-span-2">
-          {documentaryPhotos
-            ? "Fotografia"
-            : "Fotos e vídeos para adicionar agora"}
-
-          <input
-            ref={input}
-            required
-            type="file"
+        <div className="grid gap-3 md:col-span-2">
+          <MediaAddButton
+            accept={documentaryPhotos ? "image/*" : "image/*,video/*"}
             multiple={!documentaryPhotos}
-            accept={
-              documentaryPhotos
-                ? "image/*"
-                : "image/*,video/*"
-            }
-            onChange={(event) =>
-              setFiles(
-                Array.from(
-                  event.target.files || []
-                )
-              )
-            }
-            className="rounded-md border bg-white p-2 text-sm"
+            label={documentaryPhotos ? "+ Adicionar fotografia" : "+ Adicionar fotos e vídeos"}
+            counts={{
+              photos: `Fotos ${photoCount + stagedPhotos} / ${MAX_PHOTOS}`,
+              videos: documentaryPhotos ? undefined : `Vídeos ${videoCount + stagedVideos} / ${MAX_VIDEOS}`,
+            }}
+            onFiles={incoming => {
+              const photos = incoming.filter(file => file.type.startsWith("image/"));
+              const videos = incoming.filter(file => file.type.startsWith("video/"));
+              if (photos.length + videos.length !== incoming.length) {
+                toast.error("Selecione somente imagens ou vídeos.");
+                return;
+              }
+              if (documentaryPhotos && (incoming.length > 1 || videos.length)) {
+                toast.error("Fotografia documental recebe uma imagem por vez.");
+                return;
+              }
+              if (!hasRoom("foto", stagedPhotos + photos.length) || !hasRoom("vídeo", stagedVideos + videos.length)) {
+                toast.error(`Limite absoluto: ${MAX_PHOTOS} fotos e ${MAX_VIDEOS} vídeos por conteúdo.`);
+                return;
+              }
+              stage.addFiles(incoming);
+            }}
           />
-
-          {files.length > 0 && (
-            <span className="flex gap-2 text-xs text-[#496b3b]">
-              <CheckCircle2 className="h-4 w-4" />
-
-              {files.length === 1
-                ? files[0].name
-                : `${files.length} arquivos selecionados`}
-            </span>
-          )}
-        </label>
+          <MediaStage
+            items={stage.items}
+            onRemove={stage.remove}
+            onRetry={itemId => {
+              const item = stage.items.find(entry => entry.localId === itemId);
+              if (item) void stage.uploadOne(item).catch(error => toast.error(error instanceof Error ? error.message : "Falha no reenvio."));
+            }}
+          />
+        </div>
 
         <label className="grid gap-2 text-sm font-medium">
           Origem
@@ -563,20 +536,34 @@ export function CoverageMediaPanel({
                     `${media.mediaType} #${media.id}`}
                 </span>
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={detach.isPending}
-                  onClick={() =>
-                    detach.mutate({
-                      publicationId,
-                      mediaId: media.id,
-                    })
-                  }
-                >
-                  <Trash2 className="mr-1 h-3.5 w-3.5" />
-                  Remover
-                </Button>
+                 <Button
+                   size="sm"
+                   variant="outline"
+                   disabled={detach.isPending}
+                   onClick={() =>
+                     detach.mutate({
+                       publicationId,
+                       mediaId: media.id,
+                     })
+                   }
+                 >
+                   <Trash2 className="mr-1 h-3.5 w-3.5" />
+                   Remover
+                 </Button>
+                 {media.mediaType === "foto" ? (
+                   <Button
+                     size="sm"
+                     onClick={() =>
+                       attach.mutate({
+                         publicationId,
+                         mediaId: media.id,
+                         asCover: true,
+                       })
+                     }
+                   >
+                     Usar como capa
+                   </Button>
+                 ) : null}
               </div>
             ))
           ) : (

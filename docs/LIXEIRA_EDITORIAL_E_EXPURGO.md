@@ -23,17 +23,14 @@ Enquanto o prazo estiver ativo, a ação **Restaurar** retorna o conteúdo ao es
 
 O projeto já possui o callback seguro `POST /api/scheduled/editorial-trash-purge`. Ele autentica chamadas de cron, executa de forma idempotente e expurga somente registros cujo `deletedAt` tenha ultrapassado 24 horas.
 
-Por segurança, o cron **não foi criado neste ambiente**. A plataforma de agendamento só consegue alcançar um endereço de produção; portanto, primeiro é necessário salvar um checkpoint e publicar o servidor completo. Depois da publicação, o titular deve criar uma tarefa de projeto, por exemplo a cada hora em UTC:
+Por segurança, o cron **não deve ser um processo dentro da aplicação**. No Render, use um Cron Job autenticado com `EDITORIAL_TRASH_CRON_SECRET` apontando para `POST /api/scheduled/editorial-trash-purge`. Exemplo:
 
 ```bash
-manus-heartbeat create \
-  --name oju-editorial-trash-purge-hourly \
-  --cron "0 0 * * * *" \
-  --path /api/scheduled/editorial-trash-purge \
-  --description "Expurga publicações que passaram mais de 24 horas na Lixeira Editorial"
+curl -X POST "$OJU_PUBLIC_BASE_URL/api/scheduled/editorial-trash-purge" \
+  -H "Authorization: Bearer $EDITORIAL_TRASH_CRON_SECRET"
 ```
 
-O comando deve ser executado somente após a publicação completa do servidor. A execução pode ser consultada e pausada pelo titular na área de tarefas agendadas da plataforma. Não use temporizadores no processo da aplicação, como `setInterval` ou bibliotecas de cron locais: ambientes escaláveis podem suspender instâncias e não oferecem execução confiável nesses mecanismos.
+O comando deve ser executado somente após a publicação do servidor. No Render, use o Cron Job documentado em `docs/RENDER_DEPLOY.md`. Não use temporizadores no processo da aplicação, como `setInterval` ou bibliotecas de cron locais: ambientes escaláveis podem suspender instâncias e não oferecem execução confiável nesses mecanismos.
 
 ## Salvaguardas implementadas
 

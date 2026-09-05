@@ -5,7 +5,7 @@ import { commercialMiniclips, mediaAssets, settings, uploadSessions, users } fro
 import { getDb } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { publishEditorialEvent } from "../editorialEvents";
-import { activePartnerMemberships, assertPartnerScope, recordAuditEvent } from "../partnerScope";
+import { activePartnerMemberships, assertPartnerScope, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 
 async function requireDb() {
   const db = await getDb();
@@ -71,7 +71,7 @@ export const mediaRouter = router({
     return rows.filter(media => media.createdBy === ctx.user.id || (media.partnerId !== null && partnerIds.includes(media.partnerId)));
   }),
   create: protectedProcedure.input(z.object({
-    mediaType: z.enum(["foto", "vídeo"]), assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/manus-storage\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência de mídia precisa ser uma URL válida ou um caminho interno do Acervo." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), publicationAllowed: z.boolean(), projectCoverage: z.string().max(280).optional(), terms: z.string().max(5000).optional(), usageExpiresAt: z.date().optional(), durationSeconds: z.number().int().min(1).max(60).optional(), backgroundEligible: z.boolean().optional(), backgroundPriority: z.number().int().min(0).max(99).optional(), uploadId: z.string().min(12).max(96).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional(),
+    mediaType: z.enum(["foto", "vídeo"]), assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência de mídia precisa ser uma URL válida ou um caminho interno do Acervo." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), publicationAllowed: z.boolean(), projectCoverage: z.string().max(280).optional(), terms: z.string().max(5000).optional(), usageExpiresAt: z.date().optional(), durationSeconds: z.number().int().min(1).max(60).optional(), backgroundEligible: z.boolean().optional(), backgroundPriority: z.number().int().min(0).max(99).optional(), uploadId: z.string().min(12).max(96).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional(),
   })).mutation(async ({ ctx, input }) => {
     requireAdmin(ctx.user.role);
     const db = await requireDb();
@@ -80,16 +80,21 @@ export const mediaRouter = router({
     if (upload && (upload.assetUrl !== input.assetUrl || upload.storageKey !== input.storageKey)) throw new TRPCError({ code: "BAD_REQUEST", message: "A referência da mídia não corresponde à sessão de upload concluída." });
     const partnerId = upload?.partnerId ?? input.partnerId ?? null;
     const territoryId = upload?.territoryId ?? input.territoryId ?? null;
-    if (partnerId || territoryId) {
-      try { await assertPartnerScope({ db, actor: ctx.user, partnerId, territoryIds: territoryId ? [territoryId] : [], resourceLabel: "este registro de mídia", requirePartner: Boolean(partnerId) }); }
-      catch (error) { throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo para registrar esta mídia." }); }
+    let scopedPartnerId = partnerId;
+    let scopedTerritoryId = territoryId;
+    try {
+      const scope = await resolveAuthenticatedScope({ db, actor: ctx.user, requestedPartnerId: partnerId, requestedTerritoryId: territoryId, resourceLabel: "este registro de mídia" });
+      scopedPartnerId = scope.partnerId;
+      scopedTerritoryId = scope.territoryId;
+    } catch (error) {
+      throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo para registrar esta mídia." });
     }
     const durationSeconds = upload?.durationSeconds ?? input.durationSeconds;
     if (input.mediaType === "vídeo" && !durationSeconds) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe a duração confirmada do vídeo. Vídeos documentais devem ter até 60 segundos." });
     const { uploadId, partnerId: _partnerId, territoryId: _territoryId, ...values } = input;
-    const result = await db.insert(mediaAssets).values({ ...values, storageKey: upload?.storageKey ?? values.storageKey, filename: upload?.filename ?? values.filename, fileSize: upload?.fileSize ?? undefined, durationSeconds, partnerId, territoryId, uploadId: uploadId ?? null, checksum: upload?.checksum ?? null, uploadStatus: "Pronto", createdBy: ctx.user.id });
+    const result = await db.insert(mediaAssets).values({ ...values, storageKey: upload?.storageKey ?? values.storageKey, filename: upload?.filename ?? values.filename, fileSize: upload?.fileSize ?? undefined, durationSeconds, partnerId: scopedPartnerId, territoryId: scopedTerritoryId, uploadId: uploadId ?? null, checksum: upload?.checksum ?? null, uploadStatus: "Pronto", createdBy: ctx.user.id });
     const id = Number(result[0].insertId);
-    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId, territoryId, resourceType: "media", resourceId: id, action: "media-registered", nextState: { uploadId: uploadId ?? null, mediaType: input.mediaType, publicationAllowed: input.publicationAllowed }, detail: "Mídia registrada no Acervo; publicação permanece dependente de autorização e curadoria." });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: scopedPartnerId, territoryId: scopedTerritoryId, resourceType: "media", resourceId: id, action: "media-registered", nextState: { uploadId: uploadId ?? null, mediaType: input.mediaType, publicationAllowed: input.publicationAllowed }, detail: "Mídia registrada no Acervo; publicação permanece dependente de autorização e curadoria." });
     publishEditorialEvent("media-created", id);
     return { id };
   }),
@@ -170,7 +175,7 @@ export const mediaRouter = router({
     return { success: true };
   }),
   createBackgroundClip: protectedProcedure.input(z.object({
-    assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/manus-storage\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência do vídeo precisa ser válida." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), durationSeconds: z.number().int().min(1).max(60), priority: z.number().int().min(0).max(99),
+    assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência do vídeo precisa ser válida." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), durationSeconds: z.number().int().min(1).max(60), priority: z.number().int().min(0).max(99),
   })).mutation(async ({ ctx, input }) => {
     requirePrincipal(ctx.user.role);
     const db = await requireDb();

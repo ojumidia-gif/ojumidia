@@ -212,10 +212,13 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+const resolveApiUrl = () => {
+  const base = ENV.forgeApiUrl.trim();
+  if (!base) {
+    throw new Error("Serviço de linguagem não configurado. Defina BUILT_IN_FORGE_API_URL e BUILT_IN_FORGE_API_KEY.");
+  }
+  return `${base.replace(/\/$/, "")}/v1/chat/completions`;
+};
 
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
@@ -435,9 +438,11 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
-    : "https://forge.manus.im/v1/models";
+  const base = ENV.forgeApiUrl.trim();
+  if (!base) {
+    throw new Error("Serviço de linguagem não configurado. Defina BUILT_IN_FORGE_API_URL e BUILT_IN_FORGE_API_KEY.");
+  }
+  const url = `${base.replace(/\/$/, "")}/v1/models`;
 
   const response = await fetchWithBackoff(url, {
     headers: { authorization: `Bearer ${ENV.forgeApiKey}` },

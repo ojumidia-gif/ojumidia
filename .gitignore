@@ -109,8 +109,15 @@ temp/
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 
-# Manus version file (auto-generated, not part of source)
-client/public/__manus__/version.json
+# Local development object storage (never production)
+.local-storage/
+.manus-logs/
+.oju-logs/
+
+# Generator snapshot — not runtime
+template.json
+
+# Generated project noise
 .project-config.json
 
 

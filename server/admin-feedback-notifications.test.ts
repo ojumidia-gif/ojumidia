@@ -23,8 +23,9 @@ describe("feedback visual do Centro Administrativo", () => {
 
   it("notifica salvamento e erro ao editar uma publicação", () => {
     const edit = source("client/src/pages/admin/PublicationEdit.tsx");
-    expect(edit).toContain("Alterações editoriais salvas.");
+    expect(edit).toContain("Rascunho salvo.");
     expect(edit).toContain("Revisão publicada.");
     expect(edit).toContain("Não foi possível salvar as alterações.");
+    expect(edit).toContain("Enviar para revisão");
   });
 });

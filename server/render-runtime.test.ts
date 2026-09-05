@@ -30,8 +30,10 @@ describe("prontidão de runtime para Render", () => {
     const runtime = read("server/_core/index.ts");
     const cron = read("scripts/render-editorial-trash-cron.mjs");
     expect(storage).toContain("S3_BUCKET");
+    expect(storage).toContain("requestChecksumCalculation");
     expect(storage).toContain("storageGetSignedUrl");
-    expect(proxy).toContain("storageGetSignedUrl");
+    expect(proxy).toContain("/media-storage/*");
+    expect(proxy).toContain("/manus-storage/*");
     expect(runtime).toContain("EDITORIAL_TRASH_CRON_SECRET");
     expect(cron).toContain("/api/scheduled/editorial-trash-purge");
   });

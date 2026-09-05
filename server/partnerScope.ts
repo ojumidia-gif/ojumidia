@@ -30,6 +30,89 @@ export async function partnerTerritoryIds(db: Db, partnerId: number) {
   return rows.map(row => row.territoryId);
 }
 
+export type AuthenticatedScope = {
+  partnerId: number | null;
+  territoryId: number | null;
+  scope: "global" | "partner" | "central-legacy";
+};
+
+export function decideAuthenticatedScope(input: {
+  isPrincipal: boolean;
+  membershipPartnerIds: number[];
+  authorizedTerritoryIds: number[];
+  requestedPartnerId: number | null;
+  requestedTerritoryId: number | null;
+  resourceLabel: string;
+}): AuthenticatedScope {
+  const { isPrincipal, membershipPartnerIds, authorizedTerritoryIds, requestedPartnerId, requestedTerritoryId, resourceLabel } = input;
+  if (isPrincipal) {
+    return { partnerId: requestedPartnerId, territoryId: requestedTerritoryId, scope: "global" };
+  }
+  if (!membershipPartnerIds.length) {
+    if (requestedPartnerId) throw new Error(`Você não possui escopo ativo no Parceiro Ojú responsável por ${resourceLabel}.`);
+    return { partnerId: null, territoryId: null, scope: "central-legacy" };
+  }
+  const partnerId =
+    requestedPartnerId && membershipPartnerIds.includes(requestedPartnerId)
+      ? requestedPartnerId
+      : membershipPartnerIds.length === 1
+        ? membershipPartnerIds[0]
+        : null;
+  if (!partnerId) throw new Error(`Selecione um Parceiro Ojú ativo antes de operar ${resourceLabel}.`);
+  if (requestedPartnerId && requestedPartnerId !== partnerId) {
+    throw new Error(`Você não possui escopo ativo no Parceiro Ojú responsável por ${resourceLabel}.`);
+  }
+  const territoryId =
+    requestedTerritoryId && authorizedTerritoryIds.includes(requestedTerritoryId)
+      ? requestedTerritoryId
+      : authorizedTerritoryIds.length === 1
+        ? authorizedTerritoryIds[0]
+        : null;
+  if (!territoryId) throw new Error(`Informe ao menos um território autorizado para ${resourceLabel}.`);
+  if (requestedTerritoryId && !authorizedTerritoryIds.includes(requestedTerritoryId)) {
+    throw new Error("O território informado não pertence ao escopo autorizado deste Parceiro Ojú.");
+  }
+  return { partnerId, territoryId, scope: "partner" };
+}
+
+export async function resolveAuthenticatedScope(input: {
+  db: Db;
+  actor: PartnerActor;
+  requestedPartnerId?: number | null;
+  requestedTerritoryId?: number | null;
+  resourceLabel: string;
+}): Promise<AuthenticatedScope> {
+  const requestedPartnerId = input.requestedPartnerId ?? null;
+  const requestedTerritoryId = input.requestedTerritoryId ?? null;
+  if (isPartnerPrincipal(input.actor)) {
+    return decideAuthenticatedScope({
+      isPrincipal: true,
+      membershipPartnerIds: [],
+      authorizedTerritoryIds: [],
+      requestedPartnerId,
+      requestedTerritoryId,
+      resourceLabel: input.resourceLabel,
+    });
+  }
+  const memberships = await activePartnerMemberships(input.db, input.actor.id);
+  const membershipPartnerIds = memberships.map(item => item.partnerId);
+  const partnerIdForTerritories =
+    requestedPartnerId && membershipPartnerIds.includes(requestedPartnerId)
+      ? requestedPartnerId
+      : membershipPartnerIds.length === 1
+        ? membershipPartnerIds[0]
+        : null;
+  const authorizedTerritoryIds = partnerIdForTerritories ? await partnerTerritoryIds(input.db, partnerIdForTerritories) : [];
+  return decideAuthenticatedScope({
+    isPrincipal: false,
+    membershipPartnerIds,
+    authorizedTerritoryIds,
+    requestedPartnerId,
+    requestedTerritoryId,
+    resourceLabel: input.resourceLabel,
+  });
+}
+
 export async function assertPartnerScope(input: {
   db: Db;
   actor: PartnerActor;

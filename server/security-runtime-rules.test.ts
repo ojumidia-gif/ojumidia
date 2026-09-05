@@ -14,7 +14,7 @@ describe("regras de segurança de execução", () => {
   });
 
   it("protege o upload por autenticação, papel permitido, tipo e limite de tamanho", () => {
-    expect(server).toContain('limit: "16mb"');
+    expect(server).toContain('limit: "64mb"');
     expect(server).toContain('"Seu perfil não possui permissão para enviar mídia."');
     expect(server).toContain('"Tipo de arquivo não permitido."');
   });

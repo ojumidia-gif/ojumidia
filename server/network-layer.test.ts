@@ -49,9 +49,9 @@ describe("camada oficial da Rede Ojú", () => {
   it("expõe os contadores e a duração máxima de vídeo na interface e no servidor", () => {
     const panel = source("client/src/pages/admin/CoverageMediaPanel.tsx");
     const server = source("server/_core/index.ts");
-    expect(panel).toContain("Fotos: {photoCount} de {MAX_PHOTOS}");
-    expect(panel).toContain("Vídeos: {videoCount} de {documentaryPhotos ? 0 : MAX_VIDEOS}");
-    expect(panel).toContain("verifiedDuration = uploaded.durationSeconds ?? duration");
+    expect(panel).toContain("Fotos {photoCount} / {MAX_PHOTOS}");
+    expect(panel).toContain("Vídeos {videoCount} / {documentaryPhotos ? 0 : MAX_VIDEOS}");
+    expect(panel).toContain("uploaded.durationSeconds ?? duration");
     expect(server).toContain('import { parseBuffer } from "music-metadata"');
     expect(server).toContain("O vídeo ultrapassa o máximo absoluto de 60 segundos.");
   });

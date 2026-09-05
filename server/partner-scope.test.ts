@@ -31,6 +31,8 @@ describe("Parceiro Ojú, território e operação isolada", () => {
 
   it("verifica papel, parceiro e território no backend, sem confiar somente na interface", () => {
     expect(scope).toContain("assertPartnerScope");
+    expect(scope).toContain("decideAuthenticatedScope");
+    expect(scope).toContain("resolveAuthenticatedScope");
     expect(scope).toContain("O território informado não pertence ao escopo autorizado");
     expect(scope).toContain("activePartnerMemberships");
     expect(partnerRouter).toContain("Somente o Super Admin pode administrar Parceiros Ojú");

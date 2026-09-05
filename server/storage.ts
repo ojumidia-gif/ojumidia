@@ -1,5 +1,6 @@
-// Uploads use Forge in the managed environment or an explicit S3-compatible
-// bucket in external deployments. Downloads remain behind /manus-storage/{key}.
+// Object storage: Tigris (S3-compatible) in production, optional Forge, or
+// local disk in development only. Public reads go through /media-storage/{key}
+// with a temporary alias at /manus-storage/{key} for records already saved.
 
 import {
   DeleteObjectCommand,
@@ -8,6 +9,9 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { randomUUID } from "node:crypto";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { dirname, resolve, sep } from "node:path";
 import { ENV } from "./_core/env";
 
 function getForgeConfig() {
@@ -16,7 +20,7 @@ function getForgeConfig() {
 
   if (!forgeUrl || !forgeKey) {
     throw new Error(
-      "Storage config missing: configure Forge storage or S3 credentials.",
+      "Storage de produção ausente: configure Tigris (S3_BUCKET, S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY).",
     );
   }
 
@@ -26,33 +30,99 @@ function getForgeConfig() {
   };
 }
 
-function getExternalS3Config() {
-  const bucket = process.env.S3_BUCKET?.trim();
-  const region =
-    process.env.S3_REGION?.trim() || process.env.AWS_REGION?.trim();
+export const MEDIA_PUBLIC_PREFIX = "/media-storage";
+export const MEDIA_LEGACY_PREFIX = "/manus-storage";
+
+export function publicMediaUrl(key: string) {
+  return `${MEDIA_PUBLIC_PREFIX}/${normalizeKey(key)}`;
+}
+
+export function isInternalMediaUrl(value: string) {
+  return /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value);
+}
+
+export function readObjectStorageEnv() {
+  const bucket =
+    process.env.S3_BUCKET?.trim() ||
+    process.env.TIGRIS_BUCKET?.trim();
+  const endpoint =
+    process.env.S3_ENDPOINT?.trim() ||
+    process.env.TIGRIS_ENDPOINT?.trim();
   const accessKeyId =
     process.env.S3_ACCESS_KEY_ID?.trim() ||
+    process.env.TIGRIS_ACCESS_KEY_ID?.trim() ||
     process.env.AWS_ACCESS_KEY_ID?.trim();
   const secretAccessKey =
     process.env.S3_SECRET_ACCESS_KEY?.trim() ||
+    process.env.TIGRIS_SECRET_ACCESS_KEY?.trim() ||
     process.env.AWS_SECRET_ACCESS_KEY?.trim();
+  const tigrisLike = Boolean(endpoint && /tigris|storage\.dev/i.test(endpoint));
+  const region =
+    process.env.S3_REGION?.trim() ||
+    process.env.AWS_REGION?.trim() ||
+    (endpoint ? "auto" : "");
+  const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === "true" ? true : tigrisLike ? false : Boolean(endpoint);
 
-  if (!bucket || !region || !accessKeyId || !secretAccessKey) {
-    return null;
-  }
+  return { bucket, endpoint, accessKeyId, secretAccessKey, region, forcePathStyle, tigrisLike };
+}
 
+export function objectStorageClientOptions() {
+  const env = readObjectStorageEnv();
+  if (!env.bucket || !env.accessKeyId || !env.secretAccessKey || !env.region) return null;
   return {
-    bucket,
-    client: new S3Client({
-      region,
-      endpoint: process.env.S3_ENDPOINT?.trim() || undefined,
-      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+    bucket: env.bucket,
+    tigrisLike: env.tigrisLike,
+    clientConfig: {
+      region: env.region,
+      endpoint: env.endpoint || undefined,
+      forcePathStyle: env.forcePathStyle,
       credentials: {
-        accessKeyId,
-        secretAccessKey,
+        accessKeyId: env.accessKeyId,
+        secretAccessKey: env.secretAccessKey,
       },
-    }),
+      requestChecksumCalculation: "WHEN_REQUIRED" as const,
+      responseChecksumValidation: "WHEN_REQUIRED" as const,
+    },
   };
+}
+
+function getExternalS3Config() {
+  const options = objectStorageClientOptions();
+  if (!options) return null;
+  return {
+    bucket: options.bucket,
+    client: new S3Client(options.clientConfig),
+  };
+}
+
+export function getLocalStorageDir(): string | null {
+  if (ENV.isProduction) return null;
+  if (process.env.LOCAL_STORAGE_ENABLED === "false") return null;
+  const configured = process.env.LOCAL_STORAGE_DIR?.trim();
+  return resolve(process.cwd(), configured || ".local-storage");
+}
+
+export function isLocalDevelopmentStorage() {
+  return Boolean(getLocalStorageDir()) && !getExternalS3Config() && !(ENV.forgeApiUrl && ENV.forgeApiKey);
+}
+
+function localStoragePath(key: string) {
+  const root = getLocalStorageDir();
+  if (!root) throw new Error("Storage local de desenvolvimento não está disponível.");
+  const normalized = normalizeKey(key).replace(/\\/g, "/");
+  if (!normalized || normalized.includes("..") || normalized.startsWith("/")) {
+    throw new Error("Chave de storage inválida.");
+  }
+  const absolute = resolve(root, normalized);
+  const rootWithSep = root.endsWith(sep) ? root : `${root}${sep}`;
+  if (absolute !== root && !absolute.startsWith(rootWithSep)) {
+    throw new Error("Chave de storage inválida.");
+  }
+  return absolute;
+}
+
+export function resolveLocalStorageFile(relKey: string) {
+  return localStoragePath(relKey);
 }
 
 function normalizeKey(relKey: string): string {
@@ -60,7 +130,7 @@ function normalizeKey(relKey: string): string {
 }
 
 function appendHashSuffix(relKey: string): string {
-  const hash = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+  const hash = randomUUID().replace(/-/g, "").slice(0, 8);
   const lastDot = relKey.lastIndexOf(".");
 
   return lastDot === -1
@@ -70,8 +140,18 @@ function appendHashSuffix(relKey: string): string {
 
 export function hasStorageConfiguration() {
   return Boolean(
-    (ENV.forgeApiUrl && ENV.forgeApiKey) || getExternalS3Config(),
+    (ENV.forgeApiUrl && ENV.forgeApiKey) || getExternalS3Config() || isLocalDevelopmentStorage(),
   );
+}
+
+export function describeStorageConfiguration() {
+  if (getExternalS3Config()) {
+    const options = objectStorageClientOptions();
+    return options?.tigrisLike ? "tigris" : "s3";
+  }
+  if (ENV.forgeApiUrl && ENV.forgeApiKey) return "forge";
+  if (isLocalDevelopmentStorage()) return "local-development";
+  return "missing";
 }
 
 export async function storagePut(
@@ -81,6 +161,17 @@ export async function storagePut(
 ): Promise<{ key: string; url: string }> {
   const key = appendHashSuffix(normalizeKey(relKey));
   const externalS3 = getExternalS3Config();
+
+  if (isLocalDevelopmentStorage()) {
+    const absolute = localStoragePath(key);
+    await mkdir(dirname(absolute), { recursive: true });
+    const buffer = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
+    await writeFile(absolute, buffer);
+    return {
+      key,
+      url: publicMediaUrl(key),
+    };
+  }
 
   if (externalS3) {
     await externalS3.client.send(
@@ -94,7 +185,7 @@ export async function storagePut(
 
     return {
       key,
-      url: `/manus-storage/${key}`,
+      url: publicMediaUrl(key),
     };
   }
 
@@ -150,7 +241,7 @@ export async function storagePut(
 
   return {
     key,
-    url: `/manus-storage/${key}`,
+    url: publicMediaUrl(key),
   };
 }
 
@@ -161,7 +252,7 @@ export async function storageGet(
 
   return {
     key,
-    url: `/manus-storage/${key}`,
+    url: publicMediaUrl(key),
   };
 }
 
@@ -169,6 +260,10 @@ export async function storageGetSignedUrl(
   relKey: string,
 ): Promise<string> {
   const key = normalizeKey(relKey);
+  if (isLocalDevelopmentStorage()) {
+    localStoragePath(key);
+    return publicMediaUrl(key);
+  }
   const externalS3 = getExternalS3Config();
 
   if (externalS3) {
@@ -231,6 +326,11 @@ export async function storageDelete(relKey: string): Promise<void> {
   const key = normalizeKey(relKey);
 
   if (!key) {
+    return;
+  }
+
+  if (isLocalDevelopmentStorage()) {
+    await unlink(localStoragePath(key)).catch(() => undefined);
     return;
   }
 

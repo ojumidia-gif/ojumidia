@@ -2,7 +2,7 @@
 
 ## Escopo e pré-requisitos
 
-Esta implantação usa **um Web Service Node** para servir a aplicação React, Express, tRPC, OAuth, uploads e rotas SPA pela mesma origem. O projeto continua com MySQL/TiDB via Drizzle e usa Forge Storage ou um bucket S3 compatível; o disco efêmero do Render não é utilizado como Acervo permanente. O Firebase Hosting permanece reservado à prévia estática e não substitui este serviço completo.
+Esta implantação usa **um Web Service Node** para servir a aplicação React, Express, tRPC, OAuth, uploads e rotas SPA pela mesma origem. O banco de produção é **Aiven** (MySQL via `DATABASE_URL`). A mídia permanente fica no **Tigris** (S3-compatible). O disco efêmero do Render não é Acervo. O Firebase Hosting, se existir, permanece só como prévia estática e não substitui este serviço.
 
 > Não publique com acesso local habilitado. `OJU_LOCAL_DEV_LOGIN_ENABLED` deve permanecer ausente ou `false` no Render.
 
@@ -22,7 +22,7 @@ O serviço atende em `0.0.0.0` e usa a porta entregue em `PORT`. O endpoint `GET
 
 ## 2. Banco e migrations
 
-Crie ou escolha um **MySQL/TiDB compatível** e defina `DATABASE_URL` no Render. A Ojú não cria Render Postgres no Blueprint, pois isso alteraria o banco já adotado pelo projeto. Antes de cada subida, o Render executa apenas `pnpm db:migrate`; a geração de migration é deliberadamente separada em `pnpm db:generate` para desenvolvimento.
+Crie ou escolha um **MySQL Aiven** (ou outro MySQL compatível já usado pelo projeto) e defina `DATABASE_URL` no Render. A Ojú não cria Render Postgres no Blueprint, pois isso alteraria o banco já adotado pelo projeto. Antes de cada subida, o Render executa apenas `pnpm db:migrate`; a geração de migration é deliberadamente separada em `pnpm db:generate` para desenvolvimento.
 
 Faça backup do banco antes da primeira aplicação e nunca rode `db:generate` diretamente em produção. As migrations existentes são aditivas e devem ser aplicadas em ordem.
 
@@ -44,7 +44,7 @@ Selecione uma única configuração de storage:
 
 | Alternativa         | Variáveis                                                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Forge/Manus Storage | `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`                                                                                         |
+| Tigris (produção) | `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`; `S3_REGION=auto`. Path-style só se `S3_FORCE_PATH_STYLE=true`. |
 | S3 ou compatível    | `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`; use `S3_ENDPOINT` e `S3_FORCE_PATH_STYLE=true` se o provedor exigir. |
 
 Os uploads continuam vinculados a usuário, parceiro e território, possuem checksum, idempotência, estados técnicos e aprovação editorial separada. O Render processa a requisição, mas o arquivo permanente permanece no storage.

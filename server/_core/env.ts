@@ -33,10 +33,10 @@ export const ENV = {
 
 export function isGoogleOAuthConfigured() {
   return Boolean(
-    ENV.googleClientId &&
-      ENV.googleClientSecret &&
-      ENV.googleOAuthRedirectUri &&
-      ENV.cookieSecret
+    (process.env.GOOGLE_CLIENT_ID ?? "").trim() &&
+      (process.env.GOOGLE_CLIENT_SECRET ?? "").trim() &&
+      (process.env.GOOGLE_OAUTH_REDIRECT_URI ?? "").trim() &&
+      (process.env.JWT_SECRET ?? "").trim()
   );
 }
 

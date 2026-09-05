@@ -12,15 +12,16 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { storagePut } from "../storage";
+import { describeStorageConfiguration, hasStorageConfiguration, storagePut } from "../storage";
 import { sdk } from "./sdk";
 import { openEditorialEventStream } from "../editorialEvents";
 import { registerLocalDevAuthRoutes } from "./localDevAuth";
 import { registerPrivateCommercialFilesRoute } from "../privateCommercialFiles";
 import { getDb } from "../db";
 import { uploadSessions } from "../../drizzle/schema";
-import { assertPartnerScope, recordAuditEvent } from "../partnerScope";
+import { recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 import { purgeExpiredEditorialTrash } from "../editorialTrash";
+import { getAuthRuntimeStatus } from "./authStatus";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -86,6 +87,10 @@ async function startServer() {
   registerOAuthRoutes(app);
   registerLocalDevAuthRoutes(app);
   registerPrivateCommercialFilesRoute(app);
+  app.get("/api/auth/status", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(getAuthRuntimeStatus());
+  });
   app.post("/api/scheduled/editorial-trash-purge", async (req, res) => {
     try {
       const configuredSecret = process.env.EDITORIAL_TRASH_CRON_SECRET;
@@ -106,12 +111,16 @@ async function startServer() {
     }
   });
   app.get("/api/editorial/events", (_req, res) => openEditorialEventStream(res));
-  app.post("/api/media/upload", express.raw({ type: ["image/*", "video/*", "audio/*", "application/pdf"], limit: "16mb" }), async (req, res) => {
+  app.post("/api/media/upload", express.raw({ type: ["image/*", "video/*", "audio/*", "application/pdf", "application/octet-stream"], limit: "64mb" }), async (req, res) => {
     let uploadId: string | null = null;
     let db: NonNullable<Awaited<ReturnType<typeof getDb>>> | null = null;
     try {
-      const user = await sdk.authenticateRequest(req);
-      if (!user) return res.status(401).json({ message: "Faça login para enviar arquivos." });
+      let user;
+      try {
+        user = await sdk.authenticateRequest(req);
+      } catch {
+        return res.status(401).json({ message: "Faça login para enviar arquivos." });
+      }
       if (!["criador", "editor", "aprovador", "administrador", "administrador principal"].includes(user.role)) {
         return res.status(403).json({ message: "Seu perfil não possui permissão para enviar mídia." });
       }
@@ -126,23 +135,32 @@ async function startServer() {
       uploadId = requestedUploadId || randomUUID();
       const partnerHeader = String(req.header("x-partner-id") || "").trim();
       const territoryHeader = String(req.header("x-territory-id") || "").trim();
-      const partnerId = partnerHeader ? Number(partnerHeader) : null;
-      const territoryId = territoryHeader ? Number(territoryHeader) : null;
-      if ((partnerHeader && (!Number.isInteger(partnerId) || partnerId! <= 0)) || (territoryHeader && (!Number.isInteger(territoryId) || territoryId! <= 0))) return res.status(400).json({ message: "O contexto territorial do upload é inválido." });
+      const requestedPartnerId = partnerHeader ? Number(partnerHeader) : null;
+      const requestedTerritoryId = territoryHeader ? Number(territoryHeader) : null;
+      if ((partnerHeader && (!Number.isInteger(requestedPartnerId) || requestedPartnerId! <= 0)) || (territoryHeader && (!Number.isInteger(requestedTerritoryId) || requestedTerritoryId! <= 0))) return res.status(400).json({ message: "O contexto territorial do upload é inválido." });
       db = await getDb();
       if (!db) return res.status(503).json({ message: "Banco de dados indisponível para registrar o upload." });
-      if (partnerId || territoryId) {
-        try {
-          await assertPartnerScope({ db, actor: user, partnerId, territoryIds: territoryId ? [territoryId] : [], resourceLabel: "este upload", requirePartner: Boolean(partnerId) });
-        } catch (error) {
-          return res.status(403).json({ message: error instanceof Error ? error.message : "Você não possui escopo para este upload." });
-        }
+      if (!hasStorageConfiguration()) {
+        return res.status(503).json({
+          message: process.env.NODE_ENV === "production"
+            ? "Storage de produção ausente. Configure Tigris (S3_BUCKET, S3_ENDPOINT e chaves) no ambiente."
+            : "Storage ausente. Configure S3/Forge ou use o armazenamento local de desenvolvimento (.local-storage).",
+        });
+      }
+      let partnerId: number | null = null;
+      let territoryId: number | null = null;
+      try {
+        const scope = await resolveAuthenticatedScope({ db, actor: user, requestedPartnerId, requestedTerritoryId, resourceLabel: "este upload" });
+        partnerId = scope.partnerId;
+        territoryId = scope.territoryId;
+      } catch (error) {
+        return res.status(403).json({ message: error instanceof Error ? error.message : "Você não possui escopo para este upload." });
       }
       const checksum = createHash("sha256").update(req.body).digest("hex");
       const existing = (await db.select().from(uploadSessions).where(eq(uploadSessions.id, uploadId)).limit(1))[0];
       if (existing) {
         if (existing.userId !== user.id) return res.status(403).json({ message: "Este identificador de upload pertence a outro usuário." });
-        if (["Pronto", "Aprovado", "Publicado"].includes(existing.status) && existing.assetUrl && existing.storageKey) return res.status(200).json({ uploadId, assetUrl: existing.assetUrl, storageKey: existing.storageKey, filename: existing.filename, size: existing.fileSize, durationSeconds: existing.durationSeconds, checksum: existing.checksum, status: existing.status, reused: true });
+        if (["Pronto", "Aprovado", "Publicado"].includes(existing.status) && existing.assetUrl && existing.storageKey) return res.status(200).json({ uploadId, url: existing.assetUrl, key: existing.storageKey, assetUrl: existing.assetUrl, storageKey: existing.storageKey, filename: existing.filename, size: existing.fileSize, durationSeconds: existing.durationSeconds, checksum: existing.checksum, status: existing.status, reused: true });
         if (["Enviando", "Enviado", "Processando"].includes(existing.status)) return res.status(409).json({ message: "Este upload já está em processamento. Aguarde a conclusão antes de tentar novamente.", uploadId });
         await db.update(uploadSessions).set({ status: "Enviando", partnerId, territoryId, filename, contentType, checksum, errorMessage: null, assetUrl: null, storageKey: null, fileSize: null, durationSeconds: null, completedAt: null, attemptCount: existing.attemptCount + 1, rejectedBy: null, rejectedAt: null, cancelledAt: null }).where(eq(uploadSessions.id, uploadId));
       } else {
@@ -166,11 +184,12 @@ async function startServer() {
       const uploaded = await storagePut(`media/${user.id}/${uploadId}-${filename}`, req.body, contentType);
       await db.update(uploadSessions).set({ status: "Pronto", storageKey: uploaded.key, assetUrl: uploaded.url, fileSize: req.body.length, durationSeconds: durationSeconds ?? null, completedAt: new Date() }).where(eq(uploadSessions.id, uploadId));
       await recordAuditEvent(db, { actorId: user.id, partnerId, territoryId, resourceType: "upload-session", resourceId: null, action: "upload-ready", nextState: { uploadId, status: "Pronto", filename, checksum }, detail: "Arquivo enviado ao storage e pronto para registro no Acervo; nenhuma publicação foi criada." });
-      return res.status(201).json({ ...uploaded, uploadId, filename, size: req.body.length, durationSeconds, checksum, status: "Pronto" });
+      return res.status(201).json({ ...uploaded, url: uploaded.url, key: uploaded.key, assetUrl: uploaded.url, storageKey: uploaded.key, uploadId, filename, size: req.body.length, durationSeconds, checksum, status: "Pronto" });
     } catch (error) {
-      if (db && uploadId) await db.update(uploadSessions).set({ status: "Falhou", errorMessage: error instanceof Error ? error.message.slice(0, 4000) : "Falha desconhecida no upload." }).where(eq(uploadSessions.id, uploadId)).catch(() => undefined);
+      const detail = error instanceof Error ? error.message.slice(0, 400) : "Falha desconhecida no upload.";
+      if (db && uploadId) await db.update(uploadSessions).set({ status: "Falhou", errorMessage: detail.slice(0, 4000) }).where(eq(uploadSessions.id, uploadId)).catch(() => undefined);
       console.error("[MediaUpload]", error);
-      return res.status(500).json({ message: "Não foi possível enviar o arquivo. Tente novamente." });
+      return res.status(500).json({ message: `Não foi possível enviar o arquivo. ${detail}` });
     }
   });
   // tRPC API
@@ -194,15 +213,18 @@ async function startServer() {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT deve ser um número válido entre 1 e 65535.");
   server.listen(port, "0.0.0.0", () => {
     const runtime = process.env.NODE_ENV || "development";
-    const oauthConfigured = Boolean(
-      process.env.GOOGLE_CLIENT_ID &&
-        process.env.GOOGLE_CLIENT_SECRET &&
-        process.env.GOOGLE_OAUTH_REDIRECT_URI &&
-        process.env.JWT_SECRET
-    );
-    const storageConfigured = Boolean((process.env.BUILT_IN_FORGE_API_URL && process.env.BUILT_IN_FORGE_API_KEY) || (process.env.S3_BUCKET && (process.env.S3_REGION || process.env.AWS_REGION)));
-    console.info(`[Runtime] Ojú Mídia iniciado em modo ${runtime}; porta ${port}; OAuth ${oauthConfigured ? "configurado" : "pendente"}; storage ${storageConfigured ? "configurado" : "pendente"}.`);
+    const authStatus = getAuthRuntimeStatus();
+    const storageKind = describeStorageConfiguration();
+    console.info(`[Runtime] Ojú Mídia iniciado em modo ${runtime}; porta ${port}; login ${authStatus.loginMode}; storage ${storageKind}.`);
+    if (!authStatus.googleOAuth) console.info(`[OAuth] ${authStatus.message}`);
+    if (storageKind === "local-development") console.info("[Storage] Arquivos deste ambiente vão para .local-storage. Isso não é persistência de produção.");
+    if (storageKind === "missing") console.warn("[Storage] Nenhum storage configurado. Em produção use Tigris (S3_*). Em desenvolvimento, .local-storage entra automaticamente.");
   });
+  const shutdown = () => {
+    server.close(() => process.exit(0));
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 startServer().catch(console.error);

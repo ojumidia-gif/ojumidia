@@ -17,6 +17,7 @@ import {
   publicationTaxonomies,
   publications,
   taxonomies,
+  uploadSessions,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { EDITORIAL_TRASH_RETENTION_MS } from "../editorialTrash";
@@ -68,7 +69,7 @@ export const operationsRouter = router({
     const items: PendingItem[] = [];
     const add = (item: PendingItem, ownerId?: number | null) => { if (visible(item, ownerId)) items.push(item); };
 
-    const [publicationRows, mediaRows, requestRows, authorizationRows, authorizationTermRows, refundRows, contractRows, suggestionRows, visibilityRows, institutionRows, eventRows, memoryRows, careRows] = await Promise.all([
+    const [publicationRows, mediaRows, requestRows, authorizationRows, authorizationTermRows, refundRows, contractRows, suggestionRows, visibilityRows, institutionRows, eventRows, memoryRows, careRows, uploadRows] = await Promise.all([
       db.select().from(publications).where(or(eq(publications.status, "Em revisão"), isNotNull(publications.deletedAt))).orderBy(desc(publications.updatedAt)),
       db.select().from(mediaAssets).where(and(eq(mediaAssets.uploadStatus, "Pronto"), eq(mediaAssets.state, "Ativo"))).orderBy(desc(mediaAssets.createdAt)),
       db.select().from(commercialRequests).where(inArray(commercialRequests.status, ["Solicitação", "Em análise", "Proposta", "Aceite", "Entrega"])).orderBy(desc(commercialRequests.updatedAt)),
@@ -82,6 +83,7 @@ export const operationsRouter = router({
       db.select().from(communityEvents).where(and(isNull(communityEvents.deletedAt), or(eq(communityEvents.consentStatus, "Pendente"), eq(communityEvents.status, "Em revisão")))).orderBy(desc(communityEvents.updatedAt)),
       db.select().from(oralMemories).where(and(isNull(oralMemories.deletedAt), or(eq(oralMemories.consentStatus, "Pendente"), eq(oralMemories.status, "Em revisão"), and(isNotNull(oralMemories.generatedTranscript), isNotNull(oralMemories.aiProcessedAt), isNull(oralMemories.aiReviewedAt))))).orderBy(desc(oralMemories.updatedAt)),
       db.select().from(communityCareRequests).where(inArray(communityCareRequests.status, ["Recebida", "Em acolhimento"])).orderBy(desc(communityCareRequests.updatedAt)),
+      db.select().from(uploadSessions).where(inArray(uploadSessions.status, ["Enviando", "Enviado", "Processando", "Falhou"])).orderBy(desc(uploadSessions.updatedAt)),
     ]);
 
     const reviewIds = publicationRows.filter(row => row.status === "Em revisão").map(row => row.id);
@@ -120,6 +122,7 @@ export const operationsRouter = router({
     eventRows.forEach(event => add({ id: `event-${event.id}`, category: "Comunidade", priority: "Atenção", title: event.title, description: event.consentStatus === "Pendente" ? "Agenda comunitária aguarda consentimento." : "Agenda comunitária aguarda revisão.", href: "/admin/comunidade", createdAt: event.updatedAt, dueAt: event.startsAt, partnerId: event.partnerId, territoryId: event.territoryId }, event.managedByUserId));
     memoryRows.forEach(memory => add({ id: `memory-${memory.id}`, category: "Memórias", priority: memory.aiProcessedAt && !memory.aiReviewedAt ? "Atenção" : "Acompanhamento", title: memory.title, description: memory.aiProcessedAt && !memory.aiReviewedAt ? "Memória oral com conteúdo assistido aguardando revisão humana." : "Memória oral aguarda consentimento ou revisão.", href: "/admin/revisar-memorias", createdAt: memory.updatedAt, dueAt: null, partnerId: memory.partnerId, territoryId: memory.territoryId }, memory.managedByUserId));
     careRows.forEach(care => add({ id: `care-${care.id}`, category: "Acolhimento", priority: care.status === "Recebida" ? "Crítica" : "Atenção", title: `Pedido de acolhimento: ${care.requestType}`, description: "Pedido reservado exige acompanhamento responsável; dados de contato não são exibidos aqui.", href: "/admin/notificacoes-acolhimento", createdAt: care.updatedAt, dueAt: null, partnerId: care.partnerId, territoryId: care.territoryId }, care.managedByUserId));
+    uploadRows.forEach(session => add({ id: `upload-${session.id}`, category: "Upload", priority: session.status === "Falhou" ? "Crítica" : "Atenção", title: session.filename, description: session.status === "Falhou" ? (session.errorMessage || "O envio falhou e pode ser retomado com o mesmo identificador.") : `Arquivo em “${session.status}”. Você pode continuar trabalhando enquanto o processamento termina.`, href: "/admin/midias", createdAt: session.updatedAt, dueAt: null, partnerId: session.partnerId, territoryId: session.territoryId }, session.userId));
     if (principal) {
       const responsibilityTerms = await db.select().from(administratorResponsibilityTerms).where(eq(administratorResponsibilityTerms.status, "Aguardando assinatura gov.br")).orderBy(desc(administratorResponsibilityTerms.createdAt));
       responsibilityTerms.forEach(term => items.push({ id: `responsibility-${term.id}`, category: "Governança", priority: "Crítica", title: term.email, description: "Administrador autorizado aguarda assinatura do termo de responsabilidade via gov.br.", href: "/admin/colaboradores", createdAt: term.createdAt, dueAt: null, partnerId: null, territoryId: null }));

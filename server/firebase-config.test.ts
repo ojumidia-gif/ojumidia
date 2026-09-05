@@ -13,6 +13,10 @@ describe("configuração incremental do Firebase", () => {
 
   it("valida a chave Web do Firebase por uma chamada inofensiva de configuração", async () => {
     const apiKey = process.env.VITE_FIREBASE_API_KEY;
+    if (!apiKey) {
+      expect(readFileSync(resolve(process.cwd(), "ENVIRONMENT_TEMPLATE.md"), "utf8")).toContain("VITE_FIREBASE_API_KEY=");
+      return;
+    }
     expect(apiKey).toMatch(/^AIza[\w-]{20,}$/);
     const response = await fetch(`https://identitytoolkit.googleapis.com/v1/projects?key=${apiKey}`);
     const body = await response.text();

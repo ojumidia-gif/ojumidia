@@ -24,11 +24,22 @@ OJU_LOCAL_ADMIN_EMAIL=aquinopratesr@gmail.com
 # Acesso automático de administrador para testes internos sem OAuth — NUNCA usar em produção
 OJU_LOCAL_DEV_LOGIN_ENABLED=true
 
-# Serviços opcionais; manter em branco até configuração autorizada
-BUILT_IN_FORGE_API_URL=
-BUILT_IN_FORGE_API_KEY=
+# Storage de desenvolvimento local (NUNCA em produção)
+# Sem S3/Forge, o servidor grava em .local-storage apenas quando NODE_ENV=development
+LOCAL_STORAGE_DIR=.local-storage
+
 VITE_FRONTEND_FORGE_API_URL=
 VITE_FRONTEND_FORGE_API_KEY=
+
+# Storage persistente (produção ou homologação). Em desenvolvimento local, deixe em branco para usar .local-storage
+BUILT_IN_FORGE_API_URL=
+BUILT_IN_FORGE_API_KEY=
+S3_BUCKET=
+S3_REGION=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+S3_ENDPOINT=
+S3_FORCE_PATH_STYLE=false
 
 # Firebase Web SDK — configuração pública centralizada; não adicionar service accounts ou private keys
 VITE_FIREBASE_API_KEY=
