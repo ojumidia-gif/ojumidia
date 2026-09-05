@@ -18,6 +18,9 @@ describe("gestão individual de colaboradores", () => {
     expect(router).toContain('const COMMERCIAL_CONTACT_EMAIL = "ojumidia@gmail.com"');
     expect(router).toContain("não pode receber autorização administrativa");
     expect(router).toContain("Somente o administrador principal pode gerenciar colaboradores");
+    expect(router).toContain('const collaboratorRoles = ["criador", "editor", "aprovador", "administrador"]');
+    expect(source("drizzle/schema.ts")).toContain("collaboratorAccessGrants");
+    expect(router).toContain("Administrador territorial precisa de Parceiro Ojú");
   });
 
   it("vincula o convite ao primeiro login e centraliza a ativação de papel na sincronização do grant", () => {

@@ -41,27 +41,38 @@ export function isInternalMediaUrl(value: string) {
   return /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value);
 }
 
+function cleanEnv(value?: string) {
+  const trimmed = value?.trim() ?? "";
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 export function readObjectStorageEnv() {
-  const bucket =
-    process.env.S3_BUCKET?.trim() ||
-    process.env.TIGRIS_BUCKET?.trim();
-  const endpoint =
-    process.env.S3_ENDPOINT?.trim() ||
-    process.env.TIGRIS_ENDPOINT?.trim();
+  const bucket = cleanEnv(process.env.S3_BUCKET) || cleanEnv(process.env.TIGRIS_BUCKET);
+  const endpoint = (cleanEnv(process.env.S3_ENDPOINT) || cleanEnv(process.env.TIGRIS_ENDPOINT)).replace(/\/+$/, "");
   const accessKeyId =
-    process.env.S3_ACCESS_KEY_ID?.trim() ||
-    process.env.TIGRIS_ACCESS_KEY_ID?.trim() ||
-    process.env.AWS_ACCESS_KEY_ID?.trim();
+    cleanEnv(process.env.S3_ACCESS_KEY_ID) ||
+    cleanEnv(process.env.TIGRIS_ACCESS_KEY_ID) ||
+    cleanEnv(process.env.AWS_ACCESS_KEY_ID);
   const secretAccessKey =
-    process.env.S3_SECRET_ACCESS_KEY?.trim() ||
-    process.env.TIGRIS_SECRET_ACCESS_KEY?.trim() ||
-    process.env.AWS_SECRET_ACCESS_KEY?.trim();
+    cleanEnv(process.env.S3_SECRET_ACCESS_KEY) ||
+    cleanEnv(process.env.TIGRIS_SECRET_ACCESS_KEY) ||
+    cleanEnv(process.env.AWS_SECRET_ACCESS_KEY);
   const tigrisLike = Boolean(endpoint && /tigris|storage\.dev/i.test(endpoint));
-  const region =
-    process.env.S3_REGION?.trim() ||
-    process.env.AWS_REGION?.trim() ||
-    (endpoint ? "auto" : "");
-  const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === "true" ? true : tigrisLike ? false : Boolean(endpoint);
+  const region = tigrisLike
+    ? (cleanEnv(process.env.S3_REGION) || "auto")
+    : (cleanEnv(process.env.S3_REGION) || cleanEnv(process.env.AWS_REGION) || (endpoint ? "auto" : ""));
+  const forcePathStyleExplicit = cleanEnv(process.env.S3_FORCE_PATH_STYLE);
+  const forcePathStyle =
+    forcePathStyleExplicit === "true"
+      ? true
+      : forcePathStyleExplicit === "false"
+        ? false
+        : tigrisLike
+          ? false
+          : Boolean(endpoint);
 
   return { bucket, endpoint, accessKeyId, secretAccessKey, region, forcePathStyle, tigrisLike };
 }

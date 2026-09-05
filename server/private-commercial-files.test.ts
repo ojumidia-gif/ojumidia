@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 describe("armazenamento protegido de documentos comerciais", () => {
   const route = readFileSync(resolve(process.cwd(), "server/privateCommercialFiles.ts"), "utf8");
   const router = readFileSync(resolve(process.cwd(), "server/routers/commercial.ts"), "utf8");
-  const storageRules = readFileSync(resolve(process.cwd(), "STORAGE_RULES.md"), "utf8");
+  const storageRules = readFileSync(resolve(process.cwd(), "README.md"), "utf8");
 
   it("restringe termos assinados ao Super Admin ou ao administrador da própria carteira", () => {
     expect(route).toContain('role === "administrador principal" || (role === "administrador" && ownerId === userId)');

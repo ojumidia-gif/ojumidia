@@ -110,7 +110,7 @@ export const partnersRouter = router({
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.id, resourceType: "partner-territories", resourceId: current.id, action: "partner-territory-tenure-updated", previousState: previous, nextState: { activeTerritoryIds: territoryIds, endedTerritoryIds: toEnd.map(item => item.territoryId), startedTerritoryIds: toAdd }, detail: "Titularidade territorial atualizada pelo Super Admin sem apagar associações históricas." });
     return { success: true, version: current.version + 1 };
   }),
-  setMember: protectedProcedure.input(z.object({ partnerId: z.number().int().positive(), userId: z.number().int().positive(), operationalRole: z.enum(memberRoles), status: z.enum(memberStatuses) })).mutation(async ({ ctx, input }) => {
+  setMember: protectedProcedure.input(z.object({ partnerId: z.number().int().positive(), userId: z.number().int().positive(), operationalRole: z.enum(memberRoles), status: z.enum(memberStatuses), territoryId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
     requirePrincipal(ctx.user.role);
     const db = await requireDb();
     const [partner, account] = await Promise.all([
@@ -119,11 +119,16 @@ export const partnersRouter = router({
     ]);
     if (!partner[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Parceiro Ojú não encontrado." });
     if (!account[0] || !account[0].adminAccess) throw new TRPCError({ code: "BAD_REQUEST", message: "O membro precisa possuir acesso administrativo ativo antes de ser associado ao parceiro." });
+    if (input.territoryId) {
+      const territories = await assertTerritoryTaxonomies(db, [input.territoryId]);
+      const active = await db.select({ territoryId: partnerTerritories.territoryId }).from(partnerTerritories).where(and(eq(partnerTerritories.partnerId, input.partnerId), eq(partnerTerritories.status, "Ativa")));
+      if (!active.some(row => row.territoryId === territories[0])) throw new TRPCError({ code: "BAD_REQUEST", message: "O território do membro precisa estar ativo neste Parceiro Ojú." });
+    }
     const existing = (await db.select().from(partnerMembers).where(and(eq(partnerMembers.partnerId, input.partnerId), eq(partnerMembers.userId, input.userId))).limit(1))[0];
-    const values = { operationalRole: input.operationalRole, status: input.status, activatedAt: input.status === "Ativo" ? new Date() : existing?.activatedAt ?? null, revokedAt: ["Suspenso", "Revogado"].includes(input.status) ? new Date() : null };
+    const values = { operationalRole: input.operationalRole, status: input.status, territoryId: input.territoryId ?? existing?.territoryId ?? null, activatedAt: input.status === "Ativo" ? new Date() : existing?.activatedAt ?? null, revokedAt: ["Suspenso", "Revogado"].includes(input.status) ? new Date() : null };
     if (existing) await db.update(partnerMembers).set(values).where(eq(partnerMembers.id, existing.id));
     else await db.insert(partnerMembers).values({ partnerId: input.partnerId, userId: input.userId, createdBy: ctx.user.id, ...values });
-    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: input.partnerId, resourceType: "partner-member", resourceId: input.userId, action: "partner-member-set", previousState: existing ? { status: existing.status, operationalRole: existing.operationalRole } : null, nextState: input, detail: "Membro associado ou atualizado no Parceiro Ojú." });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: input.partnerId, territoryId: input.territoryId ?? null, resourceType: "partner-member", resourceId: input.userId, action: "partner-member-set", previousState: existing ? { status: existing.status, operationalRole: existing.operationalRole, territoryId: existing.territoryId } : null, nextState: input, detail: "Membro associado ou atualizado no Parceiro Ojú." });
     return { success: true };
   }),
 });

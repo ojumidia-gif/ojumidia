@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { Express, Request, Response } from "express";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import * as db from "../db";
+import { applyLoginSideEffects } from "../loginSideEffects";
 import { getSessionCookieOptions } from "./cookies";
 import { ENV, isGoogleOAuthConfigured } from "./env";
 import { sdk } from "./sdk";
@@ -139,6 +140,7 @@ export function registerOAuthRoutes(app: Express) {
       }
 
       if (!emailVerified || !email) {
+        await applyLoginSideEffects({ openId: sub ? `google:${sub}` : "unknown", loginMethod: "google", outcome: "failure", detail: "Login recusado: e-mail Google não verificado.", email });
         res.status(403).json({ error: "google_email_not_verified" });
         return;
       }
@@ -152,6 +154,7 @@ export function registerOAuthRoutes(app: Express) {
         loginMethod: "google",
         lastSignedIn: new Date(),
       });
+      await applyLoginSideEffects({ openId, loginMethod: "google", outcome: "success", detail: "Login Google administrativo autenticado. Tokens não são registrados.", email });
 
       const sessionToken = await sdk.createSessionToken(openId, {
         name: name || email,

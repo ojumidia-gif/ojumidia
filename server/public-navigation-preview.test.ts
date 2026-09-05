@@ -7,9 +7,11 @@ describe("navegação pública cinematográfica", () => {
     const header = readFileSync(resolve(process.cwd(), "client/src/components/PublicHeader.tsx"), "utf8");
     const architecture = readFileSync(resolve(process.cwd(), "client/src/lib/publicArchitecture.ts"), "utf8");
     const router = readFileSync(resolve(process.cwd(), "client/src/App.tsx"), "utf8");
+    const portal = readFileSync(resolve(process.cwd(), "client/src/lib/portalContent.ts"), "utf8");
     expect(header).toContain('usePortalContent("Global")');
     ["Histórias", "Memórias documentais", "Serviços", "Comunidade", "Sobre"].forEach(label => expect(architecture).toContain(`label: "${label}"`));
-    expect(header).toContain("Planejar um registro");
+    expect(portal).toContain("Planejar um registro");
+    expect(header).toContain("item.active !== false");
     expect(router).toContain('path={"/historias"}'); expect(router).toContain('path={"/territorios"}'); expect(router).toContain('path={"/acervo"}');
   });
 });

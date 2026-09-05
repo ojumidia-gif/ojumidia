@@ -14,7 +14,7 @@ describe("configuração incremental do Firebase", () => {
   it("valida a chave Web do Firebase por uma chamada inofensiva de configuração", async () => {
     const apiKey = process.env.VITE_FIREBASE_API_KEY;
     if (!apiKey) {
-      expect(readFileSync(resolve(process.cwd(), "ENVIRONMENT_TEMPLATE.md"), "utf8")).toContain("VITE_FIREBASE_API_KEY=");
+      expect(readFileSync(resolve(process.cwd(), ".env.example"), "utf8")).toContain("VITE_FIREBASE_API_KEY=");
       return;
     }
     expect(apiKey).toMatch(/^AIza[\w-]{20,}$/);

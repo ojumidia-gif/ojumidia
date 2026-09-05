@@ -48,8 +48,8 @@ export function PublicHeader({
   const color = cinematic ? "text-white" : "text-[#3d382e]";
   const close = () => setOpen(false);
   const { block } = usePortalContent("Global");
-  const navigation = block("navigation", portalContentDefaults.Global.navigation);
-  const links = navigation?.items || [];
+  const navigation = block("navigation", portalContentDefaults.Global.navigation as unknown as { items: Array<{ label: string; href: string; order?: number; active?: boolean; featured?: boolean }> });
+  const links = [...(navigation?.items || [])].filter(item => item.active !== false).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
     <header
@@ -59,18 +59,15 @@ export function PublicHeader({
         <OjuMark cinematic={cinematic} />
 
         <nav className={`hidden items-center gap-3 text-[9px] font-bold uppercase tracking-[.055em] xl:flex ${color}`}>
-          {links.map(({ label, href }, index) => (
+          {links.map(({ label, href, featured }, index) => (
             <Link
               key={`${label}-${href}`}
               href={href}
-              className={`relative whitespace-nowrap py-7 transition hover:text-[#f0a45f] ${cinematic && index === 0 ? "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:bg-[#ef9e59]" : ""}`}
+              className={`relative whitespace-nowrap py-7 transition hover:text-[#f0a45f] ${featured || (cinematic && index === 0) ? "text-[#f0a45f] after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:bg-[#ef9e59]" : ""}`}
             >
               {label}
             </Link>
           ))}
-          <Link href="/planejar-um-registro" className="whitespace-nowrap text-[#f0a45f]">
-            Planejar um registro
-          </Link>
         </nav>
 
         <div className={`flex items-center gap-3 ${color}`}>
@@ -93,30 +90,16 @@ export function PublicHeader({
       {open && (
         <nav className={`border-t ${cinematic ? "border-white/15 bg-[#090807]/98 text-white" : "border-[#1f1c16]/10 bg-[#f7f5ef] text-[#3d382e]"} xl:hidden`}>
           <div className="container grid grid-cols-2 gap-x-5 gap-y-1 py-5 text-xs font-bold uppercase tracking-[.08em]">
-            {links.map(({ label, href }) => (
+            {links.map(({ label, href, featured }) => (
               <Link
                 key={`${label}-${href}`}
                 href={href}
                 onClick={close}
-                className="rounded px-2 py-3 hover:bg-white/10 hover:text-[#ef9e59]"
+                className={`rounded px-2 py-3 hover:bg-white/10 hover:text-[#ef9e59] ${featured ? "col-span-2 text-[#ef9e59]" : ""}`}
               >
                 {label}
               </Link>
             ))}
-            <Link
-              href="/planejar-um-registro"
-              onClick={close}
-              className="col-span-2 rounded px-2 py-3 text-[#ef9e59]"
-            >
-              Planejar um registro
-            </Link>
-            <Link
-              href="/cuidado-e-consentimento"
-              onClick={close}
-              className="col-span-2 rounded px-2 py-3 text-[#ef9e59]"
-            >
-              Cuidado e consentimento
-            </Link>
           </div>
         </nav>
       )}

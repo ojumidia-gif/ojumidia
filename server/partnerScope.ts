@@ -10,6 +10,13 @@ export function isPartnerPrincipal(actor: PartnerActor) {
   return actor.role === "administrador principal";
 }
 
+/** Conteúdo sem Parceiro Ojú é operação nacional/central. Admin de parceiro não o lê nem altera. */
+export function canAccessCentralPublication(isPrincipal: boolean, hasActivePartnerMembership: boolean, publicationPartnerId: number | null) {
+  if (isPrincipal) return true;
+  if (publicationPartnerId) return true;
+  return !hasActivePartnerMembership;
+}
+
 export async function activePartnerMemberships(db: Db, userId: number) {
   return db
     .select({
@@ -19,10 +26,35 @@ export async function activePartnerMemberships(db: Db, userId: number) {
       partnerSlug: partners.slug,
       partnerStatus: partners.status,
       operationalRole: partnerMembers.operationalRole,
+      territoryId: partnerMembers.territoryId,
     })
     .from(partnerMembers)
     .innerJoin(partners, eq(partnerMembers.partnerId, partners.id))
     .where(and(eq(partnerMembers.userId, userId), eq(partnerMembers.status, "Ativo"), eq(partners.status, "Ativo")));
+}
+
+export function authorizedTerritoryIdsForMembership(membershipTerritoryId: number | null | undefined, partnerTerritoryIds: number[]) {
+  if (membershipTerritoryId) {
+    return partnerTerritoryIds.includes(membershipTerritoryId) ? [membershipTerritoryId] : [];
+  }
+  return partnerTerritoryIds;
+}
+
+export async function syncPartnerMemberFromGrant(db: Db, input: {
+  userId: number;
+  partnerId: number;
+  territoryId: number;
+  createdBy: number;
+}) {
+  await assertTerritoryTaxonomies(db, [input.territoryId]);
+  const partnerTerritories = await partnerTerritoryIds(db, input.partnerId);
+  if (!partnerTerritories.includes(input.territoryId)) {
+    throw new Error("O território do convite precisa estar ativo neste Parceiro Ojú.");
+  }
+  const existing = (await db.select().from(partnerMembers).where(and(eq(partnerMembers.partnerId, input.partnerId), eq(partnerMembers.userId, input.userId))).limit(1))[0];
+  const values = { operationalRole: "Operador territorial" as const, status: "Ativo" as const, territoryId: input.territoryId, activatedAt: new Date(), revokedAt: null };
+  if (existing) await db.update(partnerMembers).set(values).where(eq(partnerMembers.id, existing.id));
+  else await db.insert(partnerMembers).values({ partnerId: input.partnerId, userId: input.userId, createdBy: input.createdBy, ...values });
 }
 
 export async function partnerTerritoryIds(db: Db, partnerId: number) {
@@ -102,7 +134,9 @@ export async function resolveAuthenticatedScope(input: {
       : membershipPartnerIds.length === 1
         ? membershipPartnerIds[0]
         : null;
-  const authorizedTerritoryIds = partnerIdForTerritories ? await partnerTerritoryIds(input.db, partnerIdForTerritories) : [];
+  const partnerTerritoriesList = partnerIdForTerritories ? await partnerTerritoryIds(input.db, partnerIdForTerritories) : [];
+  const membership = memberships.find(item => item.partnerId === partnerIdForTerritories);
+  const authorizedTerritoryIds = authorizedTerritoryIdsForMembership(membership?.territoryId, partnerTerritoriesList);
   return decideAuthenticatedScope({
     isPrincipal: false,
     membershipPartnerIds,
@@ -130,10 +164,11 @@ export async function assertPartnerScope(input: {
   const memberships = await activePartnerMemberships(db, actor.id);
   const membership = memberships.find(item => item.partnerId === partnerId);
   if (!membership) throw new Error(`Você não possui escopo ativo no Parceiro Ojú responsável por ${resourceLabel}.`);
-  const authorizedTerritories = await partnerTerritoryIds(db, partnerId);
+  const partnerTerritoriesList = await partnerTerritoryIds(db, partnerId);
+  const authorizedTerritories = authorizedTerritoryIdsForMembership(membership.territoryId, partnerTerritoriesList);
   const effectiveTerritories = territoryIds.filter((id): id is number => Boolean(id));
   if (!effectiveTerritories.length) throw new Error(`Informe ao menos um território autorizado para ${resourceLabel}.`);
-  if (effectiveTerritories.some(id => !authorizedTerritories.includes(id))) throw new Error(`O território informado não pertence ao escopo autorizado deste Parceiro Ojú.`);
+  if (!authorizedTerritories.length || effectiveTerritories.some(id => !authorizedTerritories.includes(id))) throw new Error(`O território informado não pertence ao escopo autorizado deste Parceiro Ojú.`);
   return { partnerId, territoryIds: effectiveTerritories, scope: "partner" as const, membership };
 }
 

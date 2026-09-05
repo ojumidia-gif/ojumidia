@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm"
 import { z } from "zod";
 import {
   administratorResponsibilityTerms,
+  auditEvents,
   authorizationTerms,
   commercialEditorialAuthorizations,
   commercialRefundRequests,
@@ -130,5 +131,10 @@ export const operationsRouter = router({
     const ordered = orderOperationalPendencies(items);
     const summary = { total: ordered.length, critical: ordered.filter(item => item.priority === "Crítica").length, attention: ordered.filter(item => item.priority === "Atenção").length, followUp: ordered.filter(item => item.priority === "Acompanhamento").length };
     return { summary, items: ordered.slice(0, input.limit), scope: principal ? "global" : "territorial" };
+  }),
+  auditLog: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(200).default(80) }).optional()).query(async ({ ctx, input }) => {
+    if (ctx.user.role !== "administrador principal") throw new Error("Somente o Super Admin consulta o registro administrativo.");
+    const db = await requireDb();
+    return db.select().from(auditEvents).orderBy(desc(auditEvents.createdAt)).limit(input?.limit ?? 80);
   }),
 });

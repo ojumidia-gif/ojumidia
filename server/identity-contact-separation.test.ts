@@ -6,7 +6,7 @@ const source = (file: string) => readFileSync(resolve(process.cwd(), file), "utf
 
 describe("separação entre contato e identidade administrativa", () => {
   it("documenta que o contato comercial não concede privilégios", () => {
-    const policy = source("docs/IDENTIDADE_E_ACESSO.md");
+    const policy = source("README.md");
     expect(policy).toContain("ojumidia@gmail.com");
     expect(policy).toContain("não cria, eleva ou recupera privilégios administrativos");
     expect(policy).toContain("Contas Google próprias");

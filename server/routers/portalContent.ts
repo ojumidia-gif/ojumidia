@@ -3,6 +3,7 @@ import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { portalContentActivities, portalContentBlocks, portalContentPages } from "../../drizzle/schema";
 import { getDb } from "../db";
+import { sanitizePublicNavigation } from "../publicNavPolicy";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
 const pageInput = z.enum(portalContentPages);
@@ -75,7 +76,9 @@ export const portalContentRouter = router({
   save: protectedProcedure.input(blockInput).mutation(async ({ ctx, input }) => {
     requirePrincipal(ctx.user.role);
     const db = await requireDb();
-    const contentJson = validateJson(input.contentJson);
+    const contentJson = input.page === "Global" && input.sectionKey === "navigation"
+      ? sanitizePublicNavigation(input.contentJson)
+      : validateJson(input.contentJson);
     const values = { page: input.page, sectionKey: input.sectionKey, label: input.label, contentJson, isVisible: input.isVisible, displayOrder: input.displayOrder, updatedBy: ctx.user.id, deletedAt: null };
     if (input.id) {
       const current = (await db.select().from(portalContentBlocks).where(eq(portalContentBlocks.id, input.id)).limit(1))[0];

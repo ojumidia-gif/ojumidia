@@ -6,8 +6,9 @@ vi.mock("../db", () => ({ getDb: getDbMock }));
 import { editorialRouter } from "./editorial";
 
 const chainFor = <T>(rows: T[]) => {
-  const chain: { from: () => typeof chain; where: () => typeof chain; orderBy: () => typeof chain; limit: () => Promise<T[]>; then: (resolve: (value: T[]) => unknown, reject?: (reason: unknown) => unknown) => Promise<unknown> } = {
+  const chain: { from: () => typeof chain; innerJoin: () => typeof chain; where: () => typeof chain; orderBy: () => typeof chain; limit: () => Promise<T[]>; then: (resolve: (value: T[]) => unknown, reject?: (reason: unknown) => unknown) => Promise<unknown> } = {
     from: () => chain,
+    innerJoin: () => chain,
     where: () => chain,
     orderBy: () => chain,
     limit: async () => rows,
@@ -17,13 +18,14 @@ const chainFor = <T>(rows: T[]) => {
 };
 
 function databaseForEventBoundLimit(mediaType: "foto" | "vídeo") {
-  const publication = { id: 1, contentKind: "Cobertura", status: "Rascunho", photoLimit: 1, videoLimit: 1 };
+  const publication = { id: 1, contentKind: "Cobertura", status: "Rascunho", photoLimit: 1, videoLimit: 1, partnerId: null };
   const incoming = { id: 2, mediaType, publicationAllowed: true, state: "Ativo" };
   const total = mediaType === "foto" ? 5 : 2;
   const alreadyAttached = Array.from({ length: total }, (_, index) => ({ id: index + 3, mediaType, publicationAllowed: true, state: "Ativo" }));
   return {
     select: vi.fn()
       .mockReturnValueOnce(chainFor([publication]))
+      .mockReturnValueOnce(chainFor([]))
       .mockReturnValueOnce(chainFor([incoming]))
       .mockReturnValueOnce(chainFor(alreadyAttached.map(item => ({ publicationId: 1, mediaId: item.id }))))
       .mockReturnValueOnce(chainFor(alreadyAttached))

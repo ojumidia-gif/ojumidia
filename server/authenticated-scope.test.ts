@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideAuthenticatedScope } from "./partnerScope";
+import { canAccessCentralPublication, decideAuthenticatedScope } from "./partnerScope";
 
 describe("isolamento territorial autenticado", () => {
   it("permite ao Super Admin operar com ou sem parceiro", () => {
@@ -33,6 +33,13 @@ describe("isolamento territorial autenticado", () => {
       requestedTerritoryId: null,
       resourceLabel: "este upload",
     })).toEqual({ partnerId: 10, territoryId: 100, scope: "partner" });
+  });
+
+  it("impede Admin de parceiro de ler publicação nacional sem partnerId", () => {
+    expect(canAccessCentralPublication(true, true, null)).toBe(true);
+    expect(canAccessCentralPublication(false, true, null)).toBe(false);
+    expect(canAccessCentralPublication(false, false, null)).toBe(true);
+    expect(canAccessCentralPublication(false, true, 10)).toBe(true);
   });
 
   it("rejeita território fora da carteira autorizada", () => {

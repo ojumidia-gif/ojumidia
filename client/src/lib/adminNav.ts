@@ -1,4 +1,4 @@
-import { BookOpenText, BriefcaseBusiness, FilePenLine, Film, HeartHandshake, Home, Image, ListFilter, MapPinned, Settings, Sparkles, Trash2 } from "lucide-react";
+import { BookOpenText, BriefcaseBusiness, FilePenLine, Film, HeartHandshake, Home, Image, ListFilter, MapPinned, ScrollText, Settings, Sparkles, Trash2 } from "lucide-react";
 
 export type AdminNavItem = {
   label: string;
@@ -59,10 +59,30 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Sistema",
     items: [
       { label: "Conteúdo do portal", href: "/admin/conteudo-portal", icon: FilePenLine, principalOnly: true },
+      { label: "Auditoria", href: "/admin/auditoria", icon: ScrollText, principalOnly: true },
       { label: "Configurações", href: "/admin/configuracoes", icon: Settings },
     ],
   },
 ];
+
+export const principalOnlyAdminPaths = [
+  "/admin/miniclipes",
+  "/admin/destaques",
+  "/admin/lixeira-editorial",
+  "/admin/parceiros",
+  "/admin/conteudo-portal",
+  "/admin/auditoria",
+  "/admin/colaboradores",
+  "/admin/politicas-comerciais",
+  "/admin/ganhos",
+  "/admin/avisos-repasse",
+  "/admin/anuncios",
+  "/admin/receitas",
+] as const;
+
+export function isPrincipalOnlyAdminPath(pathname: string) {
+  return principalOnlyAdminPaths.some(path => pathname === path || pathname.startsWith(`${path}/`));
+}
 
 export function visibleAdminNav(role: string | undefined) {
   const principal = role === "administrador principal";

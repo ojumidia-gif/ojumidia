@@ -61,6 +61,8 @@ describe("Parceiro Ojú, território e operação isolada", () => {
     expect(dashboard).toContain("Parceiros Ojú, territórios e escopos");
     expect(partnerPanel).toContain("Identidade pública contextual");
     expect(partnerPanel).toContain("A ativação só é aceita após haver ao menos um território autorizado");
+    expect(editorialRouter).toContain("canAccessCentralPublication");
+    expect(editorialRouter).toContain("resolveAuthenticatedScope");
     expect(editorialRouter).toContain("suggestHighlight");
     expect(editorialRouter).toContain("decideHighlightSuggestion");
     expect(networkRouter).toContain("apenas o Super Admin pode aprová-lo para a Home nacional");

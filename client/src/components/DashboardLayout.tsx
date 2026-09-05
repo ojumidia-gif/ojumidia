@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { OjuMark } from "@/components/PublicHeader";
 import { startLogin } from "@/const";
-import { visibleAdminNav } from "@/lib/adminNav";
+import { isPrincipalOnlyAdminPath, visibleAdminNav } from "@/lib/adminNav";
 import { isStaticFirebasePreview } from "@/lib/runtimeMode";
 import { FolderKanban, Layers3, LogOut, Settings, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -35,6 +35,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return <main className="min-h-screen bg-[#242017] px-5 text-[#f7f5ef] grid place-items-center"><section className="max-w-md text-center"><div className="mx-auto mb-8 w-fit rounded-full bg-[#f6b71b] p-4"><Layers3 className="h-7 w-7 text-[#242017]" /></div><h1 className="font-serif text-4xl">Centro Administrativo Ojú</h1><p className="mt-4 leading-7 text-[#ded8ca]">{authStatus?.message || "Entre com sua conta autorizada para administrar a operação editorial da Ojú Mídia."}</p>{canGoogle ? <Button onClick={() => startLogin()} className="mt-8 bg-[#f6b71b] text-[#242017] hover:bg-[#f3c449]">Entrar com Google</Button> : canLocal ? <Button asChild className="mt-8 bg-[#f6b71b] text-[#242017] hover:bg-[#f3c449]"><Link href="/admin/acesso-local">Abrir acesso local</Link></Button> : <p className="mt-8 text-sm leading-6 text-[#aaa190]">Não há login administrativo neste ambiente. No desenvolvimento, habilite o acesso local; em produção, configure o OAuth Google.</p>}</section></main>;
   }
   if (!user.adminAccess) return <main className="min-h-screen bg-[#242017] px-5 text-[#f7f5ef] grid place-items-center"><section className="max-w-md text-center"><div className="mx-auto mb-8 w-fit rounded-full border border-[#f6b71b]/50 p-4"><Layers3 className="h-7 w-7 text-[#f6b71b]" /></div><h1 className="font-serif text-4xl">Acesso não autorizado</h1><p className="mt-4 leading-7 text-[#ded8ca]">Sua sessão está ativa, mas esta conta não foi autorizada individualmente para o Centro Administrativo.</p><Button onClick={logout} variant="outline" className="mt-8 border-[#f6b71b] text-[#f6b71b] hover:bg-[#f6b71b] hover:text-[#242017]">Sair desta conta</Button></section></main>;
+  if (user.role !== "administrador principal" && isPrincipalOnlyAdminPath(location)) {
+    return (
+      <main className="min-h-screen bg-[#242017] px-5 text-[#f7f5ef] grid place-items-center">
+        <section className="max-w-md text-center">
+          <div className="mx-auto mb-8 w-fit rounded-full border border-[#f6b71b]/50 p-4"><Layers3 className="h-7 w-7 text-[#f6b71b]" /></div>
+          <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#f6b71b]">Área restrita</p>
+          <h1 className="mt-3 font-serif text-4xl">Você não tem permissão para esta área</h1>
+          <p className="mt-4 leading-7 text-[#ded8ca]">Esta rota é exclusiva do Super Admin. O menu não oferece este atalho, e a API continua recusando a operação.</p>
+          <Link href="/admin" className="mt-8 inline-flex items-center rounded-md bg-[#f6b71b] px-4 py-2 text-sm font-medium text-[#242017] hover:bg-[#f3c449]">Voltar ao painel</Link>
+        </section>
+      </main>
+    );
+  }
   const groups = visibleAdminNav(user.role);
   const partnerLabel = context.data?.scope === "partner" ? context.data.partners[0] : null;
   const Sidebar = () => (

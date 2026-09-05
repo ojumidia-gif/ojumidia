@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { communityEntries, ojuMethod, ojuServices, publicNavigation } from "@/lib/publicArchitecture";
+import { communityEntries, ojuMethod, ojuServices } from "@/lib/publicArchitecture";
 import { useEditorialLive } from "@/hooks/useEditorialLive";
 import { trpc } from "@/lib/trpc";
 import { isStaticFirebasePreview } from "@/lib/runtimeMode";
@@ -13,16 +13,17 @@ export type HeroContent = { eyebrow: string; title: string; description: string;
 export const portalContentDefaults = {
   Global: {
     navigation: { items: [
-      { label: "Histórias", href: "/historias" },
-      { label: "Coberturas", href: "/coberturas" },
-      { label: "Documentários", href: "/documentarios" },
-      { label: "Projetos", href: "/projetos" },
-      { label: "Territórios", href: "/territorios" },
-      { label: "Instituições", href: "/instituicoes" },
-      { label: "Agenda", href: "/agenda" },
-      { label: "Memórias", href: "/memorias" },
-      { label: "Acervo", href: "/acervo" },
-      { label: "Serviços", href: "/servicos" },
+      { label: "Histórias", href: "/historias", order: 1, active: true, featured: true },
+      { label: "Coberturas", href: "/coberturas", order: 2, active: true, featured: false },
+      { label: "Documentários", href: "/documentarios", order: 3, active: true, featured: false },
+      { label: "Projetos", href: "/projetos", order: 4, active: true, featured: false },
+      { label: "Territórios", href: "/territorios", order: 5, active: true, featured: false },
+      { label: "Instituições", href: "/instituicoes", order: 6, active: true, featured: false },
+      { label: "Agenda", href: "/agenda", order: 7, active: true, featured: false },
+      { label: "Memórias", href: "/memorias", order: 8, active: true, featured: false },
+      { label: "Acervo", href: "/acervo", order: 9, active: true, featured: false },
+      { label: "Serviços", href: "/servicos", order: 10, active: true, featured: false },
+      { label: "Planejar um registro", href: "/planejar-um-registro", order: 11, active: true, featured: true },
     ] },
     footer: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Redes sociais", href: "https://instagram.com/ojumidia", external: true }], legalItems: [{ label: "Privacidade" }, { label: "Termos" }] },
     method: { eyebrow: "Método Ojú", title: "Cuidado antes da câmera.", description: "Registrar começa quando a Ojú compreende o que está sendo vivido, o que precisa permanecer privado e o que pode atravessar o tempo.", items: ojuMethod },

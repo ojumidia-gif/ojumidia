@@ -12,6 +12,15 @@ export function requireFinancialAccess(role: string) { if (!["administrador", "a
 export function requireFinancialPrincipal(role: string) { if (!isPrincipalFinancial(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Apenas o administrador principal gerencia políticas e repasses." }); }
 export function money(value: number) { return Math.round(value * 100) / 100; }
 
+export function partnerShareFromPolicy(partnerGrossAmount: number, ojuPercent: number) {
+  if (!Number.isFinite(ojuPercent) || ojuPercent < 0 || ojuPercent > 100) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "A política ativa precisa de um percentual Ojú entre 0 e 100." });
+  }
+  const ojuAmount = money(partnerGrossAmount * ojuPercent / 100);
+  const partnerNet = money(partnerGrossAmount - ojuAmount);
+  return { ojuAmount, partnerNet, ojuPercent };
+}
+
 export async function activeCommercialPolicy(db: Awaited<ReturnType<typeof requireFinancialDb>>, scope: PolicyScope, now = new Date()) {
   return (await db.select().from(commercialPolicies).where(and(eq(commercialPolicies.scope, scope), eq(commercialPolicies.status, "Ativa"), lte(commercialPolicies.effectiveAt, now))).orderBy(desc(commercialPolicies.version)).limit(1))[0] ?? null;
 }

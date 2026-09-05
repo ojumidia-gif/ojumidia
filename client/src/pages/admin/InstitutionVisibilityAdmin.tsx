@@ -59,7 +59,7 @@ export default function InstitutionVisibilityAdmin() {
     { label: "Reserva", value: Number(summary.data?.reserveAmount ?? 0), color: "#8b6f9d" },
   ], [summary.data]);
   const distributionTotal = distribution.reduce((sum, item) => sum + item.value, 0);
-  const activeSplit = activePolicy.data ? `${activePolicy.data.ojuPercent}% Ojú Mídia, ${activePolicy.data.developmentPercent}% desenvolvimento e manutenção, ${activePolicy.data.captorPercent}% para captação/atendimento${Number(activePolicy.data.executorPercent) ? ` e ${activePolicy.data.executorPercent}% executor` : ""}` : "50% Ojú Mídia, 30% desenvolvimento e manutenção, 20% para captação/atendimento";
+  const activeSplit = activePolicy.data ? `${activePolicy.data.ojuPercent}% Ojú Mídia, ${activePolicy.data.developmentPercent}% desenvolvimento e manutenção, ${activePolicy.data.captorPercent}% para captação/atendimento${Number(activePolicy.data.executorPercent) ? ` e ${activePolicy.data.executorPercent}% executor` : ""}` : "Nenhuma política de visibilidade está ativa. O Super Admin precisa ativar uma política antes de registrar captação.";
 
   return <AdminPage eyebrow="Sustentação transparente" title="Visibilidade institucional renovável.">
     <p className="-mt-5 mb-7 max-w-3xl text-sm leading-6 text-[#655e52]">Esta área administra contribuição por presença institucional. Ela não publica conteúdos, não compra destaque editorial e não substitui consentimento. A vigência vence pela própria data, sem exigir que o portal permaneça aberto.</p>

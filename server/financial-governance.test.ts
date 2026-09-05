@@ -20,7 +20,9 @@ describe("governança financeira da rede Ojú", () => {
     expect(router).toContain("activatePolicy");
     expect(router).toContain('status: "Substituída"');
     expect(router).toContain("markNotificationRead");
-    expect(router).toContain("notification.recipientUserId !== ctx.user.id");
+    expect(router).toContain("partnerShareFromPolicy");
+    expect(router).not.toContain("* .95");
+    expect(router).toContain("commercialPolicyVersion");
   });
 
   it("aplica somente regra ativa a novas captações e preserva sua versão no fechamento", () => {

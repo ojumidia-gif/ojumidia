@@ -58,6 +58,7 @@ import PortalContentAdmin from "./pages/admin/PortalContentAdmin";
 import PartnersAdmin from "./pages/admin/PartnersAdmin";
 import EditorialTrashAdmin from "./pages/admin/EditorialTrashAdmin";
 import OperationsCenterAdmin from "./pages/admin/OperationsCenterAdmin";
+import AuditAdmin from "./pages/admin/AuditAdmin";
 import DocumentaryMemories from "./pages/DocumentaryMemories";
 import Services from "./pages/Services";
 import CommunityHub from "./pages/CommunityHub";
@@ -127,6 +128,7 @@ function Router() {
       <Route path={"/admin/parceiros"} component={PartnersAdmin} />
       <Route path={"/admin/lixeira-editorial"} component={EditorialTrashAdmin} />
       <Route path={"/admin/pendencias"} component={OperationsCenterAdmin} />
+      <Route path={"/admin/auditoria"} component={AuditAdmin} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

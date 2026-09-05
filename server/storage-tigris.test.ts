@@ -24,6 +24,8 @@ describe("adapter de objeto para Tigris/S3", () => {
       expect(env.region).toBe("auto");
       expect(env.tigrisLike).toBe(true);
       expect(env.forcePathStyle).toBe(false);
+      process.env.AWS_REGION = "sa-east-1";
+      expect(readObjectStorageEnv().region).toBe("auto");
       const options = objectStorageClientOptions();
       expect(options?.clientConfig.requestChecksumCalculation).toBe("WHEN_REQUIRED");
       expect(options?.clientConfig.responseChecksumValidation).toBe("WHEN_REQUIRED");

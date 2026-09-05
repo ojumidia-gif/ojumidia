@@ -7,7 +7,7 @@ import { getDb } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { publishEditorialEvent } from "../editorialEvents";
 import { canUseCommercialLocation, canUseCommercialMedia, canUseCommercialNarrative, canUseOnPortal, type CommercialEditorialAuthorization } from "../commercialEditorialAuthorization";
-import { activePartnerMemberships, assertPartnerScope, recordAuditEvent } from "../partnerScope";
+import { activePartnerMemberships, assertPartnerScope, canAccessCentralPublication, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 import { editorialTrashDeadline, isEditorialTrashExpired, permanentlyPurgePublication } from "../editorialTrash";
 
 function slugify(value: string) {
@@ -49,6 +49,10 @@ async function publicationTerritoryIds(db: NonNullable<Awaited<ReturnType<typeof
 
 async function assertPublicationScope(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actor: { id: number; role: string }, publication: typeof publications.$inferSelect, label: string) {
   if (actor.role === "administrador principal") return;
+  const memberships = await activePartnerMemberships(db, actor.id);
+  if (!canAccessCentralPublication(false, memberships.length > 0, publication.partnerId ?? null)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Este conteúdo pertence à operação nacional e está fora do escopo do seu Parceiro Ojú." });
+  }
   if (!publication.partnerId) return;
   const territoryIds = await publicationTerritoryIds(db, publication.id);
   try { await assertPartnerScope({ db, actor, partnerId: publication.partnerId, territoryIds, resourceLabel: label, requirePartner: true }); }
@@ -284,17 +288,25 @@ export const editorialRouter = router({
     return { ...result[0], teamCredit: team[0]?.name || null, contributors, media: media.sort((a, b) => (links.find(link => link.mediaId === a.id)?.displayOrder ?? 0) - (links.find(link => link.mediaId === a.id)?.displayOrder ?? 0)), taxonomies: publicationTaxonomy, commercialEditorial: result[0].commercialRequestId ? { requiresAuthorization: true as const, authorized: canUseOnPortal(commercialAuthorization), authorizedAt: commercialAuthorization?.authorizedAt ?? null, status: commercialAuthorization?.status ?? "Pendente", authorization: commercialAuthorization } : null };
   }),
 
-  create: protectedProcedure.input(z.object({ title: z.string().min(4).max(280), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]), subtitle: z.string().max(420).optional(), summary: z.string().max(2000).optional(), body: z.string().max(30000).optional(), teamId: z.number().int().positive().optional(), teamCredit: z.string().min(2).max(160).optional(), photoLimit: z.number().int().min(0).max(200).optional(), videoLimit: z.number().int().min(0).max(80).optional() })).mutation(async ({ ctx, input }) => {
+  create: protectedProcedure.input(z.object({ title: z.string().min(4).max(280), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]), subtitle: z.string().max(420).optional(), summary: z.string().max(2000).optional(), body: z.string().max(30000).optional(), teamId: z.number().int().positive().optional(), teamCredit: z.string().min(2).max(160).optional(), photoLimit: z.number().int().min(0).max(200).optional(), videoLimit: z.number().int().min(0).max(80).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
     const role = ctx.user.role as EditorialRole;
     if (!["criador", "editor", "administrador", "administrador principal"].includes(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode criar publicações." });
+    let scope: Awaited<ReturnType<typeof resolveAuthenticatedScope>>;
+    try {
+      scope = await resolveAuthenticatedScope({ db, actor: ctx.user, requestedPartnerId: input.partnerId, requestedTerritoryId: input.territoryId, resourceLabel: "esta publicação" });
+    } catch (error) {
+      throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo para criar esta publicação." });
+    }
     const base = slugify(input.title) || "publicacao";
     const slug = `${base}-${Date.now().toString(36)}`;
     const teamId = await resolveTeamId(db, input.teamId, input.teamCredit);
-    const { teamCredit: _teamCredit, ...publicationInput } = input;
-    const result = await db.insert(publications).values({ ...publicationInput, photoLimit: input.contentKind === "Fotografia documental" ? 5 : input.photoLimit, videoLimit: input.contentKind === "Fotografia documental" ? 0 : input.videoLimit, teamId, slug, createdBy: ctx.user.id, status: "Rascunho", isPublic: false });
+    const { teamCredit: _teamCredit, partnerId: _partnerId, territoryId: _territoryId, ...publicationInput } = input;
+    const result = await db.insert(publications).values({ ...publicationInput, partnerId: scope.partnerId, photoLimit: input.contentKind === "Fotografia documental" ? 5 : input.photoLimit, videoLimit: input.contentKind === "Fotografia documental" ? 0 : input.videoLimit, teamId, slug, createdBy: ctx.user.id, status: "Rascunho", isPublic: false });
     const publicationId = Number(result[0].insertId);
+    if (scope.territoryId) await db.insert(publicationTaxonomies).values({ publicationId, taxonomyId: scope.territoryId });
     await db.insert(editorialActivities).values({ publicationId, actorId: ctx.user.id, toStatus: "Rascunho", note: "Publicação criada." });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: scope.partnerId, territoryId: scope.territoryId, resourceType: "publication", resourceId: publicationId, action: "publication-created", nextState: { status: "Rascunho", contentKind: input.contentKind }, detail: "Rascunho criado no escopo autenticado." });
     publishEditorialEvent("publication-created", publicationId);
     return { id: publicationId, slug };
   }),
@@ -396,6 +408,7 @@ export const editorialRouter = router({
     const changed = await db.update(publications).set(values).where(and(eq(publications.id, input.id), eq(publications.version, input.expectedVersion)));
     if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de alterar a etapa." });
     await db.insert(editorialActivities).values({ publicationId: input.id, actorId: ctx.user.id, fromStatus: previous, toStatus: next, note: input.note });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current[0].partnerId, territoryId: (await publicationTerritoryIds(db, input.id))[0] ?? null, resourceType: "publication", resourceId: input.id, action: "publication-status-changed", previousState: { status: previous }, nextState: { status: next }, detail: input.note || `Etapa editorial: ${previous} → ${next}.` });
     publishEditorialEvent("status-changed", input.id);
     return { status: next };
   }),
@@ -463,6 +476,7 @@ export const editorialRouter = router({
     const changed = await db.update(publications).set({ isPublic: false, unpublishedAt: new Date(), unpublishedBy: ctx.user.id, version: current[0].version + 1 }).where(and(eq(publications.id, input.id), eq(publications.version, input.expectedVersion)));
     if (!changed[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de despublicar." });
     await db.insert(editorialActivities).values({ publicationId: input.id, actorId: ctx.user.id, fromStatus: "Publicada", toStatus: "Publicada", note: input.note || "Conteúdo despublicado." });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current[0].partnerId, territoryId: (await publicationTerritoryIds(db, input.id))[0] ?? null, resourceType: "publication", resourceId: input.id, action: "publication-unpublished", previousState: { isPublic: true }, nextState: { isPublic: false }, detail: input.note || "Conteúdo retirado do portal." });
     publishEditorialEvent("publication-unpublished", input.id);
     return { success: true };
   }),
