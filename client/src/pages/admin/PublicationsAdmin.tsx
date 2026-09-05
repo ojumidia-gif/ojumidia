@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { siteDestinations } from "@/lib/siteDestinations";
-import { AdminPage, EmptyAdmin, statusStyle } from "./_shared";
+import { AdminPage, EmptyAdmin, statusStyle, ThreeStepsGuide } from "./_shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,6 +110,9 @@ export default function PublicationsAdmin() {
         {item.status === "Publicada" && item.isPublic && <Button variant="outline" size="sm" onClick={() => unpublish.mutate({ id: item.id, expectedVersion: item.version })}>Tirar do ar</Button>}
         {item.status === "Publicada" && !item.isPublic && <Button variant="outline" size="sm" onClick={() => republish.mutate({ id: item.id, expectedVersion: item.version })}>Republicar</Button>}
         {item.status !== "Arquivada" && <Button variant="outline" size="sm" onClick={() => archive.mutate({ id: item.id, expectedVersion: item.version })}><Archive className="mr-1 h-3.5 w-3.5" />Arquivar</Button>}
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/admin/preview/${item.id}`}><Eye className="mr-1 h-3.5 w-3.5" />Prévia</Link>
+        </Button>
         {item.status === "Publicada" && item.isPublic && <Button asChild variant="ghost" size="icon" aria-label={`Ver ${item.title} no portal`}><Link href={`/historias/${item.slug}`}><Eye className="h-4 w-4" /></Link></Button>}
         {isPrincipal && <Button variant="outline" size="sm" className="border-[#8b4d24] text-[#8b4d24]" onClick={() => setDeleteTarget({ id: item.id, title: item.title, version: item.version })}><Trash2 className="mr-1 h-3.5 w-3.5" />Excluir</Button>}
       </>}
@@ -119,6 +122,7 @@ export default function PublicationsAdmin() {
   };
 
   return <AdminPage eyebrow="Conteúdos" title="Criar e publicar em poucos passos." action={<Button onClick={() => setOpen(true)} className="rounded-full bg-[#f6b71b] text-[#242017] hover:bg-[#eeb12a]"><FilePlus2 className="mr-2 h-4 w-4" />Novo conteúdo</Button>}>
+    <ThreeStepsGuide steps={["Crie o rascunho (projeto, história, cobertura…).", "Escreva, marque a capa e ligue o território.", "Envie para revisão. Só depois vem a aprovação e o site."]} />
     <section className="mb-7">
       <p className="mb-3 text-xs font-bold uppercase tracking-[.14em] text-[#806817]">As dez seções do site</p>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">

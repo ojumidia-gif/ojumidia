@@ -25,6 +25,7 @@ export function hasAnalyticsConfiguration(endpoint?: string, websiteId?: string)
 
 export function initializeAnalytics() {
   if (isStaticFirebasePreview) return;
+  if (typeof navigator !== "undefined" && navigator.doNotTrack === "1") return;
   const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT;
   const websiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID;
   if (!hasAnalyticsConfiguration(endpoint, websiteId)) return;

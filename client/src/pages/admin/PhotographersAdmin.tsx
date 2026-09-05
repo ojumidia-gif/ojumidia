@@ -5,7 +5,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Camera } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { AdminPage, EmptyAdmin } from "./_shared";
+import { AdminPage, EmptyAdmin, SiteReadiness, ThreeStepsGuide } from "./_shared";
+import { photographerSiteGaps } from "@/lib/editorialFlow";
 
 export default function PhotographersAdmin() {
   const { user } = useAuth();
@@ -23,7 +24,8 @@ export default function PhotographersAdmin() {
 
   return (
     <AdminPage eyebrow="Portal → Fotógrafos" title="Cadastrar, editar e publicar fichas.">
-      <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">O que ficar visível aparece em /fotografos. O crédito nas fotos do Acervo não depende desta ficha.</p>
+      <p className="-mt-4 mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">O que ficar visível aparece em /fotografos. O crédito nas fotos do Acervo não depende desta ficha.</p>
+      <ThreeStepsGuide steps={["Cadastre a ficha.", "Escreva a apresentação curta.", "Publique no site quando a casa autorizar."]} />
       <section className="grid gap-7 xl:grid-cols-[380px_1fr]">
         <form className="admin-card grid gap-3 p-5" onSubmit={event => {
           event.preventDefault();
@@ -47,16 +49,19 @@ export default function PhotographersAdmin() {
         </form>
         <div className="grid gap-3">
           {isLoading ? <p className="text-sm text-[#655e52]">Carregando fichas...</p> : executors?.length ? executors.map(item => (
-            <article key={item.id} className="admin-card flex flex-wrap items-center justify-between gap-3 p-5">
-              <div>
-                <p className="font-medium">{item.displayName}</p>
-                <p className="mt-1 text-xs text-[#655e52]">{item.specialty}{item.publicVisible ? " · visível em /fotografos" : " · ainda fora do portal"}</p>
+            <article key={item.id} className="admin-card grid gap-3 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium">{item.displayName}</p>
+                  <p className="mt-1 text-xs text-[#655e52]">{item.specialty}{item.publicVisible ? " · visível em /fotografos" : " · ainda fora do portal"}</p>
+                </div>
+                {canPublish ? (
+                  <Button size="sm" variant={item.publicVisible ? "outline" : "default"} className={item.publicVisible ? "" : "bg-[#242017] text-white"} disabled={updateExecutor.isPending} onClick={() => updateExecutor.mutate({ id: item.id, publicVisible: !item.publicVisible })}>
+                    <Camera className="mr-1 h-3.5 w-3.5" />{item.publicVisible ? "Ocultar do site" : "Publicar no site"}
+                  </Button>
+                ) : null}
               </div>
-              {canPublish ? (
-                <Button size="sm" variant={item.publicVisible ? "outline" : "default"} className={item.publicVisible ? "" : "bg-[#242017] text-white"} disabled={updateExecutor.isPending} onClick={() => updateExecutor.mutate({ id: item.id, publicVisible: !item.publicVisible })}>
-                  <Camera className="mr-1 h-3.5 w-3.5" />{item.publicVisible ? "Ocultar do site" : "Publicar no site"}
-                </Button>
-              ) : null}
+              <SiteReadiness items={photographerSiteGaps(item)} readyText="Pronto para /fotografos." />
             </article>
           )) : <EmptyAdmin text="Nenhum fotógrafo cadastrado. Crie a ficha e publique no portal." />}
         </div>

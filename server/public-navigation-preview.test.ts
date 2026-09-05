@@ -9,8 +9,8 @@ describe("navegação pública cinematográfica", () => {
     const router = readFileSync(resolve(process.cwd(), "client/src/App.tsx"), "utf8");
     const portal = readFileSync(resolve(process.cwd(), "client/src/lib/portalContent.ts"), "utf8");
     expect(header).toContain('usePortalContent("Global")');
-    ["Histórias", "Memórias documentais", "Serviços", "Comunidade", "Sobre"].forEach(label => expect(architecture).toContain(`label: "${label}"`));
-    expect(portal).toContain("Planejar um registro");
+    ["Olhar", "Chão", "Chamar a Ojú"].forEach(label => expect(architecture).toContain(`label: "${label}"`));
+    expect(portal).toContain("Chamar a Ojú");
     expect(header).toContain("item.active !== false");
     ["/historias", "/coberturas", "/documentarios", "/projetos", "/territorios", "/fotografos", "/instituicoes", "/agenda", "/memorias", "/acervo"].forEach(path => expect(router).toContain(`path={"${path}"}`));
     expect(router).toContain('path={"/admin/fotografos"}'); expect(router).toContain('path={"/admin/territorios"}');

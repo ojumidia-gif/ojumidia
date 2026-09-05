@@ -26,7 +26,7 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
       { label: "Memórias", href: "/memorias", order: 9, active: true, featured: false },
       { label: "Acervo", href: "/acervo", order: 10, active: true, featured: false },
       { label: "Serviços", href: "/servicos", order: 11, active: true, featured: false },
-      { label: "Planejar um registro", href: "/planejar-um-registro", order: 12, active: true, featured: true },
+      { label: "Chamar a Ojú", href: "/planejar-um-registro", order: 12, active: true, featured: true },
     ] },
   },
   {
@@ -34,7 +34,7 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
     sectionKey: "footer",
     label: "Rodapé",
     displayOrder: 20,
-    content: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }], legalItems: [{ label: "Privacidade" }, { label: "Termos" }] },
+    content: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }], legalItems: [{ label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
   },
   {
     page: "Global",
@@ -48,14 +48,14 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
     sectionKey: "hero",
     label: "Abertura da Home",
     displayOrder: 10,
-    content: { eyebrow: "Histórias que pedem registro", title: "Memórias que conectam gerações", description: "Documentamos culturas afro-brasileiras, religiosidades de matriz africana e histórias que mantêm vivas as memórias dos nossos territórios.", ctaLabel: "Planejar um registro", ctaHref: "/planejar-um-registro", secondaryLabel: "Explorar histórias", secondaryHref: "/historias" },
+    content: { eyebrow: "Ojú: o olhar que registra", title: "Memória preta, casa e chão que não se apaga.", description: "Documentamos culturas afro-brasileiras, religiosidades de matriz africana e os territórios que as sustentam — com contexto, crédito e autorização.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro", secondaryLabel: "Olhar histórias", secondaryHref: "/historias" },
   },
   {
     page: "Home",
     sectionKey: "planning",
     label: "Convite para planejar registro",
     displayOrder: 20,
-    content: { title: "Sua história também merece ser registrada.", description: "A Ojú começa pela escuta do que precisa permanecer.", ctaLabel: "Planejar um registro", ctaHref: "/planejar-um-registro" },
+    content: { title: "Sua história também merece ser registrada.", description: "A Ojú começa pela escuta do que precisa permanecer.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro" },
   },
   {
     page: "Home",

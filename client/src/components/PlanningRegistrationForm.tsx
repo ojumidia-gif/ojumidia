@@ -55,8 +55,8 @@ export function PlanningRegistrationForm({ compact = false }: { compact?: boolea
       <section className="border border-[#ef9e59]/35 bg-[#15100c] p-7 text-white sm:p-9">
         <CheckCircle2 className="h-10 w-10 text-[#ef9e59]" aria-hidden="true" />
         <h2 className="mt-5 font-serif text-3xl">A conversa pode começar.</h2>
-        <p className="mt-3 max-w-lg text-sm leading-6 text-white/65">A solicitação entrou no fluxo comercial da Ojú. Se preferir, você também pode continuar a conversa pelo WhatsApp.</p>
-        <a href="https://wa.me/5592920019527" target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 border border-[#ef9e59] px-5 py-3 text-xs font-bold uppercase tracking-[.1em] text-[#ef9e59]">
+        <p className="mt-3 max-w-lg text-sm leading-6 text-white/65">A solicitação entrou no fluxo comercial da Ojú. Se preferir, continue a conversa pelo WhatsApp — é o canal da escuta, não um chat no site.</p>
+        <a href="https://wa.me/5592920019527" target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 bg-[#c45c26] px-5 py-3 text-xs font-bold uppercase tracking-[.1em] text-[#f4efe6]">
           <MessageCircle className="h-4 w-4" /> Continuar no WhatsApp
         </a>
       </section>
@@ -67,7 +67,7 @@ export function PlanningRegistrationForm({ compact = false }: { compact?: boolea
     <form onSubmit={submit} className={`border border-white/15 bg-[#100d0a] ${compact ? "p-5" : "p-6 sm:p-8"} text-white`}>
       <div className="flex flex-wrap items-start justify-between gap-5 border-b border-white/10 pb-6">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#ef9e59]">Planejar um registro</p>
+          <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#ef9e59]">Chamar a Ojú</p>
           <h2 className="mt-3 font-serif text-3xl">Conte o que precisa permanecer.</h2>
         </div>
         <p className="max-w-xs text-xs leading-5 text-white/55">Você não precisa chegar com um pacote definido. A Ojú começa entendendo o contexto.</p>

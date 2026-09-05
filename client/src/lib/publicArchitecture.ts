@@ -1,8 +1,8 @@
 export const publicNavigation = [
-  { label: "Histórias", href: "/historias" },
-  { label: "Memórias documentais", href: "/memorias-documentais" },
+  { label: "Olhar", href: "/historias" },
+  { label: "Chão", href: "/territorios" },
+  { label: "Chamar a Ojú", href: "/planejar-um-registro" },
   { label: "Serviços", href: "/servicos" },
-  { label: "Comunidade", href: "/comunidade" },
   { label: "Sobre", href: "/sobre" },
 ] as const;
 

@@ -1,4 +1,3 @@
-import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Link, useRoute } from "wouter";
@@ -7,5 +6,24 @@ import { trpc } from "@/lib/trpc";
 export default function PublicationPreview() {
   const [, params] = useRoute("/admin/preview/:id");
   const { data, isLoading } = trpc.editorial.preview.useQuery({ id: Number(params?.id) }, { enabled: Boolean(params?.id) });
-  return <DashboardLayout><div className="mx-auto max-w-4xl"><div className="flex items-center justify-between gap-4"><Link href="/admin/publicacoes" className="inline-flex items-center gap-2 text-sm font-semibold"><ArrowLeft className="h-4 w-4" />Voltar aos conteúdos</Link>{params?.id && <Button asChild className="bg-[#242017] text-white"><Link href={`/admin/editar/${params.id}`}>Editar</Link></Button>}</div>{isLoading ? <p className="mt-12">Preparando visualização...</p> : data ? <article className="mt-8 rounded-2xl bg-[#f9f7f1] px-6 py-10 sm:px-12"><p className="editorial-kicker">Pré-visualização · {data.contentKind}</p><h1 className="mt-3 font-serif text-5xl leading-[1.02]">{data.title}</h1>{data.subtitle && <p className="mt-5 font-serif text-2xl italic text-[#655e52]">{data.subtitle}</p>}{data.commercialEditorial && !data.commercialEditorial.authorized ? <aside className="mt-7 rounded-xl border border-[#a33a23]/30 bg-[#fff0ea] px-5 py-4"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#8d2d18]">Material contratado em guarda privada</p><p className="mt-2 text-sm leading-6 text-[#6b4438]">A entrega ao contratante permanece separada do portal. Esta Cobertura não poderá ser publicada nem reaproveitada editorialmente até que a autorização expressa seja registrada na carteira comercial.</p></aside> : data.commercialEditorial?.authorized ? <aside className="mt-7 rounded-xl border border-[#7c6b1d]/30 bg-[#fff7dc] px-5 py-4"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#765000]">Material contratado autorizado editorialmente</p><p className="mt-2 text-sm leading-6 text-[#655e52]">A autorização editorial foi registrada{data.commercialEditorial.authorizedAt ? ` em ${new Date(data.commercialEditorial.authorizedAt).toLocaleDateString("pt-BR")}` : ""}. A identificação de divulgação contratada continua obrigatória quando aplicável.</p></aside> : null}{data.taxonomies?.length ? <section className="mt-7 border-l-2 border-[#d4a70d] pl-4"><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#806817]">Relações documentais</p><div className="mt-3 flex flex-wrap gap-2">{data.taxonomies.map(item => <span key={item.id} className="rounded-full bg-[#eee9dc] px-3 py-1 text-xs text-[#393328]">{item.dimension} · {item.name}</span>)}</div></section> : null}<p className="mt-8 whitespace-pre-wrap text-lg leading-8 text-[#393328]">{data.body || data.summary || "Sem texto editorial adicionado."}</p><div className="mt-10 border-t border-[#242017]/10 pt-4 text-sm text-[#655e52]">Esta visualização permanece interna enquanto o status não for Publicada.</div></article> : <p className="mt-12">Conteúdo não encontrado.</p>}</div></DashboardLayout>;
+  const cover = data?.media.find(item => item.isCover) || data?.media[0];
+  return <div className="min-h-screen bg-[#070605] text-white">
+    <div className="border-b border-white/10 bg-black/40 px-4 py-3">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+        <Link href={params?.id ? `/admin/editar/${params.id}` : "/admin/publicacoes"} className="inline-flex items-center gap-2 text-sm font-semibold text-white/80"><ArrowLeft className="h-4 w-4" />Voltar à edição</Link>
+        <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ed9c58]">Prévia como no site · {data?.status || "…"}</p>
+        {params?.id && <Button asChild className="bg-[#ed9c58] text-[#24140b]"><Link href={`/admin/editar/${params.id}`}>Continuar edição</Link></Button>}
+      </div>
+    </div>
+    {isLoading ? <p className="container pt-16">Preparando visualização...</p> : data ? <article className="container max-w-4xl py-16">
+      <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#ed9c58]">{data.contentKind}</p>
+      <h1 className="mt-4 font-serif text-5xl leading-[1.02]">{data.title}</h1>
+      {data.subtitle && <p className="mt-5 font-serif text-2xl italic text-white/65">{data.subtitle}</p>}
+      {cover?.assetUrl ? <figure className="mt-10 overflow-hidden rounded border border-white/15">{cover.mediaType === "vídeo" ? <video controls className="aspect-video w-full" src={cover.assetUrl} /> : <img src={cover.assetUrl} alt={cover.filename || data.title} className="w-full" />}<figcaption className="px-4 py-3 text-xs text-white/55">Capa · crédito visível no portal</figcaption></figure> : null}
+      {data.commercialEditorial && !data.commercialEditorial.authorized ? <aside className="mt-7 border-l-2 border-[#a33a23] bg-[#2a1410] px-5 py-4"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#ef9e59]">Material contratado em guarda privada</p><p className="mt-2 text-sm leading-6 text-white/65">Não vai ao portal até a autorização editorial expressa.</p></aside> : null}
+      {data.taxonomies?.length ? <section className="mt-7"><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#ed9c58]">Relações documentais</p><div className="mt-3 flex flex-wrap gap-2">{data.taxonomies.map(item => <span key={item.id} className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/70">{item.dimension} · {item.name}</span>)}</div></section> : null}
+      <p className="mt-10 whitespace-pre-wrap font-serif text-xl leading-9 text-white/85">{data.body || data.summary || "Sem texto editorial adicionado."}</p>
+      <p className="mt-10 border-t border-white/10 pt-4 text-sm text-white/50">Esta prévia é o mesmo olhar do site. Enquanto o status não for Publicada, o público não vê.</p>
+    </article> : <p className="container pt-16">Conteúdo não encontrado.</p>}
+  </div>;
 }

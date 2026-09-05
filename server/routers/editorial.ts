@@ -171,6 +171,7 @@ export const searchInput = z.object({
   themeId: z.number().int().positive().optional(),
   territoryId: z.number().int().positive().optional(),
   contentTypeId: z.number().int().positive().optional(),
+  organizationId: z.number().int().positive().optional(),
   contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]).optional(),
   photographerId: z.number().int().positive().optional(),
   partnerId: z.number().int().positive().optional(),
@@ -219,7 +220,7 @@ export const editorialRouter = router({
 
   search: publicProcedure.input(searchInput).query(async ({ input }) => {
     const db = await requireDb();
-    const taxonomyIds = [input.themeId, input.territoryId, input.contentTypeId].filter((id): id is number => Boolean(id));
+    const taxonomyIds = [input.themeId, input.territoryId, input.contentTypeId, input.organizationId].filter((id): id is number => Boolean(id));
     const matchingIds = await getMatchingPublicationIds(db, taxonomyIds);
     if (matchingIds && matchingIds.length === 0) return { items: [], total: 0, hasMore: false };
     let photographerPublicationIds: number[] | null = null;
@@ -246,7 +247,18 @@ export const editorialRouter = router({
     const totalRow = await db.select({ value: count() }).from(publications).where(whereClause);
     const total = Number(totalRow[0]?.value || 0);
     const records = await db.select().from(publications).where(whereClause).orderBy(desc(publications.publishedAt), desc(publications.createdAt)).limit(input.limit).offset(input.offset);
-    const items = (await portalAuthorizedPublications(db, records)).map(({ publication, authorization }) => toPortalPublication(publication, authorization));
+    const permitted = await portalAuthorizedPublications(db, records);
+    const publicationIds = permitted.map(item => item.publication.id);
+    const coverLinks = publicationIds.length ? await db.select().from(publicationMedia).where(inArray(publicationMedia.publicationId, publicationIds)).orderBy(publicationMedia.displayOrder) : [];
+    const firstCoverByPublication = new Map<number, typeof coverLinks[number]>();
+    for (const link of coverLinks) if (!firstCoverByPublication.has(link.publicationId)) firstCoverByPublication.set(link.publicationId, link);
+    const coverMediaIds = Array.from(new Set(Array.from(firstCoverByPublication.values()).map(link => link.mediaId)));
+    const covers = coverMediaIds.length ? await db.select().from(mediaAssets).where(and(inArray(mediaAssets.id, coverMediaIds), isNull(mediaAssets.deletedAt))) : [];
+    const coverById = new Map(covers.map(item => [item.id, item]));
+    const items = permitted.map(({ publication, authorization }) => {
+      const cover = coverById.get(firstCoverByPublication.get(publication.id)?.mediaId || 0);
+      return { ...toPortalPublication(publication, authorization), coverUrl: cover?.assetUrl ?? null, coverType: cover?.mediaType ?? null, coverCredit: cover?.credit ?? null };
+    });
     return { items, total, hasMore: input.offset + records.length < total };
   }),
 
@@ -330,7 +342,8 @@ export const editorialRouter = router({
     const photographerById = new Map(photographers.map(item => [item.id, item]));
     const orderedMedia = media.sort((a, b) => (links.find(link => link.mediaId === a.id)?.displayOrder ?? 0) - (links.find(link => link.mediaId === b.id)?.displayOrder ?? 0)).map(item => {
       const photographer = item.photographerId ? photographerById.get(item.photographerId) : undefined;
-      return { ...item, photographer: photographer ? { id: photographer.id, displayName: photographer.displayName, slug: photographer.publicVisible ? photographer.publicSlug : null, profileNote: photographer.publicVisible ? photographer.profileNote : null } : null };
+      const displayOrder = links.find(link => link.mediaId === item.id)?.displayOrder ?? 0;
+      return { ...item, isCover: displayOrder === 0, photographer: photographer ? { id: photographer.id, displayName: photographer.displayName, slug: photographer.publicVisible ? photographer.publicSlug : null, profileNote: photographer.publicVisible ? photographer.profileNote : null } : null };
     });
     return { ...toPortalPublication(result[0], authorization), media: orderedMedia, taxonomies: publicationTaxonomy };
   }),

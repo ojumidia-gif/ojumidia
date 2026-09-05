@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { portalContentDefaults, usePortalContent } from "@/lib/portalContent";
+import { groupPublicNav } from "@/lib/publicNav";
 
 export function OjuMark({
   compact = false,
@@ -17,21 +18,21 @@ export function OjuMark({
   const image = (
     <img
       src={brandUrl}
-      alt="OjÃº MÃ­dia"
+      alt="Ojú Mídia"
       className={`${compact ? "h-9 w-28" : "h-12 w-40"} object-contain object-center ${cinematic ? "brightness-0 invert" : ""}`}
     />
   );
 
   if (onClick) {
     return (
-      <button onClick={onClick} className="inline-flex items-center" aria-label="OjÃº MÃ­dia">
+      <button onClick={onClick} className="inline-flex items-center" aria-label="Ojú Mídia">
         {image}
       </button>
     );
   }
 
   return (
-    <Link href="/" className="inline-flex items-center" aria-label="OjÃº MÃ­dia â€” inÃ­cio">
+    <Link href="/" className="inline-flex items-center" aria-label="Ojú Mídia — início">
       {image}
     </Link>
   );
@@ -45,28 +46,39 @@ export function PublicHeader({
   onMenuClick?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const color = cinematic ? "text-white" : "text-[#3d382e]";
-  const close = () => setOpen(false);
+  const close = () => { setOpen(false); setActiveGroup(null); };
   const { block } = usePortalContent("Global");
   const navigation = block("navigation", portalContentDefaults.Global.navigation as unknown as { items: Array<{ label: string; href: string; order?: number; active?: boolean; featured?: boolean }> });
   const links = [...(navigation?.items || [])].filter(item => item.active !== false).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const { grouped, rest } = groupPublicNav(links);
 
   return (
     <header
-      className={`${cinematic ? "absolute inset-x-0 top-0 z-40 border-b border-white/15 bg-black/30" : "sticky top-0 z-40 border-b border-[#1f1c16]/10 bg-[#f7f5ef]/92"} relative backdrop-blur-md`}
+      className={`${cinematic ? "absolute inset-x-0 top-0 z-40 border-b border-white/15 bg-black/30" : "sticky top-0 z-40 border-b border-[#1f1c16]/10 bg-[#f4efe6]/92"} relative backdrop-blur-md`}
     >
-      <div className="container flex h-[74px] items-center justify-between gap-4">
+      <div className="container flex h-[78px] items-center justify-between gap-4">
         <OjuMark cinematic={cinematic} />
 
-        <nav className={`hidden items-center gap-3 text-[9px] font-bold uppercase tracking-[.055em] xl:flex ${color}`}>
-          {links.map(({ label, href, featured }, index) => (
-            <Link
-              key={`${label}-${href}`}
-              href={href}
-              className={`relative whitespace-nowrap py-7 transition hover:text-[#f0a45f] ${featured || (cinematic && index === 0) ? "text-[#f0a45f] after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:bg-[#ef9e59]" : ""}`}
-            >
-              {label}
-            </Link>
+        <nav className={`hidden items-center gap-1 text-[11px] font-bold uppercase tracking-[.12em] xl:flex ${color}`}>
+          {grouped.map(group => (
+            <div key={group.id} className="relative" onMouseEnter={() => setActiveGroup(group.id)} onMouseLeave={() => setActiveGroup(null)}>
+              <button type="button" className={`px-3 py-7 transition hover:text-[#c45c26] ${activeGroup === group.id ? "text-[#c45c26]" : ""}`}>{group.label}</button>
+              {activeGroup === group.id && (
+                <div className={`absolute left-0 top-full min-w-64 border ${cinematic ? "border-white/15 bg-[#120e0b] text-white" : "border-[#1f1c16]/10 bg-[#f4efe6] text-[#3d382e]"} p-4 shadow-xl`}>
+                  <p className="text-[10px] font-semibold normal-case tracking-normal text-[#c45c26]">{group.description}</p>
+                  <div className="mt-3 grid gap-1">
+                    {group.items.map(item => (
+                      <Link key={item.href} href={item.href} className="rounded px-2 py-2 text-[11px] hover:bg-white/10 hover:text-[#ed9c58]">{item.label}</Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {rest.map(item => (
+            <Link key={item.href} href={item.href} className="px-3 py-7 hover:text-[#c45c26]">{item.label}</Link>
           ))}
         </nav>
 
@@ -80,7 +92,7 @@ export function PublicHeader({
               onMenuClick?.();
             }}
             className="rounded-full p-2 hover:bg-white/10 xl:hidden"
-            aria-label={open ? "Fechar navegaÃ§Ã£o" : "Abrir navegaÃ§Ã£o"}
+            aria-label={open ? "Fechar navegação" : "Abrir navegação"}
           >
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -88,22 +100,23 @@ export function PublicHeader({
       </div>
 
       {open && (
-        <nav className={`border-t ${cinematic ? "border-white/15 bg-[#090807]/98 text-white" : "border-[#1f1c16]/10 bg-[#f7f5ef] text-[#3d382e]"} xl:hidden`}>
-          <div className="container grid grid-cols-2 gap-x-5 gap-y-1 py-5 text-xs font-bold uppercase tracking-[.08em]">
-            {links.map(({ label, href, featured }) => (
-              <Link
-                key={`${label}-${href}`}
-                href={href}
-                onClick={close}
-                className={`rounded px-2 py-3 hover:bg-white/10 hover:text-[#ef9e59] ${featured ? "col-span-2 text-[#ef9e59]" : ""}`}
-              >
-                {label}
-              </Link>
+        <nav className={`border-t ${cinematic ? "border-white/15 bg-[#090807]/98 text-white" : "border-[#1f1c16]/10 bg-[#f4efe6] text-[#3d382e]"} xl:hidden`}>
+          <div className="container grid gap-6 py-6">
+            {grouped.map(group => (
+              <div key={group.id}>
+                <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#c45c26]">{group.label}</p>
+                <p className="mt-1 text-xs font-normal normal-case tracking-normal text-white/55">{group.description}</p>
+                <div className="mt-3 grid grid-cols-2 gap-1 text-xs font-bold uppercase tracking-[.08em]">
+                  {group.items.map(item => (
+                    <Link key={item.href} href={item.href} onClick={close} className="rounded px-2 py-3 hover:bg-white/10 hover:text-[#ed9c58]">{item.label}</Link>
+                  ))}
+                </div>
+              </div>
             ))}
+            {rest.length ? <div className="grid grid-cols-2 gap-1 text-xs font-bold uppercase tracking-[.08em]">{rest.map(item => <Link key={item.href} href={item.href} onClick={close} className="rounded px-2 py-3 hover:text-[#ed9c58]">{item.label}</Link>)}</div> : null}
           </div>
         </nav>
       )}
     </header>
   );
 }
-

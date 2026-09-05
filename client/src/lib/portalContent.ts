@@ -24,15 +24,15 @@ export const portalContentDefaults = {
       { label: "Memórias", href: "/memorias", order: 9, active: true, featured: false },
       { label: "Acervo", href: "/acervo", order: 10, active: true, featured: false },
       { label: "Serviços", href: "/servicos", order: 11, active: true, featured: false },
-      { label: "Planejar um registro", href: "/planejar-um-registro", order: 12, active: true, featured: true },
+      { label: "Chamar a Ojú", href: "/planejar-um-registro", order: 12, active: true, featured: true },
     ] },
-    footer: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Redes sociais", href: "https://instagram.com/ojumidia", external: true }], legalItems: [{ label: "Privacidade" }, { label: "Termos" }] },
+    footer: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Redes sociais", href: "https://instagram.com/ojumidia", external: true }], legalItems: [{ label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
     method: { eyebrow: "Método Ojú", title: "Cuidado antes da câmera.", description: "Registrar começa quando a Ojú compreende o que está sendo vivido, o que precisa permanecer privado e o que pode atravessar o tempo.", items: ojuMethod },
   },
   Home: {
-    hero: { eyebrow: "Histórias que pedem registro", title: "Memórias que conectam gerações", description: "Documentamos culturas afro-brasileiras, religiosidades de matriz africana e histórias que mantêm vivas as memórias dos nossos territórios — com contexto, crédito e autorização.", ctaLabel: "Planejar um registro", ctaHref: "/planejar-um-registro", secondaryLabel: "Explorar histórias", secondaryHref: "/historias" },
-    planning: { title: "Sua história também merece ser registrada.", description: "A Ojú começa pela escuta do que precisa permanecer antes de propor fotografia, vídeo ou documentação integrada.", ctaLabel: "Planejar um registro", ctaHref: "/planejar-um-registro" },
-    featured: { eyebrow: "Em destaque", title: "Histórias recentes", emptyMessage: "A Home mostra somente conteúdos escolhidos pela curadoria nacional.", allLabel: "Ver acervo", allHref: "/acervo" },
+    hero: { eyebrow: "Ojú: o olhar que registra", title: "Memória preta, casa e chão que não se apaga.", description: "Documentamos culturas afro-brasileiras, religiosidades de matriz africana e os territórios que as sustentam — com contexto, crédito e autorização. O sagrado só entra quando a casa autoriza.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro", secondaryLabel: "Olhar histórias", secondaryHref: "/historias" },
+    planning: { title: "Sua história também merece ser registrada.", description: "A Ojú começa pela escuta do que precisa permanecer antes de propor fotografia, vídeo ou documentação integrada.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro" },
+    featured: { eyebrow: "Em destaque", title: "Histórias recentes", emptyMessage: "A Home mostra somente conteúdos escolhidos pela curadoria nacional.", allLabel: "Ir ao acervo", allHref: "/acervo" },
     editorialFronts: { items: [
       { label: "Documentários", title: "Filmes que contam nossas histórias", action: "Assistir agora", href: "/documentarios" },
       { label: "Coberturas", title: "Registro de eventos e celebrações", action: "Ver coberturas", href: "/coberturas" },
@@ -40,7 +40,7 @@ export const portalContentDefaults = {
     ] },
   },
   "Histórias": {
-    hero: { eyebrow: "Histórias", title: "Narrativas que olham para o território.", description: "Histórias não são conteúdo para preencher uma página. São registros editados para aproximar pessoas, tempos, lugares e as relações que os sustentam." },
+    hero: { eyebrow: "Olhar", title: "Narrativas que olham para o território.", description: "Histórias não são conteúdo para preencher uma página. São registros editados para aproximar pessoas, tempos, casas e o chão que os sustenta." },
   },
   "Memórias Documentais": {
     hero: { eyebrow: "Memórias documentais", title: "Registros que encontram um lugar na memória coletiva.", description: "Esta não é uma vitrine de serviços. É uma seleção de registros que podem ser vistos porque foram publicados com contexto, crédito e autorização adequada." },
@@ -54,7 +54,7 @@ export const portalContentDefaults = {
     entries: { items: communityEntries },
   },
   "Sobre": {
-    hero: { eyebrow: "Sobre a Ojú", title: "Documentar é cuidar do que continua.", description: "A Ojú Mídia produz narrativas documentais que conectam pessoas, territórios e tempos. Trabalhamos com texto, fotografia e audiovisual sem separar a imagem do contexto que a sustenta.", ctaLabel: "Planejar um registro", ctaHref: "/planejar-um-registro" },
+    hero: { eyebrow: "Sobre a Ojú", title: "Documentar é cuidar do que continua.", description: "A Ojú Mídia produz narrativas documentais que conectam pessoas, territórios e tempos. Trabalhamos com texto, fotografia e audiovisual sem separar a imagem do contexto que a sustenta.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro" },
   },
 } as const;
 

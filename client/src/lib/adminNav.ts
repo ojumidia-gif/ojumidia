@@ -72,6 +72,7 @@ export const adminNavGroups: AdminNavGroup[] = [
 export const principalOnlyAdminPaths = [
   "/admin/miniclipes",
   "/admin/destaques",
+  "/admin/home-preview",
   "/admin/lixeira-editorial",
   "/admin/lixeira-midias",
   "/admin/retencao",

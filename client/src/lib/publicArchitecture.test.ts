@@ -4,10 +4,10 @@ import { isDocumentaryMemoryKind, ojuMethod, publicNavigation } from "./publicAr
 describe("arquitetura pública documental", () => {
   it("prioriza as cinco entradas aprovadas sem transformar a navegação em portfólio", () => {
     expect(publicNavigation.map(item => item.label)).toEqual([
-      "Histórias",
-      "Memórias documentais",
+      "Olhar",
+      "Chão",
+      "Chamar a Ojú",
       "Serviços",
-      "Comunidade",
       "Sobre",
     ]);
     expect(publicNavigation.some(item => item.label.toLowerCase().includes("portfólio"))).toBe(false);

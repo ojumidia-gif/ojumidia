@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { editorialPipeline, nextEditorialAction } from "@/lib/editorialFlow";
+import { editorialPipeline, nextEditorialAction, publicationSiteGaps } from "@/lib/editorialFlow";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import { CoverageMediaPanel } from "./CoverageMediaPanel";
 import { CoverageTaxonomiesPanel } from "./CoverageTaxonomiesPanel";
 import { InstitutionalCoveragePanel } from "./InstitutionalCoveragePanel";
+import { SiteReadiness } from "./_shared";
 
 const destinations: Record<string, string> = {
   "História": "Portal → Histórias",
@@ -53,6 +54,7 @@ export default function PublicationEdit() {
   const isPublished = data.status === "Publicada";
   const cover = data.media.find(item => item.isCover) || data.media[0];
   const nextAction = nextEditorialAction(user?.role, data.status);
+  const gaps = publicationSiteGaps(data);
   const payload = { id, expectedVersion: data.version, title, subtitle: subtitle || null, summary: summary || null, body: body || null, teamCredit: teamCredit || null, externalAlbumUrl: externalAlbumUrl || null, externalVideoUrl: externalVideoUrl || null, revisionNote: revisionNote || undefined };
   const saveThenAdvance = () => {
     update.mutate(payload, {
@@ -77,6 +79,7 @@ export default function PublicationEdit() {
         );
       })}
     </ol>
+    {data.status !== "Publicada" ? <div className="mt-5"><SiteReadiness items={gaps} readyText="Texto, capa e território ok. Siga o próximo passo editorial — o site só recebe depois da revisão e da aprovação." /></div> : null}
     {nextAction && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#806817]/30 bg-[#fff7dc] p-4">
       <p className="text-sm text-[#655e52]"><strong className="text-[#242017]">Próximo passo:</strong> {nextAction.hint}</p>
       <Button disabled={advance.isPending || update.isPending} className="bg-[#242017] text-white" onClick={() => data.status === "Rascunho" ? saveThenAdvance() : advance.mutate({ id, expectedVersion: data.version })}>
@@ -95,7 +98,7 @@ export default function PublicationEdit() {
       <section className="rounded-xl border border-[#242017]/10 bg-[#f7f3e9] p-4"><p className="text-sm font-semibold">Links externos opcionais</p><p className="mt-1 text-xs leading-5 text-[#655e52]">O portal mantém até 5 fotos e 2 vídeos curtos. Capa atual: {cover ? cover.filename || `#${cover.id}` : "ainda sem capa — marque abaixo."}</p><div className="mt-3 grid gap-3 md:grid-cols-2"><Input type="url" value={externalAlbumUrl} onChange={event => setExternalAlbumUrl(event.target.value)} placeholder="Álbum completo"/><Input type="url" value={externalVideoUrl} onChange={event => setExternalVideoUrl(event.target.value)} placeholder="Vídeo completo"/></div></section>
       {isPublished && <label className="grid gap-2 text-sm font-medium">Motivo da revisão<Textarea value={revisionNote} onChange={event => setRevisionNote(event.target.value)} /></label>}
       <div className="flex flex-wrap justify-end gap-3">
-        {!isPublished && <Button type="button" variant="outline" asChild><Link href={`/admin/preview/${id}`}>Visualizar</Link></Button>}
+        {!isPublished && <Button type="button" variant="outline" asChild><Link href={`/admin/preview/${id}`}>Prévia como no site</Link></Button>}
         {data.status === "Aprovada" && <div className="flex flex-wrap items-end gap-2"><label className="grid gap-1 text-xs font-semibold">Programar<input type="datetime-local" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} className="h-10 rounded-md border px-2 text-sm" /></label><Button type="button" variant="outline" disabled={schedule.isPending || !scheduledAt} onClick={() => schedule.mutate({ id, expectedVersion: data.version, scheduledAt: new Date(scheduledAt) })}>Agendar</Button></div>}
         <Button disabled={update.isPending} className="bg-[#242017] text-white">{update.isPending ? "Salvando..." : isPublished ? "Publicar revisão" : "Salvar texto"}</Button>
       </div>

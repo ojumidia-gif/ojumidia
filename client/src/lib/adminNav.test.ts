@@ -13,6 +13,8 @@ describe("rotas administrativas restritas ao Super Admin", () => {
     expect(labels).not.toContain("/admin/auditoria");
     expect(isPrincipalOnlyAdminPath("/admin/auditoria")).toBe(true);
     expect(isPrincipalOnlyAdminPath("/admin/anuncios/12")).toBe(true);
+    expect(isPrincipalOnlyAdminPath("/admin/destaques")).toBe(true);
+    expect(isPrincipalOnlyAdminPath("/admin/home-preview/12")).toBe(true);
     expect(isPrincipalOnlyAdminPath("/admin/publicacoes")).toBe(false);
   });
 });

@@ -15,7 +15,7 @@ describe("feedback visual do Centro Administrativo", () => {
   it("notifica criação, transições, retirada e falhas em conteúdos", () => {
     const publications = source("client/src/pages/admin/PublicationsAdmin.tsx");
     expect(publications).toContain("Rascunho criado.");
-    expect(publications).toContain("Conteúdo publicado no portal.");
+    expect(publications).toContain("Publicado no portal.");
     expect(publications).toContain("Conteúdo arquivado e retirado do portal.");
     expect(publications).toContain("Conteúdo retirado do portal.");
     expect(publications).toContain("Não foi possível criar o rascunho.");
@@ -26,6 +26,6 @@ describe("feedback visual do Centro Administrativo", () => {
     expect(edit).toContain("Texto salvo.");
     expect(edit).toContain("Revisão publicada.");
     expect(edit).toContain("Não foi possível salvar as alterações.");
-    expect(edit).toContain("Enviar para revisão");
+    expect(edit).toContain("Salvar e enviar para revisão");
   });
 });

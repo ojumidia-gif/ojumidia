@@ -12,4 +12,42 @@ export function nextEditorialAction(role: string | undefined, status: string) {
   return null;
 }
 
+export function publicationSiteGaps(data: {
+  body?: string | null;
+  summary?: string | null;
+  teamCredit?: string | null;
+  media: Array<{ isCover?: boolean }>;
+  taxonomies: Array<{ dimension: string }>;
+}) {
+  const gaps: string[] = [];
+  if (!(data.body || data.summary)?.trim()) gaps.push("Falta o texto que o site vai ler.");
+  if (!data.teamCredit?.trim()) gaps.push("Falta o crédito de quem fez.");
+  if (!data.media.length) gaps.push("Falta foto ou vídeo autorizado.");
+  else if (!data.media.some(item => item.isCover)) gaps.push("Marque a foto de capa.");
+  if (!data.taxonomies.some(item => item.dimension === "Território")) gaps.push("Ligue a um território.");
+  return gaps;
+}
+
+export function photographerSiteGaps(item: { publicVisible?: boolean; profileNote?: string | null }) {
+  const gaps: string[] = [];
+  if (!item.profileNote?.trim()) gaps.push("Falta apresentação curta para o portal.");
+  if (!item.publicVisible) gaps.push("Ainda fora de /fotografos.");
+  return gaps;
+}
+
+export function mediaSiteGaps(item: { credit?: string | null; publicationAllowed?: boolean; authorization?: string; uploadStatus?: string }) {
+  const gaps: string[] = [];
+  if (!item.credit?.trim()) gaps.push("Falta crédito.");
+  if (item.authorization === "Pendente") gaps.push("Autorização pendente.");
+  if (!item.publicationAllowed) gaps.push("Publicação no portal ainda não permitida.");
+  if (item.uploadStatus === "Pronto") gaps.push("Aprovar para revisão editorial.");
+  return gaps;
+}
+
+export function communityNextStep(consentStatus: string, status: string) {
+  if (consentStatus !== "Autorizado") return { label: "Registrar consentimento", hint: "Próximo passo: registrar o consentimento autorizado." };
+  if (status !== "Publicada") return { label: "Publicar no site", hint: "Próximo passo: publicar no site." };
+  return { label: "No site", hint: "No site, com autorização." };
+}
+
 export const editorialPipeline = ["Rascunho", "Em revisão", "Aprovada", "Publicada"] as const;

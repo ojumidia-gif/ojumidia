@@ -7,7 +7,7 @@ describe("chamada editorial da Home", () => {
     const source = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
     const content = readFileSync(resolve(process.cwd(), "client/src/lib/portalContent.ts"), "utf8");
     expect(source).toContain('usePortalContent("Home")');
-    expect(content).toContain("Memórias que conectam gerações");
+    expect(content).toContain("Memória preta, casa e chão que não se apaga.");
     expect(source).not.toContain(">Jornalismo documental<");
   });
 });

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { AdminPage, EmptyAdmin } from "./_shared";
+import { AdminPage, EmptyAdmin, SiteReadiness } from "./_shared";
 import { TaxonomyMediaPanel } from "./TaxonomyMediaPanel";
 
 const dimensions = ["Tipo de conteúdo", "Tema", "Localização", "Território", "Pessoa/organização", "Evento", "Data"] as const;
@@ -39,7 +39,8 @@ export default function TaxonomiesAdmin() {
   const edit = (item: NonNullable<typeof data>[number]) => { setEditingId(item.id); setDimension(item.dimension as Dimension); setName(item.name); setDescription(item.description || ""); setParentId(item.parentId ? String(item.parentId) : ""); setLatitude(item.latitude ? String(item.latitude) : ""); setLongitude(item.longitude ? String(item.longitude) : ""); setMapVisibility(item.mapVisibility as typeof mapVisibility); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   return <AdminPage eyebrow={territoriesFocus ? "Portal → Territórios" : "Territórios e taxonomias"} title={territoriesFocus ? "Cadastrar, editar e publicar no mapa." : "Criar, relacionar e documentar."} action={null}>
-    {territoriesFocus ? <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">Territórios com visibilidade autorizada aparecem em /territorios. Depois de cadastrar, relacione histórias e coberturas pelo painel de relações do conteúdo.</p> : null}
+    {territoriesFocus ? <p className="-mt-4 mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">Territórios com visibilidade autorizada aparecem em /territorios. Depois de cadastrar, relacione histórias e coberturas pelo painel de relações do conteúdo.</p> : null}
+    {territoriesFocus ? <div className="mb-6"><SiteReadiness items={(data || []).filter(item => item.dimension === "Território" && item.mapVisibility === "Não divulgar").map(item => `${item.name} ainda fora de /territorios.`)} readyText="Os territórios com visibilidade autorizada já podem aparecer no mapa do portal." /></div> : null}
     <section className="admin-card p-6">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-serif text-2xl">{editingId ? `Editar ${dimension}` : `Cadastrar ${dimension}`}</p><p className="mt-2 max-w-3xl text-sm leading-6 text-[#655e52]">Comece escolhendo a dimensão. Depois de salvar, o item ganha ações diretas para editar, relacionar Coberturas e adicionar imagem ou vídeo com crédito.</p></div>{editingId && <Button variant="outline" size="sm" onClick={reset}><X className="mr-1 h-3.5 w-3.5" />Cancelar edição</Button>}</div>
       <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={event => { event.preventDefault(); const mapData = dimension === "Território" ? { latitude: latitude || undefined, longitude: longitude || undefined, mapVisibility } : {}; if (editingId) update.mutate({ id: editingId, name, description: description || null, parentId: parentId ? Number(parentId) : null, ...mapData }); else create.mutate({ dimension, name, description: description || undefined, parentId: parentId ? Number(parentId) : undefined, ...mapData }); }}>
