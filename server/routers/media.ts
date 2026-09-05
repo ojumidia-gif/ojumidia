@@ -11,6 +11,7 @@ import {
   collectMediaUsages,
   GENERATED_ARTIFACT_INVENTORY,
   listAbandonedUploadSessions,
+  listUnlinkedUploadSessions,
   mediaOccupancy,
   purgeMediaAsset,
   restoreMediaIfRecoverable,
@@ -124,9 +125,10 @@ export const mediaRouter = router({
     requireSuperAdmin(ctx.user.role);
     const db = await requireDb();
     const now = new Date();
-    const [occupancy, abandoned, trash] = await Promise.all([
+    const [occupancy, abandoned, unlinked, trash] = await Promise.all([
       mediaOccupancy(db),
       listAbandonedUploadSessions(db, now),
+      listUnlinkedUploadSessions(db),
       db.select({ id: mediaAssets.id, filename: mediaAssets.filename, deletedAt: mediaAssets.deletedAt, storageKey: mediaAssets.storageKey, fileSize: mediaAssets.fileSize }).from(mediaAssets).where(isNotNull(mediaAssets.deletedAt)).orderBy(desc(mediaAssets.deletedAt)),
     ]);
     return {
@@ -141,6 +143,14 @@ export const mediaRouter = router({
         fileSize: item.session.fileSize,
         klass: item.klass,
       })),
+      technicalUploads: unlinked.map(session => ({
+        id: session.id,
+        filename: session.filename,
+        status: session.status,
+        createdAt: session.createdAt,
+        storageKey: session.storageKey,
+        fileSize: session.fileSize,
+      })),
       artifacts: GENERATED_ARTIFACT_INVENTORY,
       policy: {
         abandonedIncompleteHours: 24,
@@ -150,18 +160,32 @@ export const mediaRouter = router({
       },
     };
   }),
-  cleanupAbandonedUploads: protectedProcedure.input(z.object({ uploadId: z.string().min(8).max(96).optional() })).mutation(async ({ ctx, input }) => {
+  cleanupAbandonedUploads: protectedProcedure.input(z.object({ uploadId: z.string().min(8).max(96).optional(), force: z.boolean().optional() })).mutation(async ({ ctx, input }) => {
     requireSuperAdmin(ctx.user.role);
     const db = await requireDb();
     if (input.uploadId) {
       const session = (await db.select().from(uploadSessions).where(eq(uploadSessions.id, input.uploadId)).limit(1))[0];
       if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Sessão de upload não encontrada." });
       try {
-        await cleanupAbandonedUploadSession(db, ctx.user.id, session);
+        await cleanupAbandonedUploadSession(db, ctx.user.id, session, new Date(), { force: Boolean(input.force) });
         return { cleanedUploadSessionIds: [session.id], failed: [] };
       } catch (error) {
         throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Não foi possível limpar a sessão." });
       }
+    }
+    if (input.force) {
+      const unlinked = await listUnlinkedUploadSessions(db);
+      const cleaned: string[] = [];
+      const failed: Array<{ id: string; error: string }> = [];
+      for (const session of unlinked) {
+        try {
+          await cleanupAbandonedUploadSession(db, ctx.user.id, session, new Date(), { force: true });
+          cleaned.push(session.id);
+        } catch (error) {
+          failed.push({ id: session.id, error: error instanceof Error ? error.message : "falha" });
+        }
+      }
+      return { cleanedUploadSessionIds: cleaned, failed };
     }
     return cleanupExpiredAbandonedUploads(db, ctx.user.id);
   }),

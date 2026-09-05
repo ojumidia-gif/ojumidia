@@ -31,7 +31,7 @@ export default function RetentionAdmin() {
           <div className="w-fit rounded-full bg-[#242017] p-3 text-white"><TimerReset className="h-5 w-5" /></div>
           <div>
             <h2 className="font-serif text-2xl">Artefatos técnicos, não segunda lixeira.</h2>
-            <p className="mt-2 max-w-4xl text-sm leading-6 text-[#655e52]">Mídia do Acervo só some com Excluir definitivamente na Lixeira de mídia. Aqui: sessões abandonadas, ocupação registrada e o inventário do que o sistema gera. Exportações PDF nascem no navegador e não acumulam no Tigris. A Auditoria não se apaga.</p>
+            <p className="mt-2 max-w-4xl text-sm leading-6 text-[#655e52]">Mídia do Acervo só some com Excluir definitivamente na Lixeira de mídia. Aqui o Super Admin limpa sessões abandonadas e arquivos técnicos gerados pelo sistema que não viraram Acervo. PDFs de termos nascem no navegador. A Auditoria não se apaga.</p>
             <p className="mt-3 text-sm"><Link href="/admin/lixeira-midias" className="underline">Abrir Lixeira de mídia</Link></p>
           </div>
         </div>
@@ -60,6 +60,23 @@ export default function RetentionAdmin() {
                 ))}
               </ul>
             ) : <div className="mt-4"><EmptyAdmin text="Nenhuma sessão abandonada no prazo da política." /></div>}
+          </section>
+          <section className="admin-card mb-6 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-serif text-xl">Arquivos técnicos gerados pelo sistema</h3>
+              <Button size="sm" onClick={() => cleanup.mutate({ force: true })} disabled={cleanup.isPending || !data.technicalUploads.length}>Limpar todos sem mídia no Acervo</Button>
+            </div>
+            <p className="mt-2 text-sm text-[#655e52]">Uploads que o sistema criou e que não viraram mídia do Acervo. Não apaga fotos já publicadas nem a Lixeira. Mídias do Acervo continuam só na Lixeira de mídia.</p>
+            {data.technicalUploads.length ? (
+              <ul className="mt-4 grid gap-2 text-sm">
+                {data.technicalUploads.map(session => (
+                  <li key={session.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#242017]/10 py-3">
+                    <span>{session.filename || "arquivo técnico"} · {session.status}</span>
+                    <Button size="sm" variant="outline" onClick={() => cleanup.mutate({ uploadId: session.id, force: true })} disabled={cleanup.isPending}><Trash2 className="mr-1 h-3.5 w-3.5" />Apagar</Button>
+                  </li>
+                ))}
+              </ul>
+            ) : <div className="mt-4"><EmptyAdmin text="Não há arquivos técnicos órfãos para apagar." /></div>}
           </section>
           <section className="admin-card p-5">
             <h3 className="font-serif text-xl">Arquivos gerados pelo sistema</h3>

@@ -20,6 +20,7 @@ type ExistingMedia = {
   id: number;
   mediaType: "foto" | "vídeo";
   filename?: string | null;
+  isCover?: boolean;
 };
 
 function videoDuration(file: File) {
@@ -74,6 +75,7 @@ export function CoverageMediaPanel({
   const [biography, setBiography] = useState("");
   const [location, setLocation] = useState("");
   const [capturedAt, setCapturedAt] = useState("");
+  const [coverLocalId, setCoverLocalId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const refresh = () => {
@@ -82,8 +84,8 @@ export function CoverageMediaPanel({
   };
 
   const attach = trpc.editorial.attachMedia.useMutation({
-    onSuccess: () => {
-      toast.success("Mídia vinculada ao conteúdo.");
+    onSuccess: (_result, variables) => {
+      toast.success(variables.asCover ? "Esta foto é a capa do conteúdo." : "Mídia vinculada ao conteúdo.");
       refresh();
     },
     onError: (error) => toast.error(error.message),
@@ -255,8 +257,9 @@ export function CoverageMediaPanel({
             ? new Date(`${capturedAt}T12:00:00`)
             : undefined,
           asCover:
-            existingMedia.length === 0 &&
-            index === 0,
+            coverLocalId
+              ? item.localId === coverLocalId
+              : existingMedia.length === 0 && index === 0,
         });
       }
 
@@ -390,13 +393,13 @@ export function CoverageMediaPanel({
           <p className="font-serif text-2xl">
             {documentaryPhotos
               ? "Fotografias documentais"
-              : `Materiais de ${contentKind}`}
+              : `Fotos e vídeos de ${contentKind}`}
           </p>
 
           <p className="mt-1 text-sm text-[#655e52]">
             {documentaryPhotos
               ? "Envie no máximo cinco fotografias. Título, data, local e biografia viva são obrigatórios em cada imagem."
-              : `Limite absoluto: até ${MAX_PHOTOS} fotos e ${MAX_VIDEOS} vídeos curtos de até ${MAX_VIDEO_SECONDS} segundos.`}
+              : `Até ${MAX_PHOTOS} fotos e ${MAX_VIDEOS} vídeos curtos. A estrela “Usar como capa” define a imagem que abre este ${contentKind.toLowerCase()} no portal.`}
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -452,6 +455,8 @@ export function CoverageMediaPanel({
           />
           <MediaStage
             items={stage.items}
+            coverLocalId={coverLocalId || stage.items.find(entry => entry.kind === "foto")?.localId || null}
+            onCover={setCoverLocalId}
             onRemove={stage.remove}
             onRetry={itemId => {
               const item = stage.items.find(entry => entry.localId === itemId);
@@ -534,8 +539,10 @@ export function CoverageMediaPanel({
 
                   {media.filename ||
                     `${media.mediaType} #${media.id}`}
+                  {media.isCover ? <span className="rounded-full bg-[#f6b71b] px-2 py-0.5 text-[10px] font-bold text-[#242017]">Capa</span> : null}
                 </span>
 
+                <div className="flex gap-2">
                  <Button
                    size="sm"
                    variant="outline"
@@ -550,7 +557,7 @@ export function CoverageMediaPanel({
                    <Trash2 className="mr-1 h-3.5 w-3.5" />
                    Remover
                  </Button>
-                 {media.mediaType === "foto" ? (
+                 {media.mediaType === "foto" && !media.isCover ? (
                    <Button
                      size="sm"
                      onClick={() =>
@@ -564,6 +571,7 @@ export function CoverageMediaPanel({
                      Usar como capa
                    </Button>
                  ) : null}
+                </div>
               </div>
             ))
           ) : (

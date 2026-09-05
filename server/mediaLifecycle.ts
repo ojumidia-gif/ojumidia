@@ -79,7 +79,7 @@ export const GENERATED_ARTIFACT_INVENTORY = [
     hasDeleteButton: true,
     expires: "Sessões abandonadas: 24h incompletas / 7d prontas sem registro no Acervo",
     accumulatesInTigris: true,
-    note: "Única origem de objetos de acervo. Purge definitivo só com media.purge.",
+    note: "Única origem de objetos de acervo. Purge definitivo só com media.purge. Super Admin pode limpar sessões técnicas sem mídia no Acervo.",
   },
 ] as const;
 
@@ -268,10 +268,19 @@ export async function listAbandonedUploadSessions(db: Database, now = new Date()
     .filter(item => item.klass !== "retain" && item.klass !== "linked");
 }
 
-export async function cleanupAbandonedUploadSession(db: Database, actorId: number, session: UploadRow, now = new Date()) {
+export async function listUnlinkedUploadSessions(db: Database) {
+  const sessions = await db.select().from(uploadSessions);
+  const linkedIds = new Set((await db.select({ uploadId: mediaAssets.uploadId }).from(mediaAssets).where(isNotNull(mediaAssets.uploadId))).map(row => row.uploadId));
+  return sessions.filter(session => !linkedIds.has(session.id));
+}
+
+export async function cleanupAbandonedUploadSession(db: Database, actorId: number, session: UploadRow, now = new Date(), options?: { force?: boolean }) {
   const linked = (await db.select({ id: mediaAssets.id }).from(mediaAssets).where(eq(mediaAssets.uploadId, session.id)).limit(1))[0];
   const klass = uploadSessionCleanupClass(session, now, Boolean(linked));
-  if (klass === "linked" || klass === "retain") {
+  if (klass === "linked") {
+    throw new Error("Esta sessão ainda tem finalidade ou não atingiu a política de abandono.");
+  }
+  if (klass === "retain" && !options?.force) {
     throw new Error("Esta sessão ainda tem finalidade ou não atingiu a política de abandono.");
   }
 

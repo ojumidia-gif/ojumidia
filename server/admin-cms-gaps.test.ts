@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { partnerShareFromPolicy } from "./financialGovernance";
 import { sanitizePublicNavigation } from "./publicNavPolicy";
 import { authorizedTerritoryIdsForMembership, canAccessCentralPublication, decideAuthenticatedScope } from "./partnerScope";
-import { canAdvanceStatus } from "./editorialPolicy";
+import { canAdvanceStatus, canPublishDirect } from "./editorialPolicy";
 
 describe("lacunas Admin/CMS — política, território e privilégio", () => {
   it("calcula a parcela Ojú a partir da política persistida, sem número mágico 0.95", () => {
@@ -38,6 +38,9 @@ describe("lacunas Admin/CMS — política, território e privilégio", () => {
     expect(canAdvanceStatus("criador", "Aprovada")).toBe(false);
     expect(canAdvanceStatus("administrador", "Aprovada")).toBe(true);
     expect(canAdvanceStatus("aprovador", "Aprovada")).toBe(false);
+    expect(canPublishDirect("administrador")).toBe(true);
+    expect(canPublishDirect("administrador principal")).toBe(true);
+    expect(canPublishDirect("criador")).toBe(false);
   });
 
   it("aceita somente destinos públicos existentes na navegação CMS", () => {

@@ -40,7 +40,7 @@ export const networkRouter = router({
     } else if (ctx.user.role !== "administrador principal" && current.createdByUserId !== ctx.user.id) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode atualizar profissionais da sua carteira." });
     }
-    if (input.publicVisible !== undefined && ctx.user.role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin define a visibilidade pública do fotógrafo no portal." });
+    requireNetworkAccess(ctx.user.role);
     const values: Partial<typeof networkExecutors.$inferInsert> = {};
     if (input.displayName) values.displayName = input.displayName.trim();
     if (input.profileNote !== undefined) values.profileNote = input.profileNote?.trim() || null;

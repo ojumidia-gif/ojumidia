@@ -31,6 +31,7 @@ describe("camada oficial da Rede Ojú", () => {
     const commercial = source("server/routers/commercial.ts");
     expect(network).toContain("updateExecutor");
     expect(network).toContain("publicVisible");
+    expect(network).not.toContain("Somente o Super Admin define a visibilidade pública do fotógrafo no portal.");
     expect(network).toContain('status: "Substituído"');
     expect(network).toContain("authorizedForHome");
     expect(media).toContain("commercialMiniclips");

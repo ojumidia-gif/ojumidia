@@ -47,6 +47,23 @@ export function canEditPublication(role: EditorialRole, status: ContentStatus) {
   return status === "Em revisão" && role === "editor";
 }
 
+export function canPublishDirect(role: EditorialRole) {
+  return role === "administrador" || role === "administrador principal";
+}
+
+export function nextEditorialAction(role: EditorialRole | string | undefined, status: ContentStatus | string) {
+  if (status === "Rascunho" && canAdvanceStatus(role as EditorialRole, "Rascunho")) {
+    return { label: "Enviar para revisão", hint: "A aprovação continua obrigatória antes de ir ao site." };
+  }
+  if (status === "Em revisão" && canAdvanceStatus(role as EditorialRole, "Em revisão")) {
+    return { label: "Aprovar", hint: "Depois disto um administrador publica no site." };
+  }
+  if (status === "Aprovada" && canAdvanceStatus(role as EditorialRole, "Aprovada")) {
+    return { label: "Publicar no site", hint: "Só nesta etapa o conteúdo entra no portal." };
+  }
+  return null;
+}
+
 export function roleLabel(role: EditorialRole) {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }

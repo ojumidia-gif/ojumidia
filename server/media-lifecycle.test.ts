@@ -110,6 +110,9 @@ describe("ciclo de vida de mídia", () => {
     const week = new Date(now.getTime() - ORPHAN_COMPLETED_UPLOAD_RETENTION_MS - 1);
     expect(uploadSessionCleanupClass({ status: "Aprovado", createdAt: week, completedAt: week }, now, false)).toBe("abandoned-completed");
     expect(retencao).toContain("não substitui a Lixeira");
+    expect(retencao).toContain("technicalUploads");
+    expect(lifecycle).toContain("listUnlinkedUploadSessions");
+    expect(mediaRouter).toContain("force: z.boolean()");
     expect(GENERATED_ARTIFACT_INVENTORY.some(item => item.kind.includes("Auditoria"))).toBe(true);
     expect(GENERATED_ARTIFACT_INVENTORY.every(item => item.kind.includes("Auditoria") ? item.accumulatesInTigris === false : true)).toBe(true);
   });

@@ -16,14 +16,14 @@ describe("feedback visual do Centro Administrativo", () => {
     const publications = source("client/src/pages/admin/PublicationsAdmin.tsx");
     expect(publications).toContain("Rascunho criado.");
     expect(publications).toContain("Conteúdo publicado no portal.");
-    expect(publications).toContain("Conteúdo arquivado.");
+    expect(publications).toContain("Conteúdo arquivado e retirado do portal.");
     expect(publications).toContain("Conteúdo retirado do portal.");
-    expect(publications).toContain("Não foi possível atualizar a etapa editorial.");
+    expect(publications).toContain("Não foi possível criar o rascunho.");
   });
 
   it("notifica salvamento e erro ao editar uma publicação", () => {
     const edit = source("client/src/pages/admin/PublicationEdit.tsx");
-    expect(edit).toContain("Rascunho salvo.");
+    expect(edit).toContain("Texto salvo.");
     expect(edit).toContain("Revisão publicada.");
     expect(edit).toContain("Não foi possível salvar as alterações.");
     expect(edit).toContain("Enviar para revisão");

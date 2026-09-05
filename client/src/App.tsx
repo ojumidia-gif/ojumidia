@@ -45,6 +45,7 @@ import OralMemorySearch from "./pages/OralMemorySearch";
 import InstitutionExplorer from "./pages/InstitutionExplorer";
 import CareTracking from "./pages/CareTracking";
 import CommunityAdmin from "./pages/admin/CommunityAdmin";
+import PhotographersAdmin from "./pages/admin/PhotographersAdmin";
 import CommunityAssignmentsAdmin from "./pages/admin/CommunityAssignmentsAdmin";
 import InstitutionRegistrationAdmin from "./pages/admin/InstitutionRegistrationAdmin";
 import OralMemoryUploadAdmin from "./pages/admin/OralMemoryUploadAdmin";
@@ -106,6 +107,7 @@ function Router() {
       <Route path={"/admin/frentes"} component={EditorialFrontsAdmin} />
       <Route path={"/admin/taxonomias"} component={TaxonomiesAdmin} />
       <Route path={"/admin/territorios"} component={TaxonomiesAdmin} />
+      <Route path={"/admin/fotografos"} component={PhotographersAdmin} />
       <Route path={"/admin/midias"} component={MediaAdmin} />
       <Route path={"/admin/destaques"} component={HighlightsAdmin} />
       <Route path={"/admin/miniclipes"} component={MiniclipsAdmin} />

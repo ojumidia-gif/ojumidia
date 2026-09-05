@@ -12,6 +12,7 @@ describe("navegação pública cinematográfica", () => {
     ["Histórias", "Memórias documentais", "Serviços", "Comunidade", "Sobre"].forEach(label => expect(architecture).toContain(`label: "${label}"`));
     expect(portal).toContain("Planejar um registro");
     expect(header).toContain("item.active !== false");
-    expect(router).toContain('path={"/historias"}'); expect(router).toContain('path={"/territorios"}'); expect(router).toContain('path={"/acervo"}'); expect(router).toContain('path={"/fotografos"}');
+    ["/historias", "/coberturas", "/documentarios", "/projetos", "/territorios", "/fotografos", "/instituicoes", "/agenda", "/memorias", "/acervo"].forEach(path => expect(router).toContain(`path={"${path}"}`));
+    expect(router).toContain('path={"/admin/fotografos"}'); expect(router).toContain('path={"/admin/territorios"}');
   });
 });

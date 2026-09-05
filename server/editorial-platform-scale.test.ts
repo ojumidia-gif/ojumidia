@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { isHomeCurated, publicationIdsFullyInTerritoryScope, sortHomeCurated } from "./editorialScale";
 import { applyDueScheduledPublications, expireDueHomeHighlights } from "./editorialAutomation";
 
@@ -81,5 +83,23 @@ describe("automação editorial com RBAC implícito", () => {
     const result = await expireDueHomeHighlights(db as never, new Date("2026-01-01"));
     expect(result.expired).toBe(1);
     expect(sets[0]).toMatchObject({ homePlacement: "Nenhum", manualFeatured: false });
+  });
+});
+
+describe("fluxo editorial guiado", () => {
+  it("reordena capa de mídia já vinculada e mantém aprovação antes de publicar", () => {
+    const editorial = readFileSync(resolve(process.cwd(), "server/routers/editorial.ts"), "utf8");
+    const edit = readFileSync(resolve(process.cwd(), "client/src/pages/admin/PublicationEdit.tsx"), "utf8");
+    const media = readFileSync(resolve(process.cwd(), "client/src/pages/admin/CoverageMediaPanel.tsx"), "utf8");
+    const list = readFileSync(resolve(process.cwd(), "client/src/pages/admin/PublicationsAdmin.tsx"), "utf8");
+    expect(editorial).toContain("alreadyLinked");
+    expect(editorial).toContain("advanceStatus");
+    expect(editorial).toContain("isCover: displayOrder === 0");
+    expect(edit).toContain("Salvar e enviar para revisão");
+    expect(edit).toContain("nextEditorialAction");
+    expect(edit).not.toContain("publishDirect");
+    expect(list).not.toContain("publishDirect");
+    expect(media).toContain("onCover={setCoverLocalId}");
+    expect(media).toContain("Esta foto é a capa do conteúdo.");
   });
 });

@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { portalContentActivities, portalContentBlocks, portalContentPages } from "../../drizzle/schema";
+import { PORTAL_DEFAULT_BLOCKS } from "../portalContentCatalog";
 import { getDb } from "../db";
 import { sanitizePublicNavigation } from "../publicNavPolicy";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
@@ -45,6 +46,26 @@ async function recordActivity(db: NonNullable<Awaited<ReturnType<typeof getDb>>>
   await db.insert(portalContentActivities).values({ blockId, action, snapshot, actorId });
 }
 
+async function ensureDefaultPortalBlocks(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actorId: number) {
+  const existing = await db.select({ page: portalContentBlocks.page, sectionKey: portalContentBlocks.sectionKey }).from(portalContentBlocks);
+  const known = new Set(existing.map(item => `${item.page}:${item.sectionKey}`));
+  for (const block of PORTAL_DEFAULT_BLOCKS) {
+    if (known.has(`${block.page}:${block.sectionKey}`)) continue;
+    const contentJson = JSON.stringify(block.content);
+    const result = await db.insert(portalContentBlocks).values({
+      page: block.page,
+      sectionKey: block.sectionKey,
+      label: block.label,
+      contentJson,
+      isVisible: true,
+      displayOrder: block.displayOrder,
+      createdBy: actorId,
+      updatedBy: actorId,
+    });
+    await recordActivity(db, Number(result[0].insertId), "Criado", contentJson, actorId);
+  }
+}
+
 export const portalContentRouter = router({
   publicByPage: publicProcedure.input(z.object({ page: pageInput })).query(async ({ input }) => {
     const db = await requireDb();
@@ -64,6 +85,7 @@ export const portalContentRouter = router({
   adminList: protectedProcedure.query(async ({ ctx }) => {
     requirePrincipal(ctx.user.role);
     const db = await requireDb();
+    await ensureDefaultPortalBlocks(db, ctx.user.id);
     return db.select().from(portalContentBlocks).orderBy(asc(portalContentBlocks.page), asc(portalContentBlocks.displayOrder), asc(portalContentBlocks.id));
   }),
 
