@@ -6,8 +6,8 @@ import { portalContentDefaults, type HeroContent, usePortalContent } from "@/lib
 import { trpc } from "@/lib/trpc";
 
 export default function DocumentaryMemories() {
-  const { data, isLoading } = trpc.editorial.search.useQuery({}, { refetchInterval: 30000 });
-  const memories = (data || []).filter(item => isDocumentaryMemoryKind(item.contentKind)).slice(0, 3);
+  const { data, isLoading } = trpc.editorial.search.useQuery({ limit: 24, offset: 0 }, { refetchInterval: 30000 });
+  const memories = (data?.items || []).filter(item => isDocumentaryMemoryKind(item.contentKind)).slice(0, 3);
   const content = usePortalContent("Memórias Documentais");
   const hero = content.block<HeroContent>("hero", portalContentDefaults["Memórias Documentais"].hero as HeroContent);
 

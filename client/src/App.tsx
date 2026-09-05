@@ -30,6 +30,8 @@ import MiniclipsAdmin from "./pages/admin/MiniclipsAdmin";
 import EditorialFrontsAdmin from "./pages/admin/EditorialFrontsAdmin";
 import StoriesPreview from "./pages/StoriesPreview";
 import TerritoriesPreview from "./pages/TerritoriesPreview";
+import PhotographersPublic from "./pages/PhotographersPublic";
+import PhotographerProfile from "./pages/PhotographerProfile";
 import ArchivePreview from "./pages/ArchivePreview";
 import CoveragesPublic from "./pages/CoveragesPublic";
 import DocumentariesPublic from "./pages/DocumentariesPublic";
@@ -57,6 +59,8 @@ import PayoutNotificationsAdmin from "./pages/admin/PayoutNotificationsAdmin";
 import PortalContentAdmin from "./pages/admin/PortalContentAdmin";
 import PartnersAdmin from "./pages/admin/PartnersAdmin";
 import EditorialTrashAdmin from "./pages/admin/EditorialTrashAdmin";
+import MediaTrashAdmin from "./pages/admin/MediaTrashAdmin";
+import RetentionAdmin from "./pages/admin/RetentionAdmin";
 import OperationsCenterAdmin from "./pages/admin/OperationsCenterAdmin";
 import AuditAdmin from "./pages/admin/AuditAdmin";
 import DocumentaryMemories from "./pages/DocumentaryMemories";
@@ -79,6 +83,8 @@ function Router() {
       <Route path={"/documentarios"} component={DocumentariesPublic} />
       <Route path={"/projetos"} component={ProjectsPublic} />
       <Route path={"/territorios"} component={TerritoriesPreview} />
+      <Route path={"/fotografos"} component={PhotographersPublic} />
+      <Route path={"/fotografos/:slug"} component={PhotographerProfile} />
       <Route path={"/acervo"} component={ArchivePreview} />
       <Route path={"/historias/:slug"} component={Story} />
       <Route path={"/territorios/:slug"} component={Taxonomy} />
@@ -127,6 +133,8 @@ function Router() {
       <Route path={"/admin/avisos-repasse"} component={PayoutNotificationsAdmin} />
       <Route path={"/admin/parceiros"} component={PartnersAdmin} />
       <Route path={"/admin/lixeira-editorial"} component={EditorialTrashAdmin} />
+      <Route path={"/admin/lixeira-midias"} component={MediaTrashAdmin} />
+      <Route path={"/admin/retencao"} component={RetentionAdmin} />
       <Route path={"/admin/pendencias"} component={OperationsCenterAdmin} />
       <Route path={"/admin/auditoria"} component={AuditAdmin} />
       <Route path={"/404"} component={NotFound} />

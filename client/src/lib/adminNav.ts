@@ -28,9 +28,10 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Conteúdo", href: "/admin/publicacoes", icon: BookOpenText },
       { label: "Acervo", href: "/admin/midias", icon: Image },
+      { label: "Lixeira de mídia", href: "/admin/lixeira-midias", icon: Trash2, principalOnly: true },
       { label: "Miniclipes", href: "/admin/miniclipes", icon: Film, principalOnly: true },
       { label: "Curadoria nacional", href: "/admin/destaques", icon: Sparkles, principalOnly: true },
-      { label: "Lixeira", href: "/admin/lixeira-editorial", icon: Trash2, principalOnly: true },
+      { label: "Lixeira editorial", href: "/admin/lixeira-editorial", icon: Trash2, principalOnly: true },
     ],
   },
   {
@@ -60,6 +61,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Conteúdo do portal", href: "/admin/conteudo-portal", icon: FilePenLine, principalOnly: true },
       { label: "Auditoria", href: "/admin/auditoria", icon: ScrollText, principalOnly: true },
+      { label: "Retenção e limpeza", href: "/admin/retencao", icon: Settings, principalOnly: true },
       { label: "Configurações", href: "/admin/configuracoes", icon: Settings },
     ],
   },
@@ -69,6 +71,8 @@ export const principalOnlyAdminPaths = [
   "/admin/miniclipes",
   "/admin/destaques",
   "/admin/lixeira-editorial",
+  "/admin/lixeira-midias",
+  "/admin/retencao",
   "/admin/parceiros",
   "/admin/conteudo-portal",
   "/admin/auditoria",

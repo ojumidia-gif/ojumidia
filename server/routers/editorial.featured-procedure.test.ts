@@ -8,7 +8,7 @@ import { editorialRouter } from "./editorial";
 
 const published = (id: number, contentKind: "História" | "Cobertura" | "Fotografia documental") => ({
   id, title: `${contentKind} ${id}`, slug: `conteudo-${id}`, contentKind, status: "Publicada", isPublic: true, commercialRequestId: null,
-  manualFeatured: false, relevance: 10, sponsored: false, homePlacement: "Nenhum", homeOrder: 0, publishedAt: new Date("2026-08-19"), createdAt: new Date("2026-08-18"),
+  manualFeatured: true, relevance: 10, sponsored: false, homePlacement: "Destaque principal" as const, homeOrder: id, publishedAt: new Date("2026-08-19"), createdAt: new Date("2026-08-18"),
 });
 
 function chainFor<T>(rows: T[]) {

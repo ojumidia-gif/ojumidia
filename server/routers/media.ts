@@ -1,10 +1,20 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { z } from "zod";
-import { commercialMiniclips, mediaAssets, settings, uploadSessions, users } from "../../drizzle/schema";
+import { commercialMiniclips, mediaAssets, networkExecutors, settings, uploadSessions, users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { publishEditorialEvent } from "../editorialEvents";
+import {
+  cleanupAbandonedUploadSession,
+  cleanupExpiredAbandonedUploads,
+  collectMediaUsages,
+  GENERATED_ARTIFACT_INVENTORY,
+  listAbandonedUploadSessions,
+  mediaOccupancy,
+  purgeMediaAsset,
+  restoreMediaIfRecoverable,
+} from "../mediaLifecycle";
 import { activePartnerMemberships, assertPartnerScope, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 
 async function requireDb() {
@@ -20,7 +30,28 @@ function requirePrincipal(role: string) {
   if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode alterar a transição do fundo vivo." });
 }
 function requireSuperAdmin(role: string) {
-  if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode enviar uma mídia para a lixeira ou restaurá-la." });
+  if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode enviar uma mídia para a Lixeira, restaurá-la, expurgá-la ou alterar retenção técnica." });
+}
+
+async function scopedMediaWhere(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, user: { id: number; role: string }, trash: boolean) {
+  const conditions = [trash ? isNotNull(mediaAssets.deletedAt) : isNull(mediaAssets.deletedAt)];
+  if (user.role === "administrador principal") return and(...conditions);
+  const memberships = await activePartnerMemberships(db, user.id);
+  const partnerIds = memberships.map(item => item.partnerId);
+  conditions.push(partnerIds.length
+    ? or(eq(mediaAssets.createdBy, user.id), inArray(mediaAssets.partnerId, partnerIds))!
+    : eq(mediaAssets.createdBy, user.id));
+  return and(...conditions);
+}
+
+async function resolvePhotographerCredit(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actor: { id: number; role: string }, photographerId: number | null | undefined, partnerId: number | null, credit: string) {
+  if (!photographerId) return { photographerId: null, credit };
+  const photographer = (await db.select().from(networkExecutors).where(and(eq(networkExecutors.id, photographerId), eq(networkExecutors.status, "Ativo"))).limit(1))[0];
+  if (!photographer) throw new TRPCError({ code: "BAD_REQUEST", message: "Selecione um fotógrafo ativo da Rede Ojú." });
+  if (actor.role !== "administrador principal" && photographer.partnerId && partnerId && photographer.partnerId !== partnerId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "O fotógrafo precisa pertencer ao mesmo Parceiro Ojú da mídia." });
+  }
+  return { photographerId: photographer.id, credit: photographer.displayName || credit };
 }
 export const heroTransitionSchema = z.object({ displaySeconds: z.number().int().min(5).max(60), transitionMilliseconds: z.number().int().min(300).max(3000) });
 export const defaultHeroTransition = { displaySeconds: 14, transitionMilliseconds: 1100 };
@@ -61,17 +92,81 @@ export const mediaRouter = router({
     const db = await requireDb();
     return db.select().from(mediaAssets).where(and(eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.backgroundEligible), desc(mediaAssets.backgroundPriority), desc(mediaAssets.createdAt));
   }),
-  list: protectedProcedure.query(async ({ ctx }) => {
+  list: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(80).default(40), offset: z.number().int().min(0).default(0) }).optional()).query(async ({ ctx, input }) => {
     requireAdmin(ctx.user.role);
     const db = await requireDb();
-    if (ctx.user.role === "administrador principal") return db.select().from(mediaAssets).orderBy(desc(mediaAssets.createdAt));
-    const memberships = await activePartnerMemberships(db, ctx.user.id);
-    const partnerIds = memberships.map(item => item.partnerId);
-    const rows = await db.select().from(mediaAssets).orderBy(desc(mediaAssets.createdAt));
-    return rows.filter(media => media.createdBy === ctx.user.id || (media.partnerId !== null && partnerIds.includes(media.partnerId)));
+    const limit = input?.limit ?? 40;
+    const offset = input?.offset ?? 0;
+    const whereClause = await scopedMediaWhere(db, ctx.user, false);
+    const totalRow = await db.select({ value: count() }).from(mediaAssets).where(whereClause);
+    const items = await db.select().from(mediaAssets).where(whereClause).orderBy(desc(mediaAssets.createdAt)).limit(limit).offset(offset);
+    return { items, total: Number(totalRow[0]?.value || 0), hasMore: offset + items.length < Number(totalRow[0]?.value || 0) };
+  }),
+  trashList: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(80).default(40), offset: z.number().int().min(0).default(0) }).optional()).query(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const limit = input?.limit ?? 40;
+    const offset = input?.offset ?? 0;
+    const whereClause = await scopedMediaWhere(db, ctx.user, true);
+    const totalRow = await db.select({ value: count() }).from(mediaAssets).where(whereClause);
+    const items = await db.select().from(mediaAssets).where(whereClause).orderBy(desc(mediaAssets.deletedAt)).limit(limit).offset(offset);
+    return { items, total: Number(totalRow[0]?.value || 0), hasMore: offset + items.length < Number(totalRow[0]?.value || 0) };
+  }),
+  usages: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
+    await assertMediaScope(db, ctx.user, current);
+    return collectMediaUsages(db, current.id);
+  }),
+  retentionOverview: protectedProcedure.query(async ({ ctx }) => {
+    requireSuperAdmin(ctx.user.role);
+    const db = await requireDb();
+    const now = new Date();
+    const [occupancy, abandoned, trash] = await Promise.all([
+      mediaOccupancy(db),
+      listAbandonedUploadSessions(db, now),
+      db.select({ id: mediaAssets.id, filename: mediaAssets.filename, deletedAt: mediaAssets.deletedAt, storageKey: mediaAssets.storageKey, fileSize: mediaAssets.fileSize }).from(mediaAssets).where(isNotNull(mediaAssets.deletedAt)).orderBy(desc(mediaAssets.deletedAt)),
+    ]);
+    return {
+      occupancy,
+      trash,
+      abandonedUploads: abandoned.map(item => ({
+        id: item.session.id,
+        filename: item.session.filename,
+        status: item.session.status,
+        createdAt: item.session.createdAt,
+        storageKey: item.session.storageKey,
+        fileSize: item.session.fileSize,
+        klass: item.klass,
+      })),
+      artifacts: GENERATED_ARTIFACT_INVENTORY,
+      policy: {
+        abandonedIncompleteHours: 24,
+        orphanCompletedDays: 7,
+        mediaPurgeRequiresTrash: true,
+        auditEventsAreNotTrash: true,
+      },
+    };
+  }),
+  cleanupAbandonedUploads: protectedProcedure.input(z.object({ uploadId: z.string().min(8).max(96).optional() })).mutation(async ({ ctx, input }) => {
+    requireSuperAdmin(ctx.user.role);
+    const db = await requireDb();
+    if (input.uploadId) {
+      const session = (await db.select().from(uploadSessions).where(eq(uploadSessions.id, input.uploadId)).limit(1))[0];
+      if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Sessão de upload não encontrada." });
+      try {
+        await cleanupAbandonedUploadSession(db, ctx.user.id, session);
+        return { cleanedUploadSessionIds: [session.id], failed: [] };
+      } catch (error) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Não foi possível limpar a sessão." });
+      }
+    }
+    return cleanupExpiredAbandonedUploads(db, ctx.user.id);
   }),
   create: protectedProcedure.input(z.object({
-    mediaType: z.enum(["foto", "vídeo"]), assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência de mídia precisa ser uma URL válida ou um caminho interno do Acervo." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), publicationAllowed: z.boolean(), projectCoverage: z.string().max(280).optional(), terms: z.string().max(5000).optional(), usageExpiresAt: z.date().optional(), durationSeconds: z.number().int().min(1).max(60).optional(), backgroundEligible: z.boolean().optional(), backgroundPriority: z.number().int().min(0).max(99).optional(), uploadId: z.string().min(12).max(96).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional(),
+    mediaType: z.enum(["foto", "vídeo"]), assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência de mídia precisa ser uma URL válida ou um caminho interno do Acervo." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), publicationAllowed: z.boolean(), projectCoverage: z.string().max(280).optional(), terms: z.string().max(5000).optional(), usageExpiresAt: z.date().optional(), durationSeconds: z.number().int().min(1).max(60).optional(), backgroundEligible: z.boolean().optional(), backgroundPriority: z.number().int().min(0).max(99).optional(), uploadId: z.string().min(12).max(96).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional(), photographerId: z.number().int().positive().nullable().optional(),
   })).mutation(async ({ ctx, input }) => {
     requireAdmin(ctx.user.role);
     const db = await requireDb();
@@ -91,8 +186,9 @@ export const mediaRouter = router({
     }
     const durationSeconds = upload?.durationSeconds ?? input.durationSeconds;
     if (input.mediaType === "vídeo" && !durationSeconds) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe a duração confirmada do vídeo. Vídeos documentais devem ter até 60 segundos." });
-    const { uploadId, partnerId: _partnerId, territoryId: _territoryId, ...values } = input;
-    const result = await db.insert(mediaAssets).values({ ...values, storageKey: upload?.storageKey ?? values.storageKey, filename: upload?.filename ?? values.filename, fileSize: upload?.fileSize ?? undefined, durationSeconds, partnerId: scopedPartnerId, territoryId: scopedTerritoryId, uploadId: uploadId ?? null, checksum: upload?.checksum ?? null, uploadStatus: "Pronto", createdBy: ctx.user.id });
+    const { uploadId, partnerId: _partnerId, territoryId: _territoryId, photographerId: requestedPhotographerId, ...values } = input;
+    const credited = await resolvePhotographerCredit(db, ctx.user, requestedPhotographerId, scopedPartnerId, input.credit);
+    const result = await db.insert(mediaAssets).values({ ...values, credit: credited.credit, photographerId: credited.photographerId, storageKey: upload?.storageKey ?? values.storageKey, filename: upload?.filename ?? values.filename, fileSize: upload?.fileSize ?? undefined, durationSeconds, partnerId: scopedPartnerId, territoryId: scopedTerritoryId, uploadId: uploadId ?? null, checksum: upload?.checksum ?? null, uploadStatus: "Pronto", createdBy: ctx.user.id });
     const id = Number(result[0].insertId);
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: scopedPartnerId, territoryId: scopedTerritoryId, resourceType: "media", resourceId: id, action: "media-registered", nextState: { uploadId: uploadId ?? null, mediaType: input.mediaType, publicationAllowed: input.publicationAllowed }, detail: "Mídia registrada no Acervo; publicação permanece dependente de autorização e curadoria." });
     publishEditorialEvent("media-created", id);
@@ -121,15 +217,16 @@ export const mediaRouter = router({
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: current.id, action: "media-rejected", previousState: { uploadStatus: current.uploadStatus }, nextState: { uploadStatus: "Rejeitado" }, detail: input.reason });
     return { success: true };
   }),
-  update: protectedProcedure.input(z.object({ id: z.number().int().positive(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), projectCoverage: z.string().max(280).nullable().optional(), terms: z.string().max(5000).nullable().optional(), usageExpiresAt: z.date().nullable().optional(), publicationAllowed: z.boolean(), backgroundPriority: z.number().int().min(0).max(99).optional() })).mutation(async ({ ctx, input }) => {
+  update: protectedProcedure.input(z.object({ id: z.number().int().positive(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), projectCoverage: z.string().max(280).nullable().optional(), terms: z.string().max(5000).nullable().optional(), usageExpiresAt: z.date().nullable().optional(), publicationAllowed: z.boolean(), backgroundPriority: z.number().int().min(0).max(99).optional(), photographerId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
     requireAdmin(ctx.user.role);
     const db = await requireDb();
     const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
     if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
     if (current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "Restaure a mídia antes de editar seus metadados." });
     await assertMediaScope(db, ctx.user, current);
-    const { id, ...values } = input;
-    const updated = await db.update(mediaAssets).set({ ...values, version: current.version + 1 }).where(and(eq(mediaAssets.id, id), eq(mediaAssets.version, current.version)));
+    const { id, photographerId, ...values } = input;
+    const credited = await resolvePhotographerCredit(db, ctx.user, photographerId, current.partnerId, input.credit);
+    const updated = await db.update(mediaAssets).set({ ...values, credit: credited.credit, photographerId: credited.photographerId, version: current.version + 1 }).where(and(eq(mediaAssets.id, id), eq(mediaAssets.version, current.version)));
     if (!updated[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta mídia foi atualizada por outra pessoa. Reabra o Acervo antes de salvar." });
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: id, action: "media-updated", previousState: { version: current.version }, nextState: { version: current.version + 1 }, detail: "Metadados e direitos da mídia atualizados." });
     publishEditorialEvent("media-updated", id);
@@ -163,16 +260,36 @@ export const mediaRouter = router({
     const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
     if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
     if (current.deletedAt) return { success: true };
-    await db.update(mediaAssets).set({ state: "Arquivado", backgroundEligible: false, deletedAt: new Date(), deletedBy: ctx.user.id, deletionNote: input.note }).where(eq(mediaAssets.id, input.id)); publishEditorialEvent("media-trashed", input.id);
+    await db.update(mediaAssets).set({ state: "Arquivado", backgroundEligible: false, deletedAt: new Date(), deletedBy: ctx.user.id, deletionNote: input.note }).where(eq(mediaAssets.id, input.id));
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: current.id, action: "media-trashed", previousState: { state: current.state }, nextState: { deletedAt: "now" }, detail: input.note });
+    publishEditorialEvent("media-trashed", input.id);
     return { success: true };
   }),
   restore: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
     requireSuperAdmin(ctx.user.role);
     const db = await requireDb();
     const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
-    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
-    await db.update(mediaAssets).set({ state: "Arquivado", deletedAt: null, deletedBy: null, deletionNote: null }).where(eq(mediaAssets.id, input.id)); publishEditorialEvent("media-restored", input.id);
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada. Depois de um expurgo definitivo não existe restauração." });
+    try {
+      await restoreMediaIfRecoverable(db, ctx.user.id, current);
+    } catch (error) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "A restauração foi recusada." });
+    }
+    publishEditorialEvent("media-restored", input.id);
     return { success: true };
+  }),
+  purge: protectedProcedure.input(z.object({ id: z.number().int().positive(), confirmation: z.string().trim().min(1).max(280) })).mutation(async ({ ctx, input }) => {
+    requireSuperAdmin(ctx.user.role);
+    const db = await requireDb();
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current) return { success: true, alreadyPurged: true, uploadSessionRemoved: false, storageAlreadyAbsent: true };
+    try {
+      const result = await purgeMediaAsset(db, ctx.user.id, current, input.confirmation);
+      publishEditorialEvent("media-permanently-purged", input.id);
+      return result;
+    } catch (error) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "O expurgo não foi concluído." });
+    }
   }),
   createBackgroundClip: protectedProcedure.input(z.object({
     assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência do vídeo precisa ser válida." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), durationSeconds: z.number().int().min(1).max(60), priority: z.number().int().min(0).max(99),

@@ -29,7 +29,8 @@ describe("camada oficial da Rede Ojú", () => {
     const network = source("server/routers/network.ts");
     const media = source("server/routers/media.ts");
     const commercial = source("server/routers/commercial.ts");
-    expect(network).toContain("assignMiniclip");
+    expect(network).toContain("updateExecutor");
+    expect(network).toContain("publicVisible");
     expect(network).toContain('status: "Substituído"');
     expect(network).toContain("authorizedForHome");
     expect(media).toContain("commercialMiniclips");

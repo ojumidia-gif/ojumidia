@@ -2,7 +2,6 @@ import { and, eq, isNotNull, lte, or } from "drizzle-orm";
 import {
   editorialActivities,
   highlightSuggestions,
-  mediaAssets,
   publicationMedia,
   publicationRelations,
   publicationTaxonomies,
@@ -10,7 +9,6 @@ import {
 } from "../drizzle/schema";
 import { getDb } from "./db";
 import { recordAuditEvent } from "./partnerScope";
-import { storageDelete } from "./storage";
 
 export const EDITORIAL_TRASH_RETENTION_MS = 24 * 60 * 60 * 1000;
 
@@ -47,61 +45,13 @@ export async function permanentlyPurgePublication(
   });
 
   /*
-   * Antes de remover os vínculos, descobrimos quais mídias pertencem
-   * exclusivamente a esta publicação.
-   */
-  const linkedMedia = await db
-    .select({
-      mediaId: publicationMedia.mediaId,
-      storageKey: mediaAssets.storageKey,
-    })
-    .from(publicationMedia)
-    .leftJoin(
-      mediaAssets,
-      eq(publicationMedia.mediaId, mediaAssets.id),
-    )
-    .where(eq(publicationMedia.publicationId, publication.id));
-
-  /*
-   * Remove o vínculo da publicação primeiro.
+   * O expurgo editorial remove o conteúdo da publicação e os vínculos.
+   * A mídia do Acervo não é destruída aqui: Lixeira de mídia →
+   * Excluir definitivamente (media.purge) é a única destruição física.
    */
   await db
     .delete(publicationMedia)
     .where(eq(publicationMedia.publicationId, publication.id));
-
-  /*
-   * Uma mídia pode eventualmente estar vinculada a outra publicação.
-   * Só podemos apagar o arquivo físico quando não existir mais nenhum
-   * vínculo com outra publicação.
-   */
-  for (const media of linkedMedia) {
-    if (!media.storageKey) {
-      continue;
-    }
-
-    const remainingReferences = await db
-      .select({ id: publicationMedia.id })
-      .from(publicationMedia)
-      .where(eq(publicationMedia.mediaId, media.mediaId))
-      .limit(1);
-
-    if (remainingReferences.length > 0) {
-      continue;
-    }
-
-    /*
-     * Apaga primeiro o objeto físico do Storage.
-     *
-     * Se a exclusão física falhar, interrompemos o expurgo para evitar
-     * que o banco diga que a mídia foi definitivamente eliminada
-     * enquanto o arquivo continua ocupando espaço no Storage.
-     */
-    await storageDelete(media.storageKey);
-
-    await db
-      .delete(mediaAssets)
-      .where(eq(mediaAssets.id, media.mediaId));
-  }
 
   await db
     .delete(publicationTaxonomies)

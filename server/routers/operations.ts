@@ -70,9 +70,10 @@ export const operationsRouter = router({
     const items: PendingItem[] = [];
     const add = (item: PendingItem, ownerId?: number | null) => { if (visible(item, ownerId)) items.push(item); };
 
-    const [publicationRows, mediaRows, requestRows, authorizationRows, authorizationTermRows, refundRows, contractRows, suggestionRows, visibilityRows, institutionRows, eventRows, memoryRows, careRows, uploadRows] = await Promise.all([
+    const [publicationRows, scheduledRows, mediaRows, requestRows, authorizationRows, authorizationTermRows, refundRows, contractRows, suggestionRows, visibilityRows, institutionRows, eventRows, memoryRows, careRows, uploadRows, mediaTrashRows] = await Promise.all([
       db.select().from(publications).where(or(eq(publications.status, "Em revisão"), isNotNull(publications.deletedAt))).orderBy(desc(publications.updatedAt)),
-      db.select().from(mediaAssets).where(and(eq(mediaAssets.uploadStatus, "Pronto"), eq(mediaAssets.state, "Ativo"))).orderBy(desc(mediaAssets.createdAt)),
+      db.select().from(publications).where(and(eq(publications.status, "Aprovada"), isNotNull(publications.scheduledAt), isNull(publications.deletedAt))).orderBy(publications.scheduledAt),
+      db.select().from(mediaAssets).where(and(eq(mediaAssets.uploadStatus, "Pronto"), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.createdAt)),
       db.select().from(commercialRequests).where(inArray(commercialRequests.status, ["Solicitação", "Em análise", "Proposta", "Aceite", "Entrega"])).orderBy(desc(commercialRequests.updatedAt)),
       db.select().from(commercialEditorialAuthorizations).where(eq(commercialEditorialAuthorizations.status, "Pendente")).orderBy(desc(commercialEditorialAuthorizations.updatedAt)),
       db.select().from(authorizationTerms).where(eq(authorizationTerms.status, "Aguardando assinatura gov.br")).orderBy(desc(authorizationTerms.createdAt)),
@@ -85,6 +86,7 @@ export const operationsRouter = router({
       db.select().from(oralMemories).where(and(isNull(oralMemories.deletedAt), or(eq(oralMemories.consentStatus, "Pendente"), eq(oralMemories.status, "Em revisão"), and(isNotNull(oralMemories.generatedTranscript), isNotNull(oralMemories.aiProcessedAt), isNull(oralMemories.aiReviewedAt))))).orderBy(desc(oralMemories.updatedAt)),
       db.select().from(communityCareRequests).where(inArray(communityCareRequests.status, ["Recebida", "Em acolhimento"])).orderBy(desc(communityCareRequests.updatedAt)),
       db.select().from(uploadSessions).where(inArray(uploadSessions.status, ["Enviando", "Enviado", "Processando", "Falhou"])).orderBy(desc(uploadSessions.updatedAt)),
+      db.select().from(mediaAssets).where(isNotNull(mediaAssets.deletedAt)).orderBy(desc(mediaAssets.deletedAt)),
     ]);
 
     const reviewIds = publicationRows.filter(row => row.status === "Em revisão").map(row => row.id);
@@ -109,8 +111,13 @@ export const operationsRouter = router({
         const canRead = principal || (!publication.partnerId ? publication.createdBy === ctx.user.id : membershipIds.has(publication.partnerId) && territories.some(id => territoryScopes.get(publication.partnerId!)?.includes(id)));
         if (canRead) items.push({ id: `publication-review-${publication.id}`, category: "Editorial", priority: "Atenção", title: publication.title, description: "Publicação aguardando revisão editorial.", href: "/admin/publicacoes", createdAt: publication.updatedAt, dueAt: null, partnerId: publication.partnerId, territoryId: territories[0] ?? null });
       }
-      if (principal && publication.deletedAt) items.push({ id: `publication-trash-${publication.id}`, category: "Lixeira", priority: publication.deletedAt.getTime() + EDITORIAL_TRASH_RETENTION_MS <= now.getTime() ? "Crítica" : "Acompanhamento", title: publication.title, description: "Publicação na Lixeira Editorial dentro da janela de retenção ou aguardando expurgo.", href: "/admin/lixeira-editorial", createdAt: publication.deletedAt, dueAt: new Date(publication.deletedAt.getTime() + EDITORIAL_TRASH_RETENTION_MS), partnerId: publication.partnerId, territoryId: null });
+      if (principal && publication.deletedAt) items.push({ id: `publication-trash-${publication.id}`, category: "Lixeira editorial", priority: publication.deletedAt.getTime() + EDITORIAL_TRASH_RETENTION_MS <= now.getTime() ? "Crítica" : "Acompanhamento", title: publication.title, description: "Publicação na Lixeira Editorial dentro da janela de retenção ou aguardando expurgo.", href: "/admin/lixeira-editorial", createdAt: publication.deletedAt, dueAt: new Date(publication.deletedAt.getTime() + EDITORIAL_TRASH_RETENTION_MS), partnerId: publication.partnerId, territoryId: null });
     }
+    for (const publication of scheduledRows) {
+      const canRead = principal || (!publication.partnerId ? publication.createdBy === ctx.user.id : membershipIds.has(publication.partnerId));
+      if (canRead) items.push({ id: `publication-scheduled-${publication.id}`, category: "Editorial", priority: "Acompanhamento", title: publication.title, description: "Conteúdo aprovado aguardando publicação automática na data programada.", href: "/admin/publicacoes", createdAt: publication.updatedAt, dueAt: publication.scheduledAt, partnerId: publication.partnerId, territoryId: null });
+    }
+    if (principal) mediaTrashRows.forEach(media => items.push({ id: `media-trash-${media.id}`, category: "Lixeira de mídia", priority: "Atenção", title: media.filename || `Mídia #${media.id}`, description: "Mídia na Lixeira: segunda chance. Excluir definitivamente é irreversível.", href: "/admin/lixeira-midias", createdAt: media.deletedAt || media.createdAt, dueAt: null, partnerId: media.partnerId, territoryId: media.territoryId }));
     mediaRows.forEach(media => add({ id: `media-approval-${media.id}`, category: "Mídia", priority: "Atenção", title: media.filename || `Mídia #${media.id}`, description: "Upload pronto aguardando aprovação ou rejeição no Acervo.", href: "/admin/midias", createdAt: media.createdAt, dueAt: null, partnerId: media.partnerId, territoryId: media.territoryId }, media.createdBy));
     requestRows.forEach(request => add({ id: `commercial-${request.id}`, category: "Comercial", priority: request.status === "Solicitação" && !request.managedByUserId ? "Crítica" : "Atenção", title: request.clientName, description: `Solicitação comercial na etapa “${request.status}”.`, href: "/admin/solicitacoes", createdAt: request.updatedAt, dueAt: request.eventDate, partnerId: request.partnerId, territoryId: request.territoryId }, request.managedByUserId));
     authorizationRows.forEach(authorization => { const request = requestsById.get(authorization.requestId); if (request) add({ id: `authorization-${authorization.id}`, category: "Autorização", priority: "Atenção", title: request.clientName, description: "Autorização editorial ainda pendente para trabalho contratado.", href: "/admin/solicitacoes", createdAt: authorization.updatedAt, dueAt: authorization.expiresAt, partnerId: request.partnerId, territoryId: request.territoryId }, request.managedByUserId); });

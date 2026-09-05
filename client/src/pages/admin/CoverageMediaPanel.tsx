@@ -288,7 +288,7 @@ export function CoverageMediaPanel({
 
   const available =
     (
-      library?.filter(
+      library?.items?.filter(
         (item) =>
           item.publicationAllowed &&
           item.state === "Ativo" &&

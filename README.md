@@ -86,3 +86,28 @@ Variáveis no Dashboard (não no Git): `DATABASE_URL`, `JWT_SECRET`, OAuth Googl
 Cron da lixeira (UTC `0 * * * *`): `node scripts/render-editorial-trash-cron.mjs` com o mesmo segredo do Web Service.
 
 Não rode `pnpm db:generate` em produção.
+
+## Acervo, Lixeira e exclusão definitiva
+
+```text
+ACERVO (deletedAt IS NULL)
+  → Excluir
+LIXEIRA DE MÍDIA (deletedAt preenchido)
+  → Restaurar → volta ao Acervo (arquivada)
+  → Excluir definitivamente (media.purge, Super Admin)
+EXPURGO TOTAL
+  → Tigris: objeto removido e confirmado (404/NoSuchKey; 403 NÃO conta)
+  → Aiven: mediaAssets removido
+  → uploadSession inútil removida
+  → some do Acervo e da Lixeira
+  → Restaurar impossível
+AUDITORIA
+  → o evento permanece; o arquivo não
+```
+
+A Lixeira não é arquivo permanente. `deletedAt` é só a segunda chance. O cron editorial **não** apaga mídia no lugar do Super Admin.
+
+Retenção técnica (sessões abandonadas, 24h incompletas / 7 dias prontas sem Acervo) vive em `/admin/retencao`. Não é “lixeira da lixeira”.
+
+PDFs de termos nascem no navegador (`jspdf`) e não acumulam no Tigris. `auditEvents` não é exportação.
+

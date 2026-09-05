@@ -81,10 +81,11 @@ function createPublicDb({ publicationRows = [publication], advertisementRows = [
     select: vi.fn((shape?: Record<string, unknown>) => ({
       from: (table: unknown) => {
         const result = project(sources.get(table) || [], shape);
-        const chain: { where: () => typeof chain; orderBy: () => typeof chain; limit: () => Promise<readonly Record<string, unknown>[]>; then: (resolve: (value: readonly Record<string, unknown>[]) => unknown, reject?: (reason: unknown) => unknown) => Promise<unknown> } = {
+        const chain: { where: () => typeof chain; orderBy: () => typeof chain; limit: () => typeof chain; offset: () => Promise<readonly Record<string, unknown>[]>; then: (resolve: (value: readonly Record<string, unknown>[]) => unknown, reject?: (reason: unknown) => unknown) => Promise<unknown> } = {
           where: () => chain,
           orderBy: () => chain,
-          limit: async () => result,
+          limit: () => chain,
+          offset: async () => result,
           then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
         };
         return chain;

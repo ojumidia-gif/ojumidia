@@ -21,6 +21,8 @@ import { getDb } from "../db";
 import { uploadSessions } from "../../drizzle/schema";
 import { recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 import { purgeExpiredEditorialTrash } from "../editorialTrash";
+import { cleanupExpiredAbandonedUploads } from "../mediaLifecycle";
+import { runEditorialScheduleJobs } from "../editorialAutomation";
 import { getAuthRuntimeStatus } from "./authStatus";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -103,7 +105,9 @@ async function startServer() {
       const db = await getDb();
       if (!db) return res.status(503).json({ error: "database-unavailable" });
       const result = await purgeExpiredEditorialTrash(db);
-      return res.json({ ok: true, ...result });
+      const uploads = await cleanupExpiredAbandonedUploads(db, -1);
+      const schedule = await runEditorialScheduleJobs(db);
+      return res.json({ ok: true, ...result, ...uploads, ...schedule });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Falha desconhecida ao expurgar a Lixeira Editorial.";
       console.error("[EditorialTrashPurge]", error);

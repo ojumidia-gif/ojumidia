@@ -37,6 +37,7 @@ describe("limites documentais e fundo vivo", () => {
     expect(routerSource).toContain("media-updated");
     expect(routerSource).toContain("media-trashed");
     expect(routerSource).toContain("media-restored");
+    expect(routerSource).toContain("media-permanently-purged");
     expect(routerSource).toContain("background-clip-updated");
     expect(routerSource).toContain("home-background-config-updated");
   });

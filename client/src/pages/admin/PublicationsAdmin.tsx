@@ -39,9 +39,14 @@ export default function PublicationsAdmin() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
   const isPrincipal = user?.role === "administrador principal";
-  const { data, isLoading } = trpc.editorial.adminList.useQuery(undefined, { refetchInterval: 5000 });
+  const [page, setPage] = useState(0);
   const etapaFilter = new URLSearchParams(window.location.search).get("etapa");
-  const rows = etapaFilter ? data?.filter(item => item.status === etapaFilter) : data;
+  const { data, isLoading } = trpc.editorial.adminList.useQuery({
+    limit: 40,
+    offset: page * 40,
+    status: etapaFilter && ["Rascunho", "Em revisão", "Aprovada", "Publicada", "Arquivada"].includes(etapaFilter) ? etapaFilter as "Rascunho" | "Em revisão" | "Aprovada" | "Publicada" | "Arquivada" : undefined,
+  }, { refetchInterval: 5000 });
+  const rows = data?.items;
   const initialKind = new URLSearchParams(window.location.search).get("tipo") as typeof kinds[number] | null;
   const [open, setOpen] = useState(Boolean(initialKind));
   const [title, setTitle] = useState("");
@@ -68,7 +73,7 @@ export default function PublicationsAdmin() {
   });
   const advance = trpc.editorial.advanceStatus.useMutation({
     onSuccess: (_result, variables) => {
-      const currentStatus = data?.find(item => item.id === variables.id)?.status || "";
+      const currentStatus = data?.items.find(item => item.id === variables.id)?.status || "";
       const feedback = statusFeedback[currentStatus];
       toast.success(feedback?.title || "Status editorial atualizado.", { description: feedback?.description });
       utils.editorial.adminList.invalidate();
@@ -96,7 +101,7 @@ export default function PublicationsAdmin() {
     onError: error => toast.error(error.message),
   });
 
-  const actionButtons = (item: NonNullable<typeof data>[number]) => (
+  const actionButtons = (item: NonNullable<typeof data>["items"][number]) => (
     <div className="flex flex-wrap gap-2">
       {!item.deletedAt && <>
         <Button asChild variant="outline" size="sm" className={item.status === "Publicada" ? "border-[#806817] text-[#806817]" : ""}>
@@ -123,6 +128,7 @@ export default function PublicationsAdmin() {
         <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[940px] text-left"><thead className="bg-[#eee9dc] text-[11px] uppercase tracking-[.13em] text-[#655e52]"><tr><th className="px-6 py-3">Conteúdo</th><th className="px-4 py-3">Etapa</th><th className="px-4 py-3">Próximo passo</th><th className="px-6 py-3 text-right">Ações</th></tr></thead><tbody>{rows.map(item => <tr key={item.id} className={`border-t border-[#242017]/8 ${item.deletedAt ? "bg-[#f5e5de]/60" : ""}`}><td className="px-6 py-4"><p className="font-medium">{item.title}</p><p className="mt-1 text-xs text-[#655e52]">{item.contentKind}</p></td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyle[item.status]}`}>{item.status}</span>{item.deletedAt ? <span className="ml-2 text-xs text-[#8b4d24]">na lixeira</span> : item.status === "Publicada" && !item.isPublic ? <span className="ml-2 text-xs text-[#8b4d24]">despublicada</span> : null}</td><td className="px-4 py-4 text-sm text-[#655e52]">{item.deletedAt ? "Aguardando restauração ou exclusão definitiva futura" : nextAction[item.status] || "Fluxo concluído"}</td><td className="px-6 py-4"><div className="flex justify-end">{actionButtons(item)}</div></td></tr>)}</tbody></table></div>
         <div className="grid gap-3 p-3 md:hidden">{rows.map(item => <article key={item.id} className={`rounded-xl border border-[#242017]/10 p-4 ${item.deletedAt ? "bg-[#f5e5de]/60" : "bg-white/35"}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium">{item.title}</p><p className="mt-1 text-xs text-[#655e52]">{item.contentKind}</p></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyle[item.status]}`}>{item.status}</span></div>{item.deletedAt ? <p className="mt-3 text-xs text-[#8b4d24]">Na lixeira editorial. Somente o Super Admin pode restaurar.</p> : <p className="mt-3 text-xs text-[#655e52]">Próximo passo: {nextAction[item.status] || "Fluxo concluído"}{item.status === "Publicada" && !item.isPublic ? " · despublicada" : ""}</p>}<div className="mt-4 border-t border-[#242017]/10 pt-4">{actionButtons(item)}</div></article>)}</div>
       </> : <div className="p-6"><EmptyAdmin text="Ainda não há conteúdos. Crie uma História, Cobertura, Documentário ou Projeto para iniciar o ciclo editorial." /></div>}
+      {data && (data.hasMore || page > 0) ? <div className="flex justify-end gap-2 border-t border-[#242017]/10 px-6 py-3"><button className="text-sm font-semibold" disabled={page === 0} onClick={() => setPage(current => Math.max(0, current - 1))}>Anterior</button><button className="text-sm font-semibold" disabled={!data.hasMore} onClick={() => setPage(current => current + 1)}>Próxima</button></div> : null}
     </div>
     <p className="mt-4 text-xs text-[#655e52]">Cada conteúdo pode ser pré-visualizado, editado, despublicado ou arquivado. O Super Admin também pode excluir logicamente e restaurar registros, sem apagar mídia, direitos ou histórico editorial.</p>
     <AlertDialog open={Boolean(deleteTarget)} onOpenChange={dialogOpen => { if (!dialogOpen) { setDeleteTarget(null); setDeleteNote(""); } }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Enviar conteúdo para a lixeira editorial?</AlertDialogTitle><AlertDialogDescription>“{deleteTarget?.title}” sairá imediatamente do portal público. Mídias, direitos e histórico serão preservados; somente o Super Admin poderá restaurá-lo.</AlertDialogDescription></AlertDialogHeader><label className="grid gap-2 text-sm font-medium">Motivo da exclusão<Textarea value={deleteNote} onChange={event => setDeleteNote(event.target.value)} placeholder="Ex.: publicação substituída, autorização revogada ou correção editorial." /></label><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={!deleteTarget || deleteNote.trim().length < 3 || remove.isPending} className="bg-[#8b4d24] text-white hover:bg-[#723b1a]" onClick={event => { event.preventDefault(); if (deleteTarget) remove.mutate({ id: deleteTarget.id, expectedVersion: deleteTarget.version, note: deleteNote.trim() }); }}>Excluir do portal</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>

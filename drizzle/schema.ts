@@ -233,6 +233,8 @@ export const publications = mysqlTable("publications", {
   externalVideoUrl: text("externalVideoUrl"),
   homePlacement: mysqlEnum("homePlacement", ["Nenhum", "Destaque principal", "Destaque secundário", "Recomendado"]).default("Nenhum").notNull(),
   homeOrder: int("homeOrder").default(0).notNull(),
+  scheduledAt: timestamp("scheduledAt"),
+  highlightExpiresAt: timestamp("highlightExpiresAt"),
   version: int("version").default(1).notNull(),
 }, table => [
   index("publication_status_idx").on(table.status),
@@ -240,6 +242,8 @@ export const publications = mysqlTable("publications", {
   index("publication_feature_idx").on(table.manualFeatured, table.relevance),
   index("publication_deleted_idx").on(table.deletedAt),
   index("publication_partner_idx").on(table.partnerId, table.status),
+  index("publication_home_idx").on(table.status, table.isPublic, table.homePlacement, table.deletedAt),
+  index("publication_scheduled_idx").on(table.status, table.scheduledAt),
 ]);
 
 export const publicationTaxonomies = mysqlTable("publicationTaxonomies", {
@@ -294,6 +298,7 @@ export const mediaAssets = mysqlTable("mediaAssets", {
   durationSeconds: int("durationSeconds"),
   partnerId: int("partnerId"),
   territoryId: int("territoryId"),
+  photographerId: int("photographerId"),
   uploadStatus: mysqlEnum("uploadStatus", uploadStatuses).default("Pronto").notNull(),
   uploadId: varchar("uploadId", { length: 96 }).unique(),
   checksum: varchar("checksum", { length: 128 }),
@@ -305,6 +310,7 @@ export const mediaAssets = mysqlTable("mediaAssets", {
 }, table => [
   index("media_partner_status_idx").on(table.partnerId, table.uploadStatus, table.state),
   index("media_territory_status_idx").on(table.territoryId, table.uploadStatus, table.state),
+  index("media_photographer_idx").on(table.photographerId, table.state),
 ]);
 
 export const uploadSessions = mysqlTable("uploadSessions", {
@@ -480,6 +486,8 @@ export const networkExecutors = mysqlTable("networkExecutors", {
   whatsapp: varchar("whatsapp", { length: 40 }),
   specialty: mysqlEnum("specialty", executorSpecialties).notNull(),
   profileNote: text("profileNote"),
+  publicSlug: varchar("publicSlug", { length: 200 }).unique(),
+  publicVisible: boolean("publicVisible").default(false).notNull(),
   linkedUserId: int("linkedUserId"),
   status: mysqlEnum("status", executorStatuses).default("Ativo").notNull(),
   createdByUserId: int("createdByUserId").notNull(),

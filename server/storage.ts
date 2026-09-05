@@ -5,12 +5,13 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import { ENV } from "./_core/env";
 
@@ -71,7 +72,7 @@ export function readObjectStorageEnv() {
       : forcePathStyleExplicit === "false"
         ? false
         : tigrisLike
-          ? false
+          ? true
           : Boolean(endpoint);
 
   return { bucket, endpoint, accessKeyId, secretAccessKey, region, forcePathStyle, tigrisLike };
@@ -333,6 +334,82 @@ export async function storageGetSignedUrl(
  * explicitly instead of reporting a successful deletion that did
  * not actually happen.
  */
+export type StorageInspectResult =
+  | { status: "present" }
+  | { status: "absent" }
+  | { status: "forbidden"; message: string }
+  | { status: "error"; message: string };
+
+export function classifyStorageError(error: unknown): Exclude<StorageInspectResult, { status: "present" }> {
+  const err = error as { name?: string; Code?: string; $metadata?: { httpStatusCode?: number }; message?: string };
+  const httpStatus = err.$metadata?.httpStatusCode;
+  const blob = `${err.name || ""} ${err.Code || ""} ${err.message || ""}`;
+  if (httpStatus === 404 || /NoSuchKey|NotFound|NoSuchObject/i.test(blob)) return { status: "absent" };
+  if (httpStatus === 403 || /AccessDenied|SignatureDoesNotMatch|Forbidden|InvalidAccessKeyId|InvalidAccessKey/i.test(blob)) {
+    return { status: "forbidden", message: err.message || "Storage recusou a operação (HTTP 403)." };
+  }
+  return { status: "error", message: err.message || "Falha de storage." };
+}
+
+export async function storageInspect(relKey: string): Promise<StorageInspectResult> {
+  const key = normalizeKey(relKey);
+  if (!key) return { status: "absent" };
+
+  if (isLocalDevelopmentStorage()) {
+    try {
+      await access(localStoragePath(key));
+      return { status: "present" };
+    } catch {
+      return { status: "absent" };
+    }
+  }
+
+  const externalS3 = getExternalS3Config();
+  if (externalS3) {
+    try {
+      await externalS3.client.send(new HeadObjectCommand({ Bucket: externalS3.bucket, Key: key }));
+      return { status: "present" };
+    } catch (error) {
+      return classifyStorageError(error);
+    }
+  }
+
+  return {
+    status: "error",
+    message: "Inspeção física indisponível: Forge não confirma existência de objeto. Configure Tigris (S3_*).",
+  };
+}
+
+export async function storageDeleteConfirmed(relKey: string): Promise<{ key: string; alreadyAbsent: boolean }> {
+  const key = normalizeKey(relKey);
+  if (!key) return { key, alreadyAbsent: true };
+
+  const before = await storageInspect(key);
+  if (before.status === "forbidden") {
+    throw new Error(`O Tigris recusou a inspeção (HTTP 403). 403 não prova ausência do arquivo. Key: ${key}. ${before.message}`);
+  }
+  if (before.status === "error") {
+    throw new Error(`Não foi possível confirmar o objeto antes do expurgo. Key: ${key}. ${before.message}`);
+  }
+
+  if (before.status === "present") {
+    await storageDelete(key);
+  }
+
+  const after = await storageInspect(key);
+  if (after.status === "present") {
+    throw new Error(`O objeto ainda existe no storage depois do DeleteObject. Key: ${key}.`);
+  }
+  if (after.status === "forbidden") {
+    throw new Error(`O Tigris recusou a confirmação pós-exclusão (HTTP 403). 403 não prova que o arquivo foi apagado. Key: ${key}. ${after.message}`);
+  }
+  if (after.status === "error") {
+    throw new Error(`Não foi possível confirmar a exclusão física. Key: ${key}. ${after.message}`);
+  }
+
+  return { key, alreadyAbsent: before.status === "absent" };
+}
+
 export async function storageDelete(relKey: string): Promise<void> {
   const key = normalizeKey(relKey);
 

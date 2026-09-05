@@ -281,6 +281,13 @@
       "when": 1788620000000,
       "tag": "0039_admin_cms_gaps",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "5",
+      "when": 1788630000000,
+      "tag": "0040_editorial_platform_scale",
+      "breakpoints": true
     }
   ]
 }

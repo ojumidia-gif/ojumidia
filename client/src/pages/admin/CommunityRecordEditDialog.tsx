@@ -44,7 +44,7 @@ export function CommunityRecordEditDialog({ kind, record, onClose }: { kind: Edi
   if (!record) return null;
   const current = record;
   const title = kind === "instituicao" ? "Editar perfil institucional" : kind === "evento" ? "Editar evento comunitário" : "Editar memória oral";
-  const eligibleMedia = ((media.data || []) as MediaOption[]).filter(item => item.state === "Ativo" && !item.deletedAt);
+  const eligibleMedia = ((media.data?.items || []) as MediaOption[]).filter(item => item.state === "Ativo" && !item.deletedAt);
   const pending = updateInstitution.isPending || updateEvent.isPending || updateMemory.isPending;
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); const data = new FormData(event.currentTarget); const consentStatus = String(data.get("consentStatus")) as EditableCommunityRecord["consentStatus"];

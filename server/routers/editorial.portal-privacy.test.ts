@@ -33,7 +33,7 @@ describe("proteção pública de Coberturas contratadas", () => {
   });
 
   it("remove o identificador comercial privado do objeto preparado para o portal", () => {
-    const portalPayload = toPortalPublication({ ...publishedCommercial, id: 12, title: "Cobertura", slug: "cobertura", contentKind: "Cobertura", subtitle: null, summary: null, body: null, teamId: null, createdBy: 1, editedBy: null, approvedBy: null, createdAt: new Date(), updatedAt: new Date(), publishedAt: new Date(), unpublishedAt: null, unpublishedBy: null, coverageStart: null, coverageEnd: null, relevance: 0, manualFeatured: false, sponsored: false, sponsorDisclosure: null, photoLimit: null, videoLimit: null, homePlacement: "Nenhum", homeOrder: 0, version: 1 }, authorizedForPortal as any);
+    const portalPayload = toPortalPublication({ ...publishedCommercial, id: 12, title: "Cobertura", slug: "cobertura", contentKind: "Cobertura", subtitle: null, summary: null, body: null, teamId: null, createdBy: 1, editedBy: null, approvedBy: null, createdAt: new Date(), updatedAt: new Date(), publishedAt: new Date(), unpublishedAt: null, unpublishedBy: null, coverageStart: null, coverageEnd: null, relevance: 0, manualFeatured: false, sponsored: false, sponsorDisclosure: null, photoLimit: null, videoLimit: null, homePlacement: "Nenhum", homeOrder: 0, scheduledAt: null, highlightExpiresAt: null, version: 1 } as any, authorizedForPortal as any);
     expect(portalPayload).not.toHaveProperty("commercialRequestId");
     expect(portalPayload.editorialAuthorization).toMatchObject({ materialFromCommercialCoverage: true, authorized: true });
   });
