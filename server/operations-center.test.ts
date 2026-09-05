@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { orderOperationalPendencies } from "./routers/operations";
 
@@ -10,5 +12,11 @@ describe("Central de Pendências Operacionais", () => {
       { id: "critical-first", category: "Lixeira", priority: "Crítica", title: "Expurgo", description: "", href: "/admin/lixeira-editorial", createdAt: new Date("2026-08-20"), dueAt: new Date("2026-08-22"), partnerId: null, territoryId: null },
     ]);
     expect(ordered.map(item => item.id)).toEqual(["critical-first", "critical-later", "attention", "follow"]);
+  });
+
+  it("não trata rascunho de contrato como pendência operacional", () => {
+    const source = readFileSync(resolve(process.cwd(), "server/routers/operations.ts"), "utf8");
+    expect(source).toContain('eq(contracts.status, "Enviado")');
+    expect(source).not.toContain('inArray(contracts.status, ["Rascunho", "Enviado"])');
   });
 });

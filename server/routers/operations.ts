@@ -78,7 +78,7 @@ export const operationsRouter = router({
       db.select().from(commercialEditorialAuthorizations).where(eq(commercialEditorialAuthorizations.status, "Pendente")).orderBy(desc(commercialEditorialAuthorizations.updatedAt)),
       db.select().from(authorizationTerms).where(eq(authorizationTerms.status, "Aguardando assinatura gov.br")).orderBy(desc(authorizationTerms.createdAt)),
       db.select().from(commercialRefundRequests).where(inArray(commercialRefundRequests.status, ["Solicitado", "Em análise", "Aprovado"])).orderBy(desc(commercialRefundRequests.updatedAt)),
-      db.select().from(contracts).where(inArray(contracts.status, ["Rascunho", "Enviado"])).orderBy(desc(contracts.createdAt)),
+      db.select().from(contracts).where(eq(contracts.status, "Enviado")).orderBy(desc(contracts.createdAt)),
       db.select().from(highlightSuggestions).where(eq(highlightSuggestions.status, "Sugerida")).orderBy(desc(highlightSuggestions.createdAt)),
       db.select().from(institutionVisibilitySubscriptions).where(and(inArray(institutionVisibilitySubscriptions.status, ["Ativa", "Aguardando confirmação"]), lte(institutionVisibilitySubscriptions.expiresAt, attentionDeadline))).orderBy(institutionVisibilitySubscriptions.expiresAt),
       db.select().from(institutions).where(and(isNull(institutions.deletedAt), or(eq(institutions.consentStatus, "Pendente"), eq(institutions.status, "Em revisão")))).orderBy(desc(institutions.updatedAt)),

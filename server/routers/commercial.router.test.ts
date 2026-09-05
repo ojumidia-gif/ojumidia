@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const getDbMock = vi.hoisted(() => vi.fn());
 vi.mock("../db", () => ({ getDb: getDbMock }));
@@ -49,5 +51,12 @@ describe("procedures comerciais por papel", () => {
     await expect(commercialRouter.createCaller(context(1, "administrador principal")).updatePayout({ id: 22, payoutStatus: "Pago" })).resolves.toEqual({ success: true });
     expect(db.update).toHaveBeenCalledOnce();
     expect(db.insert).toHaveBeenCalledOnce();
+  });
+
+  it("só exclui contrato em rascunho, sem lixeira", () => {
+    const source = readFileSync(resolve(process.cwd(), "server/routers/commercial.ts"), "utf8");
+    expect(source).toContain("discardDraftCoverageContract");
+    expect(source).toContain('current.status !== "Rascunho"');
+    expect(source).toContain("coverage-contract-draft-discarded");
   });
 });
