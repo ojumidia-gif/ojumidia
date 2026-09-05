@@ -429,7 +429,7 @@ O plano Spark, regras Firebase e limites reais precisam ser confirmados fora do 
 
 ### 13.3 Observabilidade
 
-Há logs de servidor e logs locais de desenvolvimento (`.manus-logs/` no ambiente gerenciado), exceções de upload e documentos privados no console, e 111 testes na última execução. Não foram identificados métricas de negócio, tracing distribuído, alerta de erro, painel de saúde de produção, auditoria imutável, monitoramento de storage, orçamento/alerta de custo ou rotina de backup. Portanto, observabilidade é **PARCIAL**.
+Há logs de servidor e logs locais de desenvolvimento, exceções de upload e documentos privados no console, e 111 testes na última execução. Não foram identificados métricas de negócio, tracing distribuído, alerta de erro, painel de saúde de produção, auditoria imutável, monitoramento de storage, orçamento/alerta de custo ou rotina de backup. Portanto, observabilidade é **PARCIAL**.
 
 ---
 

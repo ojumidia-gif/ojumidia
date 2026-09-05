@@ -111,6 +111,9 @@ temp/
 
 # Local development object storage (never production)
 .local-storage/
+
+# Leftover generator/runtime dirs — never commit
+.manus/
 .manus-logs/
 .oju-logs/
 
