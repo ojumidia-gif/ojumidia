@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
 import { HOME_MINICLIP_CURATION_SETTING, HOME_MINICLIP_DISPLAY_SECONDS, HOME_MINICLIP_MAX_DURATION_SECONDS, HOME_MINICLIP_SEQUENCE_LIMIT, HOME_MINICLIP_TRANSITION_MS } from "@shared/const";
 import {
@@ -24,7 +24,7 @@ import {
   purgeMediaAsset,
   restoreMediaIfRecoverable,
 } from "../mediaLifecycle";
-import { activePartnerMemberships, assertPartnerScope, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
+import { assertPartnerScope, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 
 async function requireDb() {
   const db = await getDb();
@@ -45,11 +45,7 @@ function requireSuperAdmin(role: string) {
 async function scopedMediaWhere(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, user: { id: number; role: string }, trash: boolean) {
   const conditions = [trash ? isNotNull(mediaAssets.deletedAt) : isNull(mediaAssets.deletedAt)];
   if (user.role === "administrador principal") return and(...conditions);
-  const memberships = await activePartnerMemberships(db, user.id);
-  const partnerIds = memberships.map(item => item.partnerId);
-  conditions.push(partnerIds.length
-    ? or(eq(mediaAssets.createdBy, user.id), inArray(mediaAssets.partnerId, partnerIds))!
-    : eq(mediaAssets.createdBy, user.id));
+  conditions.push(eq(mediaAssets.createdBy, user.id));
   return and(...conditions);
 }
 
@@ -73,10 +69,8 @@ export function canActivateBackgroundClip(clip: Pick<typeof mediaAssets.$inferSe
 
 async function assertMediaScope(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actor: { id: number; role: string }, media: typeof mediaAssets.$inferSelect) {
   if (actor.role === "administrador principal") return;
-  if (!media.partnerId) {
-    if (media.createdBy !== actor.id) throw new TRPCError({ code: "FORBIDDEN", message: "Esta mídia pertence a outro operador." });
-    return;
-  }
+  if (media.createdBy !== actor.id) throw new TRPCError({ code: "FORBIDDEN", message: "Esta mídia pertence a outro admin." });
+  if (!media.partnerId) return;
   try {
     await assertPartnerScope({ db, actor, partnerId: media.partnerId, territoryIds: media.territoryId ? [media.territoryId] : [], resourceLabel: "esta mídia", requirePartner: true });
   } catch (error) {

@@ -71,6 +71,7 @@ import Services from "./pages/Services";
 import CommunityHub from "./pages/CommunityHub";
 import PlanRegistration from "./pages/PlanRegistration";
 import MiniclipWatch from "./pages/MiniclipWatch";
+import LegalDocument from "./pages/LegalDocument";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -105,6 +106,8 @@ function Router() {
       <Route path={"/cuidado-e-consentimento"} component={CareConsent} />
       <Route path={"/acompanhar-acolhimento"} component={CareTracking} />
       <Route path={"/conheca-a-oju"} component={AboutOju} />
+      <Route path={"/termos-de-uso"} component={() => <LegalDocument kind="terms" />} />
+      <Route path={"/privacidade"} component={() => <LegalDocument kind="privacy" />} />
       <Route path={"/admin/acesso-local"} component={LocalDevLogin} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/admin/guia"} component={AdminGuides} />

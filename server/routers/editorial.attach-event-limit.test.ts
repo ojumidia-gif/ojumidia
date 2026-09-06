@@ -18,8 +18,8 @@ const chainFor = <T>(rows: T[]) => {
 };
 
 function databaseForEventBoundLimit(mediaType: "foto" | "vídeo") {
-  const publication = { id: 1, contentKind: "Cobertura", status: "Rascunho", photoLimit: 1, videoLimit: 1, partnerId: null };
-  const incoming = { id: 2, mediaType, publicationAllowed: true, state: "Ativo" };
+  const publication = { id: 1, contentKind: "Cobertura", status: "Rascunho", photoLimit: 1, videoLimit: 1, partnerId: null, createdBy: 1 };
+  const incoming = { id: 2, mediaType, publicationAllowed: true, state: "Ativo", uploadStatus: "Aprovado", createdBy: 1 };
   const total = mediaType === "foto" ? 5 : 2;
   const alreadyAttached = Array.from({ length: total }, (_, index) => ({ id: index + 3, mediaType, publicationAllowed: true, state: "Ativo" }));
   return {

@@ -1,8 +1,25 @@
 ﻿import { Menu, Search, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "wouter";
 import { portalContentDefaults, usePortalContent } from "@/lib/portalContent";
 import { groupPublicNav } from "@/lib/publicNav";
+import { PublicFooter } from "./PublicFooter";
+
+let publicFooterHosts = 0;
+
+function SiteFooterPortal({ cinematic }: { cinematic?: boolean }) {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    publicFooterHosts += 1;
+    if (publicFooterHosts === 1) setActive(true);
+    return () => {
+      publicFooterHosts -= 1;
+    };
+  }, []);
+  if (!active || typeof document === "undefined") return null;
+  return createPortal(<PublicFooter cinematic={cinematic} />, document.body);
+}
 
 export function OjuMark({
   compact = false,
@@ -41,9 +58,11 @@ export function OjuMark({
 export function PublicHeader({
   cinematic = false,
   onMenuClick,
+  includeSiteFooter = true,
 }: {
   cinematic?: boolean;
   onMenuClick?: () => void;
+  includeSiteFooter?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
@@ -55,6 +74,7 @@ export function PublicHeader({
   const { grouped, rest } = groupPublicNav(links);
 
   return (
+    <>
     <header
       className={`${cinematic ? "absolute inset-x-0 top-0 z-40 border-b border-white/15 bg-black/30" : "sticky top-0 z-40 border-b border-[#1f1c16]/10 bg-[#f4efe6]/92"} relative backdrop-blur-md`}
     >
@@ -118,5 +138,7 @@ export function PublicHeader({
         </nav>
       )}
     </header>
+    {includeSiteFooter ? <SiteFooterPortal cinematic={cinematic} /> : null}
+    </>
   );
 }

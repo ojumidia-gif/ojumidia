@@ -35,7 +35,7 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
     sectionKey: "footer",
     label: "Rodapé",
     displayOrder: 20,
-    content: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Instagram", href: "https://instagram.com/oju.fotografia", external: true }], legalItems: [{ label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
+    content: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Instagram", href: "https://instagram.com/oju.fotografia", external: true }], legalItems: [{ label: "Termos de uso", href: "/termos-de-uso" }, { label: "Privacidade e LGPD", href: "/privacidade" }, { label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
   },
   {
     page: "Global",

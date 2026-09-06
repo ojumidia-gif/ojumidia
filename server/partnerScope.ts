@@ -17,6 +17,12 @@ export function canAccessCentralPublication(isPrincipal: boolean, hasActivePartn
   return !hasActivePartnerMembership;
 }
 
+/** Admin comum só opera o que criou. Super Admin vê o site inteiro. */
+export function canAccessOwnOperatorRecord(role: string, actorId: number, createdBy: number | null | undefined) {
+  if (role === "administrador principal") return true;
+  return createdBy === actorId;
+}
+
 export async function activePartnerMemberships(db: Db, userId: number) {
   return db
     .select({

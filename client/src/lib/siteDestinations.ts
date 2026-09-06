@@ -7,7 +7,7 @@ export const siteDestinations = [
     action: "editorial" as const,
     contentKind: "História" as const,
     how: "Crie, complete texto e capa, publique no site. Aparece em Histórias.",
-    steps: ["Novo → História + título.", "Texto, território e foto de capa.", "Publicar no site. Home é outra tela."],
+    steps: ["Tipo e título.", "Texto e território.", "Capa e publicar no site."],
   },
   {
     id: "coberturas",
@@ -17,7 +17,7 @@ export const siteDestinations = [
     action: "editorial" as const,
     contentKind: "Cobertura" as const,
     how: "Crie, ligue fotos e território, publique no site. Aparece em Coberturas.",
-    steps: ["Novo → Cobertura + título.", "Ligue território e fotos (capa).", "Publicar no site."],
+    steps: ["Tipo e título.", "Território e fotos.", "Capa e publicar no site."],
   },
   {
     id: "documentarios",
@@ -27,7 +27,7 @@ export const siteDestinations = [
     action: "editorial" as const,
     contentKind: "Documentário" as const,
     how: "Crie, adicione materiais, publique no site. Aparece em Documentários.",
-    steps: ["Novo → Documentário + título.", "Texto, território e materiais.", "Publicar no site."],
+    steps: ["Tipo e título.", "Texto e território.", "Capa e publicar no site."],
   },
   {
     id: "projetos",
@@ -37,7 +37,7 @@ export const siteDestinations = [
     action: "editorial" as const,
     contentKind: "Projeto" as const,
     how: "Crie, complete texto e fotos, publique no site. Aparece em Projetos.",
-    steps: ["Novo → Projeto + título.", "Texto, território e fotos.", "Publicar no site."],
+    steps: ["Tipo e título.", "Texto e território.", "Capa e publicar no site."],
   },
   {
     id: "fotografia-documental",
@@ -47,7 +47,7 @@ export const siteDestinations = [
     action: "editorial" as const,
     contentKind: "Fotografia documental" as const,
     how: "Crie, ligue o território, anexe até 5 fotos e publique no site.",
-    steps: ["Novo → Fotografia documental + título.", "Território + até 5 fotos com data e local.", "Publicar no site."],
+    steps: ["Tipo e título.", "Território e fotos.", "Capa e publicar no site."],
   },
   {
     id: "territorios",
@@ -57,7 +57,7 @@ export const siteDestinations = [
     action: "link" as const,
     contentKind: null,
     how: "Cadastre o território e ligue conteúdos. Visibilidade no mapa é opcional.",
-    steps: ["Cadastre o nome do território.", "Ligue-o nas publicações.", "Mapa só com autorização da casa."],
+    steps: ["Nome do território.", "Ligue nas publicações.", "Mapa só se a casa autorizar."],
   },
   {
     id: "fotografos",
@@ -67,7 +67,7 @@ export const siteDestinations = [
     action: "link" as const,
     contentKind: null,
     how: "Cadastre nome e apresentação. Publique no site. Crédito nas fotos vale mesmo sem ficha.",
-    steps: ["Nome + apresentação curta.", "Cadastrar e publicar.", "Aparece em /fotografos."],
+    steps: ["Nome e apresentação.", "Cadastrar e publicar.", "Aparece em /fotografos."],
   },
   {
     id: "instituicoes",
@@ -77,7 +77,7 @@ export const siteDestinations = [
     action: "link" as const,
     contentKind: null,
     how: "Crie o perfil com consentimento e clique em Publicar no site.",
-    steps: ["Nome + consentimento da casa.", "No card: Autorizar e publicar.", "Aparece em /instituicoes."],
+    steps: ["Nome da casa.", "Consentimento.", "Autorizar e publicar."],
   },
   {
     id: "agenda",
@@ -87,7 +87,7 @@ export const siteDestinations = [
     action: "link" as const,
     contentKind: null,
     how: "Crie o encontro, autorize e publique na Agenda.",
-    steps: ["Título, data e consentimento.", "No card: Publicar no site.", "Aparece em /agenda."],
+    steps: ["Título e data.", "Consentimento.", "Publicar no site."],
   },
   {
     id: "memorias",
@@ -97,7 +97,7 @@ export const siteDestinations = [
     action: "link" as const,
     contentKind: null,
     how: "Registre com consentimento e publique no site.",
-    steps: ["Título, arquivo e termo.", "Acesso público só se a casa autorizar.", "Publicar no site → /memorias."],
+    steps: ["Título e arquivo.", "Consentimento da casa.", "Publicar no site."],
   },
   {
     id: "acervo",
@@ -107,7 +107,7 @@ export const siteDestinations = [
     action: "link" as const,
     contentKind: null,
     how: "Envie com crédito e autorização. O site usa o que estiver ligado a conteúdo publicado.",
-    steps: ["Envie foto ou vídeo com crédito.", "Fica pronta para ligar ao conteúdo.", "O site mostra o que estiver em matéria publicada."],
+    steps: ["Envie com crédito.", "Ligue ao conteúdo.", "O site mostra o que está publicado."],
   },
 ] as const;
 

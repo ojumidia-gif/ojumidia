@@ -1,5 +1,6 @@
 import { CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 import { FormEvent, useState } from "react";
+import { Link } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -89,7 +90,7 @@ export function PlanningRegistrationForm({ compact = false }: { compact?: boolea
         </fieldset>
         <label className="grid gap-2 text-sm font-medium sm:col-span-2">Cidade, território ou local de referência <span className="font-normal text-white/45">(opcional)</span><input value={territory} onChange={event => setTerritory(event.target.value)} className={`h-11 rounded px-3 ${fieldClass}`} /></label>
         <label className="grid gap-2 text-sm font-medium sm:col-span-2">O que é importante preservar?<textarea value={context} onChange={event => setContext(event.target.value)} rows={4} placeholder="Conte o contexto, as pessoas envolvidas e o que a Ojú precisa compreender antes de sugerir um formato." className={`resize-y rounded px-3 py-3 ${fieldClass}`} /></label>
-        <label className="flex gap-3 text-xs leading-5 text-white/65 sm:col-span-2"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} className="mt-1 h-4 w-4 accent-[#ef9e59]" />Autorizo a Ojú a usar estes dados exclusivamente para responder a este pedido de planejamento.</label>
+        <label className="flex gap-3 text-xs leading-5 text-white/65 sm:col-span-2"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} className="mt-1 h-4 w-4 accent-[#ef9e59]" /><span>Autorizo a Ojú a usar estes dados exclusivamente para responder a este pedido, nos termos da <Link href="/privacidade" className="text-[#ef9e59] underline">Privacidade e LGPD</Link> e dos <Link href="/termos-de-uso" className="text-[#ef9e59] underline">Termos de uso</Link>.</span></label>
       </div>
       <button disabled={request.isPending} className="mt-7 inline-flex min-h-12 items-center justify-center gap-3 bg-[#ed9c58] px-6 text-xs font-bold uppercase tracking-[.1em] text-[#24140b] transition hover:bg-[#f4b273] disabled:cursor-not-allowed disabled:opacity-60">
         {request.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando</> : "Enviar para planejamento"}

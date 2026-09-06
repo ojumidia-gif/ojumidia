@@ -37,11 +37,11 @@ describe("ciclo editorial da Ojú Mídia", () => {
     expect(canPublishDirect("criador")).toBe(false);
   });
 
-  it("mostra só a próxima etapa, sem pular a aprovação", () => {
-    expect(nextEditorialAction("criador", "Rascunho")?.label).toBe("Enviar para revisão");
+  it("mostra só a próxima etapa, e admin publica direto", () => {
+    expect(nextEditorialAction("criador", "Rascunho")?.label).toBe("Pedir revisão");
     expect(nextEditorialAction("criador", "Aprovada")).toBeNull();
     expect(nextEditorialAction("aprovador", "Em revisão")?.label).toBe("Aprovar");
     expect(nextEditorialAction("administrador", "Aprovada")?.label).toBe("Publicar no site");
-    expect(nextEditorialAction("administrador", "Rascunho")?.label).toBe("Enviar para revisão");
+    expect(nextEditorialAction("administrador", "Rascunho")?.label).toBe("Publicar no site");
   });
 });

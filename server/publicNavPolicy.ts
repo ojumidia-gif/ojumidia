@@ -24,6 +24,8 @@ export const ALLOWED_PUBLIC_HREFS = [
   "/conheca-a-oju",
   "/contrate-sua-cobertura",
   "/busca",
+  "/termos-de-uso",
+  "/privacidade",
 ] as const;
 
 export type PublicNavItem = {

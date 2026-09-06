@@ -10,7 +10,7 @@ import { AdminPage, EmptyAdmin, FirstUserWelcome, statusStyle } from "./_shared"
 import { useDaypartGreeting } from "@/hooks/useDaypartGreeting";
 
 const workDoors = [
-  { href: "/admin/publicacoes", title: "Escrever", text: "História, cobertura, documentário, projeto e fotografia documental. Texto, território e capa. Depois revisão." },
+  { href: "/admin/publicacoes", title: "Escrever", text: "Três passos: texto, território e capa. Depois Publicar no site. Home é outra tela." },
   { href: "/admin/fotografos", title: "Fotógrafos", text: "Ficha pública em /fotografos. Crédito na foto vale mesmo sem ficha." },
   { href: "/admin/midias", title: "Fotos e vídeos", text: "Envie com crédito e autorização. Marque a capa no conteúdo." },
   { href: "/admin/miniclipes", title: "Miniclipes", text: "Vídeo curto da contratação. Não vai sozinho para a Home." },

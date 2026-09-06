@@ -1,17 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { communityNextStep, mediaSiteGaps, nextEditorialAction, photographerSiteGaps, publicationSiteGaps } from "./editorialFlow";
+import { communityNextStep, mediaSiteGaps, nextEditorialAction, photographerSiteGaps, publicationSiteGaps, publishWizardStep } from "./editorialFlow";
 
 describe("próximo passo editorial", () => {
-  it("não deixa criador publicar sem aprovação", () => {
-    expect(nextEditorialAction("criador", "Rascunho")?.label).toBe("Enviar para revisão");
+  it("admin publica direto; criador só pede revisão", () => {
+    expect(nextEditorialAction("criador", "Rascunho")?.label).toBe("Pedir revisão");
     expect(nextEditorialAction("criador", "Aprovada")).toBeNull();
-    expect(nextEditorialAction("administrador", "Em revisão")?.label).toBe("Aprovar");
+    expect(nextEditorialAction("administrador", "Rascunho")?.label).toBe("Publicar no site");
+    expect(nextEditorialAction("administrador", "Em revisão")?.label).toBe("Publicar no site");
     expect(nextEditorialAction("administrador", "Aprovada")?.label).toBe("Publicar no site");
+    expect(nextEditorialAction("administrador principal", "Rascunho")?.label).toBe("Publicar no site");
   });
 
-  it("lista o que falta para o conteúdo ir ao site", () => {
-    expect(publicationSiteGaps({ body: "", summary: "", teamCredit: "", media: [], taxonomies: [] }).length).toBeGreaterThan(2);
-    expect(publicationSiteGaps({ body: "texto", summary: null, teamCredit: "Equipe Ojú", media: [{ isCover: true }], taxonomies: [{ dimension: "Território" }] })).toEqual([]);
+  it("lista só o mínimo para o conteúdo ir ao site", () => {
+    expect(publicationSiteGaps({ body: "", summary: "", media: [], taxonomies: [] }).length).toBe(3);
+    expect(publicationSiteGaps({ body: "texto", summary: null, media: [{ isCover: true }], taxonomies: [{ dimension: "Território" }] })).toEqual([]);
+    expect(publishWizardStep(["Falta o texto que o site vai ler."])).toBe(1);
+    expect(publishWizardStep(["Ligue a um território."])).toBe(2);
+    expect(publishWizardStep([])).toBe(3);
   });
 
   it("mostra o que falta em fotógrafo, mídia e comunidade", () => {

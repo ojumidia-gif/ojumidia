@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAccessCentralPublication, decideAuthenticatedScope } from "./partnerScope";
+import { canAccessCentralPublication, canAccessOwnOperatorRecord, decideAuthenticatedScope } from "./partnerScope";
 
 describe("isolamento territorial autenticado", () => {
   it("permite ao Super Admin operar com ou sem parceiro", () => {
@@ -40,6 +40,14 @@ describe("isolamento territorial autenticado", () => {
     expect(canAccessCentralPublication(false, true, null)).toBe(false);
     expect(canAccessCentralPublication(false, false, null)).toBe(true);
     expect(canAccessCentralPublication(false, true, 10)).toBe(true);
+  });
+
+  it("impede admin comum de ver conteúdo de outro admin; Super Admin vê tudo", () => {
+    expect(canAccessOwnOperatorRecord("administrador principal", 1, 99)).toBe(true);
+    expect(canAccessOwnOperatorRecord("administrador", 7, 7)).toBe(true);
+    expect(canAccessOwnOperatorRecord("administrador", 7, 8)).toBe(false);
+    expect(canAccessOwnOperatorRecord("administrador", 7, null)).toBe(false);
+    expect(canAccessOwnOperatorRecord("administrador principal", 1, null)).toBe(true);
   });
 
   it("rejeita território fora da carteira autorizada", () => {

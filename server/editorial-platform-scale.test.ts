@@ -95,6 +95,7 @@ describe("fluxo editorial guiado", () => {
     expect(editorial).toContain("alreadyLinked");
     expect(editorial).toContain("advanceStatus");
     expect(editorial).toContain("isCover: displayOrder === 0");
+    expect(edit).toContain("Três passos até o site");
     expect(edit).toContain("Salvar e enviar para revisão");
     expect(edit).toContain("nextEditorialAction");
     expect(edit).toContain("publishDirect");

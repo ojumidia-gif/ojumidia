@@ -195,6 +195,7 @@ export const taxonomies = mysqlTable("taxonomies", {
   latitude: decimal("latitude", { precision: 10, scale: 7 }),
   longitude: decimal("longitude", { precision: 10, scale: 7 }),
   mapVisibility: mysqlEnum("mapVisibility", ["Não divulgar", "Aproximada", "Pública"]).default("Não divulgar").notNull(),
+  createdBy: int("createdBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [index("taxonomy_dimension_idx").on(table.dimension)]);
 

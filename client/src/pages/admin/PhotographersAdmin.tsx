@@ -55,10 +55,15 @@ export default function PhotographersAdmin() {
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Nova ficha</p>
           <Input required name="name" placeholder="Nome que aparece no portal" />
           <select name="specialty" className="h-10 rounded-md border bg-white px-3"><option>Fotografia</option><option>Vídeo</option><option>Documentário</option><option>Edição</option><option>Produção</option><option>Outro</option></select>
-          <Input name="email" type="email" placeholder="E-mail (opcional)" />
-          <Input name="whatsapp" placeholder="WhatsApp (opcional)" />
-          <Input name="instagram" placeholder="@instagram autorizado (opcional)" />
           <Textarea required name="note" placeholder="Apresentação curta para o portal" />
+          <details className="rounded-xl bg-[#eee9dc] px-3 py-2 text-sm">
+            <summary className="cursor-pointer font-medium">Contato (depois, se quiser)</summary>
+            <div className="mt-3 grid gap-3">
+              <Input name="email" type="email" placeholder="E-mail (opcional)" />
+              <Input name="whatsapp" placeholder="WhatsApp (opcional)" />
+              <Input name="instagram" placeholder="@instagram autorizado (opcional)" />
+            </div>
+          </details>
           <Button disabled={createExecutor.isPending || updateExecutor.isPending} className="bg-[#242017] text-white">{canPublish ? "Cadastrar e publicar" : "Cadastrar"}</Button>
         </form>
         <div className="grid gap-3">

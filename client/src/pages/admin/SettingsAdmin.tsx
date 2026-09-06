@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { BadgeDollarSign, FileSignature, MapPinned, Palette, Settings2, ShieldCheck, UserCog, UserRoundCheck, Users, WalletCards } from "lucide-react";
+import { BadgeDollarSign, BookOpenText, FileSignature, MapPinned, Palette, Settings2, ShieldCheck, UserCog, UserRoundCheck, Users, WalletCards } from "lucide-react";
 import { Link } from "wouter";
 import { AdminPage } from "./_shared";
 
@@ -8,6 +8,7 @@ const cards = [
   { href: "/admin/conteudo-portal", icon: Palette, title: "Conteúdo do portal", text: "Textos, serviços, Método Ojú e ordem das páginas públicas.", action: "Editar portal", principalOnly: true },
   { href: "/admin/equipes", icon: Users, title: "Equipes e créditos", text: "Créditos reutilizáveis nas coberturas.", action: "Gerenciar equipes" },
   { href: "/admin/taxonomias", icon: MapPinned, title: "Territórios e taxonomias", text: "Local, evento, tema e relações documentais.", action: "Organizar territórios" },
+  { href: "/admin/frentes", icon: BookOpenText, title: "Frentes editoriais", text: "Atalho por tipo: história, cobertura, documentário, projeto e fotografia.", action: "Abrir frentes", principalOnly: true },
   { href: "/admin/colaboradores", icon: UserCog, title: "Colaboradores", text: "Convites e termo de responsabilidade via gov.br.", action: "Gerir acessos", principalOnly: true },
   { href: "/admin/auditoria", icon: ShieldCheck, title: "Auditoria", text: "Logins, permissões, publicação e políticas.", action: "Abrir auditoria", principalOnly: true },
   { href: "/admin/politicas-comerciais", icon: ShieldCheck, title: "Políticas e receitas", text: "Percentuais da Ojú, avisos de repasse e receitas documentais.", action: "Abrir políticas", principalOnly: true },

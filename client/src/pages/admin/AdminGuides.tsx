@@ -20,7 +20,7 @@ export default function AdminGuides() {
       <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">
         {principal
           ? "Cada cartão é um destino público. Crie, complete o mínimo e publique no site. Dúvidas da equipe chegam no Canal Ojú. Ojú Bot não aparece para Super Admin."
-          : "Cada cartão é um destino público. Crie, complete o mínimo e publique no site. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot. Se não achar resposta pronta, envie ao Canal Ojú."}
+          : "Cada cartão é um destino público. Crie, complete o mínimo e publique no site. Você só vê e altera o que criou. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot. Se não achar resposta pronta, envie ao Canal Ojú."}
       </p>
       {ready ? (
         <div className="mb-6 flex flex-wrap items-center gap-3">

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { nextEditorialAction } from "@/lib/editorialFlow";
+import { canPublishStraight, nextEditorialAction } from "@/lib/editorialFlow";
 import { Archive, Eye, FilePlus2, Pencil, RotateCcw, Send, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -35,6 +35,7 @@ export default function PublicationsAdmin() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
   const isPrincipal = user?.role === "administrador principal";
+  const canDirect = canPublishStraight(user?.role);
   const [page, setPage] = useState(0);
   const search = new URLSearchParams(window.location.search);
   const etapaFilter = search.get("etapa");
@@ -45,7 +46,7 @@ export default function PublicationsAdmin() {
     offset: page * 40,
     status: etapaFilter && ["Rascunho", "Em revisão", "Aprovada", "Publicada", "Arquivada"].includes(etapaFilter) ? etapaFilter as "Rascunho" | "Em revisão" | "Aprovada" | "Publicada" | "Arquivada" : undefined,
     contentKind: tipoFilter && kinds.includes(tipoFilter) ? tipoFilter : undefined,
-    createdByMe: mineOnly || undefined,
+    createdByMe: isPrincipal ? (mineOnly || undefined) : undefined,
   }, { refetchInterval: 5000 });
   const rows = data?.items;
   const initialKind = tipoFilter;
@@ -116,9 +117,9 @@ export default function PublicationsAdmin() {
     <div className="flex flex-wrap gap-2">
       {!item.deletedAt && <>
         <Button asChild size="sm" className="bg-[#242017] text-white hover:bg-[#3a3428]">
-          <Link href={`/admin/editar/${item.id}`}><Pencil className="mr-1 h-3.5 w-3.5" />Editar</Link>
+          <Link href={`/admin/editar/${item.id}`}><Pencil className="mr-1 h-3.5 w-3.5" />{item.status === "Publicada" ? "Editar" : "Completar"}</Link>
         </Button>
-        {next && (
+        {!canDirect && next && (
           <Button size="sm" onClick={() => advance.mutate({ id: item.id, expectedVersion: item.version })} disabled={advance.isPending}>
             <Send className="mr-1 h-3 w-3" />{next.label}
           </Button>
@@ -138,14 +139,14 @@ export default function PublicationsAdmin() {
   };
 
   return <AdminPage eyebrow="Conteúdos" title="Criar e publicar." action={<Button onClick={() => setOpen(true)} className="rounded-full bg-[#f6b71b] text-[#242017] hover:bg-[#eeb12a]"><FilePlus2 className="mr-2 h-4 w-4" />Novo</Button>}>
-    <p className="-mt-4 mb-4 text-sm text-[#655e52]">Tipo + título. Depois texto, território e capa. Admin publica no site; a Home é outra tela.</p>
+    <p className="-mt-4 mb-4 text-sm text-[#655e52]">{isPrincipal ? "Você vê o site inteiro. Tipo e título, três passos, publicar. Home é outra tela." : "Só o que você criou. Tipo e título. Depois texto, território e capa. Publicar no site. Home é outra tela."}</p>
     <AdminFlowGuide destinationId={siteDestinationByKind(tipoFilter || kind)?.id || "historias"} />
     <div className="mb-4 flex flex-wrap gap-2 text-sm font-semibold">
       <Link href={hrefWith({ tipo: null })} className={`rounded-full px-3 py-1.5 ${!tipoFilter ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>Tudo</Link>
       {kinds.map(item => (
         <Link key={item} href={hrefWith({ tipo: item })} className={`rounded-full px-3 py-1.5 ${tipoFilter === item ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>{item}</Link>
       ))}
-      <Link href={hrefWith({ carteira: mineOnly ? null : "meus" })} className={`rounded-full px-3 py-1.5 ${mineOnly ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>{mineOnly ? "Só os meus" : "Mesa"}</Link>
+      {isPrincipal ? <Link href={hrefWith({ carteira: mineOnly ? null : "meus" })} className={`rounded-full px-3 py-1.5 ${mineOnly ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>{mineOnly ? "Só os meus" : "Tudo no site"}</Link> : null}
     </div>
     {open && <section className="admin-card mb-6 overflow-hidden">
       <div className="flex items-center justify-between border-b border-[#242017]/10 px-5 py-3"><p className="font-semibold">Novo no portal</p><button onClick={() => setOpen(false)} className="rounded-full p-2 hover:bg-[#eee9dc]" aria-label="Fechar"><X className="h-4 w-4" /></button></div>

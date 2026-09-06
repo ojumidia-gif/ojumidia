@@ -52,14 +52,17 @@ export function canPublishDirect(role: EditorialRole) {
 }
 
 export function nextEditorialAction(role: EditorialRole | string | undefined, status: ContentStatus | string) {
+  if (canPublishDirect(role as EditorialRole) && (status === "Rascunho" || status === "Em revisão" || status === "Aprovada")) {
+    return { label: "Publicar no site", hint: "Entra no portal. A Home continua só com o Super Admin." };
+  }
   if (status === "Rascunho" && canAdvanceStatus(role as EditorialRole, "Rascunho")) {
-    return { label: "Enviar para revisão", hint: "A aprovação continua obrigatória antes de ir ao site." };
+    return { label: "Pedir revisão", hint: "Um aprovador ou admin libera depois para o site." };
   }
   if (status === "Em revisão" && canAdvanceStatus(role as EditorialRole, "Em revisão")) {
-    return { label: "Aprovar", hint: "Depois disto um administrador publica no site." };
+    return { label: "Aprovar", hint: "Depois um administrador publica no site." };
   }
   if (status === "Aprovada" && canAdvanceStatus(role as EditorialRole, "Aprovada")) {
-    return { label: "Publicar no site", hint: "Entra no portal. Histórias recentes na Home continua sendo escolha da curadoria." };
+    return { label: "Publicar no site", hint: "Entra no portal. A Home continua só com o Super Admin." };
   }
   return null;
 }

@@ -1,13 +1,19 @@
+export function canPublishStraight(role: string | undefined) {
+  return role === "administrador" || role === "administrador principal";
+}
+
 export function nextEditorialAction(role: string | undefined, status: string) {
-  const admin = role === "administrador" || role === "administrador principal";
-  if (status === "Rascunho" && (admin || role === "criador" || role === "editor")) {
-    return { label: "Enviar para revisão", hint: "A aprovação continua obrigatória antes de ir ao site." };
+  if (canPublishStraight(role) && (status === "Rascunho" || status === "Em revisão" || status === "Aprovada")) {
+    return { label: "Publicar no site", hint: "Entra no portal. A Home continua só com o Super Admin." };
   }
-  if (status === "Em revisão" && (admin || role === "aprovador")) {
-    return { label: "Aprovar", hint: "Depois disto um administrador publica no site." };
+  if (status === "Rascunho" && (role === "criador" || role === "editor")) {
+    return { label: "Pedir revisão", hint: "Um aprovador ou admin libera depois para o site." };
   }
-  if (status === "Aprovada" && admin) {
-    return { label: "Publicar no site", hint: "Entra no portal. Histórias recentes na Home continua sendo escolha da curadoria." };
+  if (status === "Em revisão" && (role === "aprovador" || canPublishStraight(role))) {
+    return { label: "Aprovar", hint: "Depois um administrador publica no site." };
+  }
+  if (status === "Aprovada" && canPublishStraight(role)) {
+    return { label: "Publicar no site", hint: "Entra no portal. A Home continua só com o Super Admin." };
   }
   return null;
 }
@@ -15,17 +21,21 @@ export function nextEditorialAction(role: string | undefined, status: string) {
 export function publicationSiteGaps(data: {
   body?: string | null;
   summary?: string | null;
-  teamCredit?: string | null;
   media: Array<{ isCover?: boolean }>;
   taxonomies: Array<{ dimension: string }>;
 }) {
   const gaps: string[] = [];
   if (!(data.body || data.summary)?.trim()) gaps.push("Falta o texto que o site vai ler.");
-  if (!data.teamCredit?.trim()) gaps.push("Falta o crédito de quem fez.");
+  if (!data.taxonomies.some(item => item.dimension === "Território")) gaps.push("Ligue a um território.");
   if (!data.media.length) gaps.push("Falta foto ou vídeo autorizado.");
   else if (!data.media.some(item => item.isCover)) gaps.push("Marque a foto de capa.");
-  if (!data.taxonomies.some(item => item.dimension === "Território")) gaps.push("Ligue a um território.");
   return gaps;
+}
+
+export function publishWizardStep(gaps: string[]): 1 | 2 | 3 {
+  if (gaps.some(item => item.includes("texto"))) return 1;
+  if (gaps.some(item => item.includes("território"))) return 2;
+  return 3;
 }
 
 export function photographerSiteGaps(item: { publicVisible?: boolean; profileNote?: string | null }) {
@@ -51,3 +61,4 @@ export function communityNextStep(consentStatus: string, status: string) {
 }
 
 export const editorialPipeline = ["Rascunho", "Em revisão", "Aprovada", "Publicada"] as const;
+export const publishWizardLabels = ["Texto", "Território", "Capa e publicar"] as const;

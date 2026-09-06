@@ -42,7 +42,7 @@ export function FirstUserWelcome() {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">
             {principal
               ? "Cada destino público tem três passos. A Home nacional é só Super Admin. Dúvidas da equipe chegam no Canal Ojú. Ojú Bot é só para admin comum."
-              : "Cada destino público tem três passos. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot, canto da tela. Se a resposta pronta não existir, envie ao Canal Ojú."}
+              : "Três passos até o site: texto, território e capa. Depois Publicar. Você só vê e altera o que criou. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot."}
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => { hideFirstGuide(); setHidden(true); }}>Não exibir mais</Button>

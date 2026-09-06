@@ -1,7 +1,7 @@
 export function normalizeConfirmPhrase(value: string) {
   return value
     .normalize("NFD")
-    .replace(/\p{M}/gu, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[\u2018\u2019\u201C\u201D]/g, "")
     .replace(/\s+/g, " ")
     .trim()

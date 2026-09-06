@@ -24,12 +24,13 @@ describe("fluxo de lugar, capa e Home", () => {
     expect(edit).toContain("CoverageTaxonomiesPanel");
     expect(edit).toContain("setFeatured");
     expect(edit).toContain("suggestHighlight");
-    expect(list).toContain(">Editar</Link>");
+    expect(list).toContain("Completar");
+    expect(list).toContain("Editar");
     expect(list).not.toContain(">Continuar</Link>");
     expect(highlights).toContain("Mostrar em Histórias recentes");
     expect(highlights).toContain("coverUrl");
     expect(editorial).toContain("createdByMe");
-    expect(list).toContain("Só os meus");
+    expect(list).toContain("Tudo no site");
     expect(editorial).toContain('eq(mediaAssets.publicationAllowed, true)');
   });
 });

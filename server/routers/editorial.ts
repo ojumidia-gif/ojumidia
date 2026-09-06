@@ -7,10 +7,10 @@ import { getDb } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { publishEditorialEvent } from "../editorialEvents";
 import { canUseCommercialLocation, canUseCommercialMedia, canUseCommercialNarrative, canUseOnPortal, type CommercialEditorialAuthorization } from "../commercialEditorialAuthorization";
-import { activePartnerMemberships, assertPartnerScope, authorizedTerritoryIdsForMembership, canAccessCentralPublication, partnerTerritoryIds, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
+import { activePartnerMemberships, assertPartnerScope, canAccessCentralPublication, canAccessOwnOperatorRecord, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 import { editorialTrashDeadline, isEditorialTrashExpired, permanentlyPurgePublication } from "../editorialTrash";
 import { confirmPhrasesMatch } from "@shared/confirmPhrase";
-import { isHomeCurated, publicationIdsFullyInTerritoryScope, sortHomeCurated } from "../editorialScale";
+import { isHomeCurated, sortHomeCurated } from "../editorialScale";
 
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -38,8 +38,19 @@ async function requireDb() {
 function assertAdmin(role: EditorialRole) {
   if (!["administrador", "administrador principal"].includes(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Apenas administradores podem executar esta ação." });
 }
+
 function assertPrincipal(role: EditorialRole) {
   if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode excluir ou restaurar conteúdos." });
+}
+
+function assertTaxonomyWrite(role: string, actorId: number, createdBy: number | null | undefined) {
+  if (canAccessOwnOperatorRecord(role, actorId, createdBy)) return;
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: createdBy == null
+      ? "Este cadastro é do catálogo nacional. Somente o Super Admin pode alterá-lo."
+      : "Este cadastro é de outro admin.",
+  });
 }
 
 async function portalCoversByPublicationId(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, publicationIds: number[]) {
@@ -65,6 +76,9 @@ async function publicationTerritoryIds(db: NonNullable<Awaited<ReturnType<typeof
 
 async function assertPublicationScope(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actor: { id: number; role: string }, publication: typeof publications.$inferSelect, label: string) {
   if (actor.role === "administrador principal") return;
+  if (!canAccessOwnOperatorRecord(actor.role, actor.id, publication.createdBy)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Este conteúdo é de outro admin." });
+  }
   const memberships = await activePartnerMemberships(db, actor.id);
   if (!canAccessCentralPublication(false, memberships.length > 0, publication.partnerId ?? null)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Este conteúdo pertence à operação nacional e está fora do escopo do seu Parceiro Ojú." });
@@ -77,26 +91,8 @@ async function assertPublicationScope(db: NonNullable<Awaited<ReturnType<typeof 
 
 async function scopedPublicationIds(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actor: { id: number; role: string }) {
   if (actor.role === "administrador principal") return "all" as const;
-  const memberships = await activePartnerMemberships(db, actor.id);
-  if (!memberships.length) {
-    const rows = await db.select({ id: publications.id }).from(publications).where(and(isNull(publications.deletedAt), isNull(publications.partnerId)));
-    return rows.map(row => row.id);
-  }
-  const partnerIds = memberships.map(item => item.partnerId);
-  const authorized = new Set<number>();
-  for (const membership of memberships) {
-    const territories = await partnerTerritoryIds(db, membership.partnerId);
-    for (const id of authorizedTerritoryIdsForMembership(membership.territoryId, territories)) authorized.add(id);
-  }
-  if (!authorized.size) return [];
-  const candidates = await db.select({ id: publications.id }).from(publications).where(and(isNull(publications.deletedAt), inArray(publications.partnerId, partnerIds)));
-  const ids = candidates.map(row => row.id);
-  if (!ids.length) return [];
-  const links = await db.select({ publicationId: publicationTaxonomies.publicationId, taxonomyId: publicationTaxonomies.taxonomyId }).from(publicationTaxonomies).where(inArray(publicationTaxonomies.publicationId, ids));
-  const taxonomyIds = Array.from(new Set(links.map(link => link.taxonomyId)));
-  const territoryRows = taxonomyIds.length ? await db.select({ id: taxonomies.id }).from(taxonomies).where(and(inArray(taxonomies.id, taxonomyIds), eq(taxonomies.dimension, "Território"))) : [];
-  const territorySet = new Set(territoryRows.map(row => row.id));
-  return publicationIdsFullyInTerritoryScope({ publicationIds: ids, territoryLinks: links.filter(link => territorySet.has(link.taxonomyId)), authorizedTerritoryIds: Array.from(authorized) });
+  const own = await db.select({ id: publications.id }).from(publications).where(and(isNull(publications.deletedAt), eq(publications.createdBy, actor.id)));
+  return own.map(row => row.id);
 }
 
 async function getMatchingPublicationIds(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, taxonomyIds: number[]) {
@@ -211,6 +207,23 @@ export const adminListInput = z.object({
 
 export const editorialRouter = router({
   taxonomies: publicProcedure.query(async () => {
+    const db = await requireDb();
+    return db.select({
+      id: taxonomies.id,
+      dimension: taxonomies.dimension,
+      name: taxonomies.name,
+      slug: taxonomies.slug,
+      description: taxonomies.description,
+      parentId: taxonomies.parentId,
+      latitude: taxonomies.latitude,
+      longitude: taxonomies.longitude,
+      mapVisibility: taxonomies.mapVisibility,
+      createdAt: taxonomies.createdAt,
+    }).from(taxonomies).orderBy(taxonomies.dimension, taxonomies.name);
+  }),
+
+  adminTaxonomies: protectedProcedure.query(async ({ ctx }) => {
+    assertAdmin(ctx.user.role as EditorialRole);
     const db = await requireDb();
     return db.select().from(taxonomies).orderBy(taxonomies.dimension, taxonomies.name);
   }),
@@ -366,7 +379,7 @@ export const editorialRouter = router({
     if (input?.status) conditions.push(eq(publications.status, input.status));
     if (input?.contentKind) conditions.push(eq(publications.contentKind, input.contentKind));
     if (input?.publishedOnly) conditions.push(and(eq(publications.status, "Publicada"), eq(publications.isPublic, true))!);
-    if (input?.createdByMe) conditions.push(eq(publications.createdBy, ctx.user.id));
+    if (input?.createdByMe && ctx.user.role === "administrador principal") conditions.push(eq(publications.createdBy, ctx.user.id));
     if (input?.query) {
       const term = `%${input.query}%`;
       conditions.push(or(like(publications.title, term), like(publications.summary, term))!);
@@ -509,6 +522,7 @@ export const editorialRouter = router({
     if (!canEditPublication(ctx.user.role as EditorialRole, publication[0].status as ContentStatus)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode anexar mídias nesta etapa." });
     const media = await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.mediaId)).limit(1);
     if (!media[0] || !media[0].publicationAllowed || media[0].state !== "Ativo" || !["Aprovado", "Publicado"].includes(media[0].uploadStatus)) throw new TRPCError({ code: "BAD_REQUEST", message: "Esta mídia precisa estar ativa, autorizada e aprovada antes do vínculo editorial." });
+    if (!canAccessOwnOperatorRecord(ctx.user.role, ctx.user.id, media[0].createdBy)) throw new TRPCError({ code: "FORBIDDEN", message: "Esta mídia pertence a outro admin." });
     if (publication[0].partnerId && media[0].partnerId !== publication[0].partnerId) throw new TRPCError({ code: "FORBIDDEN", message: "A mídia precisa pertencer ao mesmo Parceiro Ojú da publicação." });
     const existing = await db.select().from(publicationMedia).where(eq(publicationMedia.publicationId, input.publicationId));
     const existingIds = existing.map(link => link.mediaId);
@@ -778,27 +792,74 @@ export const editorialRouter = router({
     assertAdmin(ctx.user.role as EditorialRole);
     const db = await requireDb();
     const slug = `${slugify(input.name)}-${Date.now().toString(36)}`;
-    const result = await db.insert(taxonomies).values({ ...input, slug });
+    const result = await db.insert(taxonomies).values({ ...input, slug, createdBy: ctx.user.id });
     publishEditorialEvent("taxonomy-updated");
     return { id: Number(result[0].insertId), slug };
   }),
   updateTaxonomy: protectedProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().min(2).max(180), description: z.string().max(1000).nullable().optional(), parentId: z.number().int().positive().nullable().optional(), latitude: z.string().regex(/^-?\d{1,2}(\.\d{1,7})?$/).nullable().optional(), longitude: z.string().regex(/^-?\d{1,3}(\.\d{1,7})?$/).nullable().optional(), mapVisibility: z.enum(["Não divulgar", "Aproximada", "Pública"]).optional() })).mutation(async ({ ctx, input }) => {
-    assertAdmin(ctx.user.role as EditorialRole); const db = await requireDb(); const current = await db.select().from(taxonomies).where(eq(taxonomies.id, input.id)).limit(1); if (!current[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Taxonomia não encontrada." }); await db.update(taxonomies).set({ name: input.name, description: input.description, parentId: input.parentId, latitude: input.latitude, longitude: input.longitude, mapVisibility: input.mapVisibility }).where(eq(taxonomies.id, input.id)); publishEditorialEvent("taxonomy-updated"); return { success: true };
+    assertAdmin(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const current = await db.select().from(taxonomies).where(eq(taxonomies.id, input.id)).limit(1);
+    if (!current[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Taxonomia não encontrada." });
+    assertTaxonomyWrite(ctx.user.role, ctx.user.id, current[0].createdBy);
+    await db.update(taxonomies).set({ name: input.name, description: input.description, parentId: input.parentId, latitude: input.latitude, longitude: input.longitude, mapVisibility: input.mapVisibility }).where(eq(taxonomies.id, input.id));
+    publishEditorialEvent("taxonomy-updated");
+    return { success: true };
   }),
   removeTaxonomy: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    assertAdmin(ctx.user.role as EditorialRole); const db = await requireDb(); await db.delete(publicationTaxonomies).where(eq(publicationTaxonomies.taxonomyId, input.id)); await db.update(taxonomies).set({ parentId: null }).where(eq(taxonomies.parentId, input.id)); await db.delete(taxonomies).where(eq(taxonomies.id, input.id)); publishEditorialEvent("taxonomy-updated"); return { success: true };
+    assertAdmin(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const current = await db.select().from(taxonomies).where(eq(taxonomies.id, input.id)).limit(1);
+    if (!current[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Taxonomia não encontrada." });
+    assertTaxonomyWrite(ctx.user.role, ctx.user.id, current[0].createdBy);
+    await db.delete(publicationTaxonomies).where(eq(publicationTaxonomies.taxonomyId, input.id));
+    await db.update(taxonomies).set({ parentId: null }).where(eq(taxonomies.parentId, input.id));
+    await db.delete(taxonomies).where(eq(taxonomies.id, input.id));
+    publishEditorialEvent("taxonomy-updated");
+    return { success: true };
   }),
-  taxonomyRelations: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => {
-    const db = await requireDb(); const links = await db.select().from(publicationTaxonomies).where(eq(publicationTaxonomies.taxonomyId, input.id)); const ids = links.map(link => link.publicationId); const related = ids.length ? await db.select().from(publications).where(inArray(publications.id, ids)) : []; return related;
+  taxonomyRelations: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const links = await db.select().from(publicationTaxonomies).where(eq(publicationTaxonomies.taxonomyId, input.id));
+    const ids = links.map(link => link.publicationId);
+    const related = ids.length ? await db.select().from(publications).where(inArray(publications.id, ids)) : [];
+    const scoped = await scopedPublicationIds(db, ctx.user);
+    if (scoped === "all") return related;
+    return related.filter(item => scoped.includes(item.id));
   }),
   taxonomyMedia: protectedProcedure.input(z.object({ taxonomyId: z.number().int().positive() })).query(async ({ input }) => {
     const db = await requireDb(); const links = await db.select().from(taxonomyMedia).where(eq(taxonomyMedia.taxonomyId, input.taxonomyId)).orderBy(desc(taxonomyMedia.isPrimary), taxonomyMedia.displayOrder); const ids = links.map(link => link.mediaId); const assets = ids.length ? await db.select().from(mediaAssets).where(inArray(mediaAssets.id, ids)) : []; return links.map(link => ({ ...assets.find(asset => asset.id === link.mediaId)!, linkId: link.id, isPrimary: link.isPrimary, displayOrder: link.displayOrder })).filter(Boolean);
   }),
   attachTaxonomyMedia: protectedProcedure.input(z.object({ taxonomyId: z.number().int().positive(), mediaId: z.number().int().positive(), isPrimary: z.boolean().optional() })).mutation(async ({ ctx, input }) => {
-    assertAdmin(ctx.user.role as EditorialRole); const db = await requireDb(); const media = await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.mediaId)).limit(1); if (!media[0] || !media[0].publicationAllowed || media[0].state !== "Ativo") throw new TRPCError({ code: "BAD_REQUEST", message: "A mídia precisa estar ativa e autorizada no Acervo." }); if (input.isPrimary) await db.update(taxonomyMedia).set({ isPrimary: false }).where(eq(taxonomyMedia.taxonomyId, input.taxonomyId)); const existing = await db.select().from(taxonomyMedia).where(and(eq(taxonomyMedia.taxonomyId, input.taxonomyId), eq(taxonomyMedia.mediaId, input.mediaId))).limit(1); if (existing[0]) { await db.update(taxonomyMedia).set({ isPrimary: input.isPrimary ?? existing[0].isPrimary }).where(eq(taxonomyMedia.id, existing[0].id)); } else { await db.insert(taxonomyMedia).values({ taxonomyId: input.taxonomyId, mediaId: input.mediaId, isPrimary: input.isPrimary ?? false }); } publishEditorialEvent("taxonomy-updated"); return { success: true };
+    assertAdmin(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const taxonomy = await db.select().from(taxonomies).where(eq(taxonomies.id, input.taxonomyId)).limit(1);
+    if (!taxonomy[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Taxonomia não encontrada." });
+    assertTaxonomyWrite(ctx.user.role, ctx.user.id, taxonomy[0].createdBy);
+    const media = await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.mediaId)).limit(1);
+    if (!media[0] || !media[0].publicationAllowed || media[0].state !== "Ativo") throw new TRPCError({ code: "BAD_REQUEST", message: "A mídia precisa estar ativa e autorizada no Acervo." });
+    if (!canAccessOwnOperatorRecord(ctx.user.role, ctx.user.id, media[0].createdBy)) throw new TRPCError({ code: "FORBIDDEN", message: "Esta mídia pertence a outro admin." });
+    if (input.isPrimary) await db.update(taxonomyMedia).set({ isPrimary: false }).where(eq(taxonomyMedia.taxonomyId, input.taxonomyId));
+    const existing = await db.select().from(taxonomyMedia).where(and(eq(taxonomyMedia.taxonomyId, input.taxonomyId), eq(taxonomyMedia.mediaId, input.mediaId))).limit(1);
+    if (existing[0]) {
+      await db.update(taxonomyMedia).set({ isPrimary: input.isPrimary ?? existing[0].isPrimary }).where(eq(taxonomyMedia.id, existing[0].id));
+    } else {
+      await db.insert(taxonomyMedia).values({ taxonomyId: input.taxonomyId, mediaId: input.mediaId, isPrimary: input.isPrimary ?? false });
+    }
+    publishEditorialEvent("taxonomy-updated");
+    return { success: true };
   }),
   removeTaxonomyMedia: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
-    assertAdmin(ctx.user.role as EditorialRole); const db = await requireDb(); await db.delete(taxonomyMedia).where(eq(taxonomyMedia.id, input.id)); publishEditorialEvent("taxonomy-updated"); return { success: true };
+    assertAdmin(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const link = (await db.select().from(taxonomyMedia).where(eq(taxonomyMedia.id, input.id)).limit(1))[0];
+    if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "Vínculo de mídia não encontrado." });
+    const taxonomy = (await db.select().from(taxonomies).where(eq(taxonomies.id, link.taxonomyId)).limit(1))[0];
+    if (!taxonomy) throw new TRPCError({ code: "NOT_FOUND", message: "Taxonomia não encontrada." });
+    assertTaxonomyWrite(ctx.user.role, ctx.user.id, taxonomy.createdBy);
+    await db.delete(taxonomyMedia).where(eq(taxonomyMedia.id, input.id));
+    publishEditorialEvent("taxonomy-updated");
+    return { success: true };
   }),
 
   publicPhotographers: publicProcedure.input(z.object({ limit: z.number().int().min(1).max(48).default(24), offset: z.number().int().min(0).default(0) }).optional()).query(async ({ input }) => {

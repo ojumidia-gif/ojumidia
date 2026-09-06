@@ -12,7 +12,7 @@ export const ojuBotFaqs: OjuBotFaq[] = [
   {
     id: "publicar-historia",
     question: "Como publico uma história no site?",
-    answer: "Conteúdos → Novo → História + título. Complete texto, território e foto de capa. Depois Publicar no site. Não entra sozinho na Home.",
+    answer: "Novo → tipo e título. Três passos: texto, território e capa. Publicar no site. Não entra sozinho na Home.",
     tags: ["história", "publicar", "criar", "site"],
     href: "/admin/publicacoes?tipo=História&novo=1",
   },
@@ -33,7 +33,7 @@ export const ojuBotFaqs: OjuBotFaq[] = [
   {
     id: "o-que-falta",
     question: "O que falta para publicar?",
-    answer: "Em geral: texto, território e foto de capa. O cartão amarelo na edição lista o que ainda falta.",
+    answer: "Em geral: texto, território e foto de capa. Crédito e subtítulo vêm depois, já no ar.",
     tags: ["falta", "capa", "território", "texto", "publicar"],
   },
   {
@@ -42,6 +42,12 @@ export const ojuBotFaqs: OjuBotFaq[] = [
     answer: "Territórios → nome. Depois ligue nas publicações. O mapa só com autorização da casa.",
     tags: ["território", "mapa", "lugar"],
     href: "/admin/territorios",
+  },
+  {
+    id: "carteira",
+    question: "Posso editar o conteúdo de outro admin?",
+    answer: "Não. Cada admin só vê e altera o que criou. Território do catálogo nacional dá para ligar, não para mudar. Super Admin vê o site inteiro.",
+    tags: ["admin", "editar", "outro", "meu", "carteira"],
   },
   {
     id: "fotografo",
@@ -77,6 +83,13 @@ export const ojuBotFaqs: OjuBotFaq[] = [
     tags: ["miniclipe", "home", "vídeo", "contratação"],
     href: "/admin/miniclipes",
   },
+  {
+    id: "lgpd",
+    question: "Onde estão os termos e a LGPD?",
+    answer: "No rodapé: Termos de uso e Privacidade e LGPD. Formulários públicos só usam seus dados para responder o pedido.",
+    tags: ["lgpd", "privacidade", "termos", "dados", "lei"],
+    href: "/privacidade",
+  },
   ...siteDestinations.map(dest => ({
     id: `fluxo-${dest.id}`,
     question: `Fluxo de ${dest.label}`,
@@ -87,7 +100,7 @@ export const ojuBotFaqs: OjuBotFaq[] = [
 ];
 
 function normalize(value: string) {
-  return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 export function matchOjuBotFaqs(query: string, limit = 6) {
