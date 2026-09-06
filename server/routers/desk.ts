@@ -1,13 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { adminDeskMessages, users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { recordAuditEvent } from "../partnerScope";
 import { protectedProcedure, router } from "../_core/trpc";
 
 const categories = ["Dúvida", "Erro", "Estabilidade", "Outro"] as const;
-const statuses = ["Aberta", "Em atendimento", "Resolvida"] as const;
 
 async function requireDb() {
   const db = await getDb();
@@ -17,6 +17,12 @@ async function requireDb() {
 
 function requirePrincipal(role: string) {
   if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin lê e responde o Canal Ojú." });
+}
+
+async function loadDeskMessage(db: Awaited<ReturnType<typeof requireDb>>, id: number) {
+  const current = (await db.select().from(adminDeskMessages).where(eq(adminDeskMessages.id, id)).limit(1))[0];
+  if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mensagem não encontrada." });
+  return current;
 }
 
 export const deskRouter = router({
@@ -69,12 +75,14 @@ export const deskRouter = router({
   reply: protectedProcedure.input(z.object({
     id: z.number().int().positive(),
     reply: z.string().trim().min(4).max(4000),
-    status: z.enum(statuses).optional(),
+    status: z.enum(["Em atendimento", "Resolvida"]).optional(),
   })).mutation(async ({ ctx, input }) => {
     requirePrincipal(ctx.user.role);
     const db = await requireDb();
-    const current = (await db.select().from(adminDeskMessages).where(eq(adminDeskMessages.id, input.id)).limit(1))[0];
-    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mensagem não encontrada." });
+    const current = await loadDeskMessage(db, input.id);
+    if (current.status === "Arquivada") {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Desarquive a mensagem para responder." });
+    }
     const status = input.status ?? (current.status === "Aberta" ? "Em atendimento" : current.status);
     await db.update(adminDeskMessages).set({
       reply: input.reply,
@@ -90,6 +98,65 @@ export const deskRouter = router({
       previousState: { status: current.status },
       nextState: { status },
       detail: "Resposta do Super Admin no Canal Ojú.",
+    });
+    return { success: true };
+  }),
+
+  archive: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const current = await loadDeskMessage(db, input.id);
+    if (current.status === "Arquivada") return { success: true };
+    await db.update(adminDeskMessages).set({ status: "Arquivada" }).where(eq(adminDeskMessages.id, input.id));
+    await recordAuditEvent(db, {
+      actorId: ctx.user.id,
+      resourceType: "admin-desk",
+      resourceId: input.id,
+      action: "desk-message-archived",
+      previousState: { status: current.status },
+      nextState: { status: "Arquivada" },
+      detail: "Mensagem arquivada no Canal Ojú.",
+    });
+    return { success: true };
+  }),
+
+  unarchive: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const current = await loadDeskMessage(db, input.id);
+    if (current.status !== "Arquivada") return { success: true };
+    const status = current.reply?.trim() ? "Resolvida" : "Aberta";
+    await db.update(adminDeskMessages).set({ status }).where(eq(adminDeskMessages.id, input.id));
+    await recordAuditEvent(db, {
+      actorId: ctx.user.id,
+      resourceType: "admin-desk",
+      resourceId: input.id,
+      action: "desk-message-unarchived",
+      previousState: { status: current.status },
+      nextState: { status },
+      detail: "Mensagem desarquivada no Canal Ojú.",
+    });
+    return { success: true };
+  }),
+
+  remove: protectedProcedure.input(z.object({
+    id: z.number().int().positive(),
+    confirmation: z.string().trim().min(1).max(180),
+  })).mutation(async ({ ctx, input }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const current = await loadDeskMessage(db, input.id);
+    if (!confirmPhrasesMatch(current.subject, input.confirmation)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Digite o assunto da mensagem para confirmar a exclusão." });
+    }
+    await db.delete(adminDeskMessages).where(eq(adminDeskMessages.id, input.id));
+    await recordAuditEvent(db, {
+      actorId: ctx.user.id,
+      resourceType: "admin-desk",
+      resourceId: input.id,
+      action: "desk-message-deleted",
+      previousState: { status: current.status, subject: current.subject },
+      detail: "Mensagem excluída do Canal Ojú.",
     });
     return { success: true };
   }),

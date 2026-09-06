@@ -911,7 +911,7 @@ export const communityCareRequests = mysqlTable("communityCareRequests", {
 ]);
 
 export const adminDeskCategories = ["Dúvida", "Erro", "Estabilidade", "Outro"] as const;
-export const adminDeskStatuses = ["Aberta", "Em atendimento", "Resolvida"] as const;
+export const adminDeskStatuses = ["Aberta", "Em atendimento", "Resolvida", "Arquivada"] as const;
 
 export const adminDeskMessages = mysqlTable("adminDeskMessages", {
   id: int("id").autoincrement().primaryKey(),

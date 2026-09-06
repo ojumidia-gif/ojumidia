@@ -31,5 +31,11 @@ describe("guia e Canal Ojú", () => {
     expect(bot).toContain('user?.role === "administrador principal"');
     const canal = readFileSync(resolve(process.cwd(), "client/src/pages/admin/CanalOjuAdmin.tsx"), "utf8");
     expect(canal).toContain("Ojú Bot é só para admin comum");
+    expect(canal).toContain("Arquivar");
+    expect(canal).toContain("Excluir");
+    expect(canal).toContain("Desarquivar");
+    expect(desk).toContain("desk-message-archived");
+    expect(desk).toContain("desk-message-deleted");
+    expect(schema).toContain('adminDeskStatuses = ["Aberta", "Em atendimento", "Resolvida", "Arquivada"]');
   });
 });
