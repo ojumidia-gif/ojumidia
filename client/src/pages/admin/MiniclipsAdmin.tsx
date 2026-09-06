@@ -23,10 +23,11 @@ function ProductionMiniclipsDesk() {
   const partner = context.data?.scope === "partner" ? context.data.partners[0] : null;
   const { data: clips, isLoading } = trpc.media.eligibleMiniclips.useQuery(undefined, { refetchInterval: 5000 });
   const stage = useMediaStage("miniclipe");
-  const [origin, setOrigin] = useState("");
-  const [credit, setCredit] = useState("");
+  const [origin, setOrigin] = useState("Operação Ojú");
+  const [credit, setCredit] = useState("Equipe Ojú");
   const [uploading, setUploading] = useState(false);
   const create = trpc.media.create.useMutation({ onError: error => toast.error(error.message) });
+  const approve = trpc.media.approveUpload.useMutation({ onError: error => toast.error(error.message) });
 
   async function upload(event: React.FormEvent) {
     event.preventDefault();
@@ -37,7 +38,7 @@ function ProductionMiniclipsDesk() {
     try {
       const uploaded = item.status === "Pronto" && item.result ? item.result : await stage.uploadOne(item, { partnerId: partner?.partnerId, territoryId: partner?.territories[0]?.id });
       if (!uploaded.durationSeconds) throw new Error("Não foi possível confirmar a duração do miniclipe.");
-      await create.mutateAsync({
+      const created = await create.mutateAsync({
         mediaType: "vídeo",
         assetUrl: uploaded.url,
         storageKey: uploaded.key,
@@ -53,7 +54,8 @@ function ProductionMiniclipsDesk() {
         partnerId: partner?.partnerId,
         territoryId: partner?.territories[0]?.id,
       });
-      toast.success("Miniclipe no Acervo. Ligue-o à contratação em Pedidos. A Home nacional continua com o Super Admin.");
+      await approve.mutateAsync({ id: created.id });
+      toast.success("Miniclipe no Acervo. Ligue-o em Pedidos. A Home continua com o Super Admin.");
       stage.clear();
       setOrigin("");
       setCredit("");
@@ -74,7 +76,7 @@ function ProductionMiniclipsDesk() {
           <div className="rounded-xl bg-[#f6d978] p-3"><Film className="h-5 w-5" /></div>
           <div>
             <p className="font-serif text-2xl">Enviar miniclipe</p>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-[#655e52]">Crédito e autorização entram com o arquivo. Depois, em Pedidos, defina o miniclip ativo da contratação.</p>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[#655e52]">Crédito já vem como Equipe Ojú. Depois, em Pedidos, defina o miniclipe da contratação.</p>
           </div>
         </div>
         <form onSubmit={upload} className="mt-6 grid gap-4 md:grid-cols-2">

@@ -6,7 +6,7 @@ export const siteDestinations = [
     adminHref: "/admin/publicacoes?tipo=História",
     action: "editorial" as const,
     contentKind: "História" as const,
-    how: "Crie, revise, aprove e publique. Aparece em Histórias.",
+    how: "Crie, complete texto e capa, publique no site. Aparece em Histórias.",
   },
   {
     id: "coberturas",
@@ -15,7 +15,7 @@ export const siteDestinations = [
     adminHref: "/admin/publicacoes?tipo=Cobertura",
     action: "editorial" as const,
     contentKind: "Cobertura" as const,
-    how: "Crie, vincule fotos, revise, aprove e publique. Aparece em Coberturas.",
+    how: "Crie, ligue fotos e território, publique no site. Aparece em Coberturas.",
   },
   {
     id: "documentarios",
@@ -24,7 +24,7 @@ export const siteDestinations = [
     adminHref: "/admin/publicacoes?tipo=Documentário",
     action: "editorial" as const,
     contentKind: "Documentário" as const,
-    how: "Crie, adicione materiais, revise, aprove e publique. Aparece em Documentários.",
+    how: "Crie, adicione materiais, publique no site. Aparece em Documentários.",
   },
   {
     id: "projetos",
@@ -33,7 +33,7 @@ export const siteDestinations = [
     adminHref: "/admin/publicacoes?tipo=Projeto",
     action: "editorial" as const,
     contentKind: "Projeto" as const,
-    how: "Crie o rascunho, complete texto e fotos, envie para revisão, aprove e publique em Projetos.",
+    how: "Crie, complete texto e fotos, publique no site. Aparece em Projetos.",
   },
   {
     id: "fotografia-documental",
@@ -42,7 +42,7 @@ export const siteDestinations = [
     adminHref: "/admin/publicacoes?tipo=Fotografia%20documental",
     action: "editorial" as const,
     contentKind: "Fotografia documental" as const,
-    how: "Crie a coleção, ligue o território, anexe até 5 fotos com data, local e biografia, revise e publique.",
+    how: "Crie, ligue o território, anexe até 5 fotos e publique no site.",
   },
   {
     id: "territorios",
@@ -51,7 +51,7 @@ export const siteDestinations = [
     adminHref: "/admin/territorios",
     action: "link" as const,
     contentKind: null,
-    how: "Cadastre o território, a visibilidade no mapa e publique conteúdos ligados a ele.",
+    how: "Cadastre o território e ligue conteúdos. Visibilidade no mapa é opcional.",
   },
   {
     id: "fotografos",
@@ -60,7 +60,7 @@ export const siteDestinations = [
     adminHref: "/admin/fotografos",
     action: "link" as const,
     contentKind: null,
-    how: "Cadastre a ficha, marque visível no portal. O crédito nas fotos continua valendo mesmo sem ficha pública.",
+    how: "Cadastre nome e apresentação. Publique no site. Crédito nas fotos vale mesmo sem ficha.",
   },
   {
     id: "instituicoes",
@@ -69,7 +69,7 @@ export const siteDestinations = [
     adminHref: "/admin/comunidade?aba=instituicoes",
     action: "link" as const,
     contentKind: null,
-    how: "Crie o perfil, registre o consentimento e clique em Publicar.",
+    how: "Crie o perfil com consentimento e clique em Publicar no site.",
   },
   {
     id: "agenda",
@@ -78,7 +78,7 @@ export const siteDestinations = [
     adminHref: "/admin/comunidade?aba=agenda",
     action: "link" as const,
     contentKind: null,
-    how: "Crie o encontro, confirme a autorização e publique na Agenda.",
+    how: "Crie o encontro, autorize e publique na Agenda.",
   },
   {
     id: "memorias",
@@ -87,7 +87,7 @@ export const siteDestinations = [
     adminHref: "/admin/comunidade?aba=memorias",
     action: "link" as const,
     contentKind: null,
-    how: "Registre a memória oral com consentimento e publique.",
+    how: "Registre com consentimento e publique no site.",
   },
   {
     id: "acervo",
@@ -96,7 +96,7 @@ export const siteDestinations = [
     adminHref: "/admin/midias",
     action: "link" as const,
     contentKind: null,
-    how: "Envie fotos e vídeos no Acervo. O que estiver autorizado e ligado a conteúdo publicado entra no portal.",
+    how: "Envie com crédito e autorização. O site usa o que estiver ligado a conteúdo publicado.",
   },
 ] as const;
 

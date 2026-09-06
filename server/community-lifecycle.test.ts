@@ -31,7 +31,9 @@ describe("ciclo administrativo comunitário", () => {
 
   it("expõe as ações de ciclo nos cartões das três frentes comunitárias", () => {
     expect(panel).toContain("CommunityLifecycleActions");
-    expect(actions).toContain("Despublicar");
+    expect(actions).toContain("Tirar do ar");
+    expect(actions).toContain("Autorizar e publicar");
+    expect(actions).toContain("Publicar no site");
     expect(actions).toContain("Arquivar");
     expect(actions).toContain("Excluir");
     expect(actions).toContain("Restaurar");

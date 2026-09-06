@@ -25,18 +25,22 @@ export function CommunityLifecycleActions({ kind, record, isPrincipal, onEdit }:
   const utils = trpc.useUtils();
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [note, setNote] = useState("");
-  const refresh = () => { utils.community.listInstitutions.invalidate(); utils.community.listEvents.invalidate(); utils.community.listMemories.invalidate(); };
+  const [publishing, setPublishing] = useState(false);
+  const refresh = () => { utils.community.listInstitutions.invalidate(); utils.community.listEvents.invalidate(); utils.community.listMemories.invalidate(); utils.community.publicInstitutions.invalidate(); utils.community.publicEvents.invalidate(); utils.community.publicMemories.invalidate(); };
   const onSuccess = (message: string) => { toast.success(message); setConfirmTrash(false); setNote(""); refresh(); };
   const onError = (error: { message: string }) => { toast.error(error.message); };
-  const institutionStatus = trpc.community.setInstitutionStatus.useMutation({ onSuccess: () => onSuccess("Etapa do perfil atualizada."), onError });
-  const eventStatus = trpc.community.setEventStatus.useMutation({ onSuccess: () => onSuccess("Etapa do evento atualizada."), onError });
-  const memoryStatus = trpc.community.setMemoryStatus.useMutation({ onSuccess: () => onSuccess("Etapa da memória atualizada."), onError });
-  const trashInstitution = trpc.community.trashInstitution.useMutation({ onSuccess: () => onSuccess("Perfil enviado à lixeira comunitária."), onError });
-  const trashEvent = trpc.community.trashEvent.useMutation({ onSuccess: () => onSuccess("Evento enviado à lixeira comunitária."), onError });
-  const trashMemory = trpc.community.trashMemory.useMutation({ onSuccess: () => onSuccess("Memória enviada à lixeira comunitária."), onError });
-  const restoreInstitution = trpc.community.restoreInstitution.useMutation({ onSuccess: () => onSuccess("Perfil restaurado como rascunho."), onError });
-  const restoreEvent = trpc.community.restoreEvent.useMutation({ onSuccess: () => onSuccess("Evento restaurado como rascunho."), onError });
-  const restoreMemory = trpc.community.restoreMemory.useMutation({ onSuccess: () => onSuccess("Memória restaurada como rascunho."), onError });
+  const institutionStatus = trpc.community.setInstitutionStatus.useMutation({ onSuccess: () => onSuccess("Atualizado."), onError });
+  const eventStatus = trpc.community.setEventStatus.useMutation({ onSuccess: () => onSuccess("Atualizado."), onError });
+  const memoryStatus = trpc.community.setMemoryStatus.useMutation({ onSuccess: () => onSuccess("Atualizado."), onError });
+  const updateInstitution = trpc.community.updateInstitution.useMutation({ onError });
+  const updateEvent = trpc.community.updateEvent.useMutation({ onError });
+  const updateMemory = trpc.community.updateMemory.useMutation({ onError });
+  const trashInstitution = trpc.community.trashInstitution.useMutation({ onSuccess: () => onSuccess("Na lixeira."), onError });
+  const trashEvent = trpc.community.trashEvent.useMutation({ onSuccess: () => onSuccess("Na lixeira."), onError });
+  const trashMemory = trpc.community.trashMemory.useMutation({ onSuccess: () => onSuccess("Na lixeira."), onError });
+  const restoreInstitution = trpc.community.restoreInstitution.useMutation({ onSuccess: () => onSuccess("Restaurado."), onError });
+  const restoreEvent = trpc.community.restoreEvent.useMutation({ onSuccess: () => onSuccess("Restaurado."), onError });
+  const restoreMemory = trpc.community.restoreMemory.useMutation({ onSuccess: () => onSuccess("Restaurado."), onError });
   const deleted = Boolean(record.deletedAt);
   const title = record.title || record.name || labels[kind];
   const setStatus = (status: "Rascunho" | "Publicada" | "Arquivada") => {
@@ -44,6 +48,21 @@ export function CommunityLifecycleActions({ kind, record, isPrincipal, onEdit }:
     if (kind === "instituicao") institutionStatus.mutate(payload);
     if (kind === "evento") eventStatus.mutate(payload);
     if (kind === "memoria") memoryStatus.mutate(payload);
+  };
+  const goLive = async () => {
+    setPublishing(true);
+    try {
+      if (record.consentStatus !== "Autorizado") {
+        if (kind === "instituicao") await updateInstitution.mutateAsync({ id: record.id, consentStatus: "Autorizado" });
+        if (kind === "evento") await updateEvent.mutateAsync({ id: record.id, consentStatus: "Autorizado" });
+        if (kind === "memoria") await updateMemory.mutateAsync({ id: record.id, consentStatus: "Autorizado" });
+      }
+      setStatus("Publicada");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível publicar.");
+    } finally {
+      setPublishing(false);
+    }
   };
   const trash = () => {
     const payload = { id: record.id, note: note.trim() };
@@ -57,8 +76,9 @@ export function CommunityLifecycleActions({ kind, record, isPrincipal, onEdit }:
     if (kind === "evento") restoreEvent.mutate(payload);
     if (kind === "memoria") restoreMemory.mutate(payload);
   };
+  const busy = publishing || institutionStatus.isPending || eventStatus.isPending || memoryStatus.isPending || updateInstitution.isPending || updateEvent.isPending || updateMemory.isPending;
 
-  if (deleted) return <div className="mt-4 border-t border-[#242017]/10 pt-4"><p className="mb-3 text-xs text-[#8b4d24]">Na lixeira editorial. Não aparece nas consultas públicas.</p>{isPrincipal && <Button variant="outline" size="sm" onClick={restore}><RotateCcw className="mr-1 h-3.5 w-3.5" />Restaurar</Button>}</div>;
+  if (deleted) return <div className="mt-4 border-t border-[#242017]/10 pt-4"><p className="mb-3 text-xs text-[#8b4d24]">Na lixeira. Fora do site.</p>{isPrincipal && <Button variant="outline" size="sm" onClick={restore}><RotateCcw className="mr-1 h-3.5 w-3.5" />Restaurar</Button>}</div>;
 
-  return <div className="mt-4 border-t border-[#242017]/10 pt-4"><p className="mb-3 text-xs text-[#655e52]">{communityNextStep(record.consentStatus, record.status).hint}</p><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={onEdit}><FilePenLine className="mr-1 h-3.5 w-3.5" />Editar</Button>{record.status === "Publicada" ? <Button variant="outline" size="sm" onClick={() => setStatus("Rascunho")}>Despublicar</Button> : <Button variant="outline" size="sm" disabled={record.consentStatus !== "Autorizado"} title={record.consentStatus !== "Autorizado" ? "A publicação exige consentimento autorizado." : undefined} onClick={() => setStatus("Publicada")}><Send className="mr-1 h-3.5 w-3.5" />Publicar</Button>}{record.status !== "Arquivada" && <Button variant="outline" size="sm" onClick={() => setStatus("Arquivada")}><Archive className="mr-1 h-3.5 w-3.5" />Arquivar</Button>}{isPrincipal && <Button variant="outline" size="sm" className="border-[#8b4d24] text-[#8b4d24]" onClick={() => setConfirmTrash(true)}><Trash2 className="mr-1 h-3.5 w-3.5" />Excluir</Button>}</div>{record.consentStatus !== "Autorizado" && <p className="mt-2 text-xs text-[#8b4d24]">Aguardando consentimento autorizado para publicação.</p>}<AlertDialog open={confirmTrash} onOpenChange={open => { setConfirmTrash(open); if (!open) setNote(""); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Enviar para a lixeira comunitária?</AlertDialogTitle><AlertDialogDescription>“{title}” será imediatamente retirado das experiências públicas. Consentimentos, mídia e histórico serão preservados.</AlertDialogDescription></AlertDialogHeader><label className="grid gap-2 text-sm font-medium">Motivo da exclusão<Textarea value={note} onChange={event => setNote(event.target.value)} placeholder="Ex.: autorização retirada, informação substituída ou correção editorial." /></label><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={note.trim().length < 3} className="bg-[#8b4d24] text-white hover:bg-[#723b1a]" onClick={event => { event.preventDefault(); trash(); }}>Excluir do diretório</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>;
+  return <div className="mt-4 border-t border-[#242017]/10 pt-4"><p className="mb-3 text-xs text-[#655e52]">{communityNextStep(record.consentStatus, record.status).hint}</p><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={onEdit}><FilePenLine className="mr-1 h-3.5 w-3.5" />Editar</Button>{record.status === "Publicada" ? <Button variant="outline" size="sm" onClick={() => setStatus("Rascunho")}>Tirar do ar</Button> : <Button size="sm" className="bg-[#242017] text-white" disabled={busy} onClick={() => void goLive()}><Send className="mr-1 h-3.5 w-3.5" />{record.consentStatus !== "Autorizado" ? "Autorizar e publicar" : "Publicar no site"}</Button>}{record.status !== "Arquivada" && <Button variant="ghost" size="sm" onClick={() => setStatus("Arquivada")}><Archive className="mr-1 h-3.5 w-3.5" />Arquivar</Button>}{isPrincipal && <Button variant="outline" size="sm" className="border-[#8b4d24] text-[#8b4d24]" onClick={() => setConfirmTrash(true)}><Trash2 className="mr-1 h-3.5 w-3.5" />Excluir</Button>}</div><AlertDialog open={confirmTrash} onOpenChange={open => { setConfirmTrash(open); if (!open) setNote(""); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Enviar para a lixeira?</AlertDialogTitle><AlertDialogDescription>“{title}” sai do diretório público.</AlertDialogDescription></AlertDialogHeader><label className="grid gap-2 text-sm font-medium">Motivo<Textarea value={note} onChange={event => setNote(event.target.value)} /></label><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={note.trim().length < 3} className="bg-[#8b4d24] text-white hover:bg-[#723b1a]" onClick={event => { event.preventDefault(); trash(); }}>Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></div>;
 }

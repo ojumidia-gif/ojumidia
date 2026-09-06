@@ -40,13 +40,13 @@ export function mediaSiteGaps(item: { credit?: string | null; publicationAllowed
   if (!item.credit?.trim()) gaps.push("Falta crédito.");
   if (item.authorization === "Pendente") gaps.push("Autorização pendente.");
   if (!item.publicationAllowed) gaps.push("Publicação no portal ainda não permitida.");
-  if (item.uploadStatus === "Pronto") gaps.push("Aprovar para revisão editorial.");
+  if (item.uploadStatus === "Pronto") gaps.push("Aprovar para ligar ao conteúdo.");
   return gaps;
 }
 
 export function communityNextStep(consentStatus: string, status: string) {
-  if (consentStatus !== "Autorizado") return { label: "Registrar consentimento", hint: "Próximo passo: registrar o consentimento autorizado." };
-  if (status !== "Publicada") return { label: "Publicar no site", hint: "Próximo passo: publicar no site." };
+  if (consentStatus !== "Autorizado") return { label: "Registrar consentimento", hint: "No card: Autorizar e publicar no site." };
+  if (status !== "Publicada") return { label: "Publicar no site", hint: "No card: Publicar no site." };
   return { label: "No site", hint: "No site, com autorização." };
 }
 

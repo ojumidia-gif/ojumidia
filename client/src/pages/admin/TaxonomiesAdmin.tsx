@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Edit3, FolderOpen, ImagePlus, MapPinned, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -28,23 +28,24 @@ export default function TaxonomiesAdmin() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [mediaTargetId, setMediaTargetId] = useState<number | null>(null);
   const { data: linked } = trpc.editorial.taxonomyRelations.useQuery({ id: selectedId || 0 }, { enabled: Boolean(selectedId) });
-  const create = trpc.editorial.createTaxonomy.useMutation({ onSuccess: () => { toast.success("Item cadastrado. Agora você pode adicionar relações, imagem ou vídeo."); reset(); utils.editorial.taxonomies.invalidate(); }, onError: error => toast.error(error.message) });
+  const create = trpc.editorial.createTaxonomy.useMutation({ onSuccess: () => { toast.success(territoriesFocus ? "Território cadastrado. Ligue-o nas publicações." : "Item cadastrado."); reset(); utils.editorial.taxonomies.invalidate(); }, onError: error => toast.error(error.message) });
   const update = trpc.editorial.updateTaxonomy.useMutation({ onSuccess: () => { toast.success("Item atualizado."); reset(); utils.editorial.taxonomies.invalidate(); }, onError: error => toast.error(error.message) });
   const remove = trpc.editorial.removeTaxonomy.useMutation({ onSuccess: () => { toast.success("Item removido. Os conteúdos permanecem preservados, apenas sem este vínculo."); utils.editorial.taxonomies.invalidate(); setSelectedId(null); setMediaTargetId(null); }, onError: error => toast.error(error.message) });
   const reset = () => { setEditingId(null); setName(""); setDescription(""); setParentId(""); setLatitude(""); setLongitude(""); setMapVisibility("Não divulgar"); };
-  const startNew = (nextDimension: Dimension) => { setDimension(nextDimension); reset(); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const grouped = dimensions.map(item => [item, data?.filter(entry => entry.dimension === item) || []] as const);
+  const startNew = (nextDimension: Dimension) => { setDimension(territoriesFocus ? "Território" : nextDimension); reset(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const grouped = (territoriesFocus ? (["Território"] as const) : dimensions).map(item => [item, data?.filter(entry => entry.dimension === item) || []] as const);
+  useEffect(() => { if (territoriesFocus) setDimension("Território"); }, [territoriesFocus]);
   const parents = data?.filter(item => item.id !== editingId && item.dimension === dimension) || [];
   const mediaTarget = data?.find(item => item.id === mediaTargetId);
   const edit = (item: NonNullable<typeof data>[number]) => { setEditingId(item.id); setDimension(item.dimension as Dimension); setName(item.name); setDescription(item.description || ""); setParentId(item.parentId ? String(item.parentId) : ""); setLatitude(item.latitude ? String(item.latitude) : ""); setLongitude(item.longitude ? String(item.longitude) : ""); setMapVisibility(item.mapVisibility as typeof mapVisibility); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   return <AdminPage eyebrow={territoriesFocus ? "Portal → Territórios" : "Territórios e taxonomias"} title={territoriesFocus ? "Cadastrar, editar e publicar no mapa." : "Criar, relacionar e documentar."} action={null}>
-    {territoriesFocus ? <p className="-mt-4 mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">Territórios com visibilidade autorizada aparecem em /territorios. Depois de cadastrar, relacione histórias e coberturas pelo painel de relações do conteúdo.</p> : null}
+    {territoriesFocus ? <p className="-mt-4 mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">Cadastre o território. Depois ligue histórias e coberturas no conteúdo. Visibilidade no mapa é opcional e só com autorização da casa.</p> : null}
     {territoriesFocus ? <div className="mb-6"><SiteReadiness items={(data || []).filter(item => item.dimension === "Território" && item.mapVisibility === "Não divulgar").map(item => `${item.name} ainda fora de /territorios.`)} readyText="Os territórios com visibilidade autorizada já podem aparecer no mapa do portal." /></div> : null}
     <section className="admin-card p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-serif text-2xl">{editingId ? `Editar ${dimension}` : `Cadastrar ${dimension}`}</p><p className="mt-2 max-w-3xl text-sm leading-6 text-[#655e52]">Comece escolhendo a dimensão. Depois de salvar, o item ganha ações diretas para editar, relacionar Coberturas e adicionar imagem ou vídeo com crédito.</p></div>{editingId && <Button variant="outline" size="sm" onClick={reset}><X className="mr-1 h-3.5 w-3.5" />Cancelar edição</Button>}</div>
+      <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-serif text-2xl">{editingId ? `Editar ${dimension}` : `Cadastrar ${dimension}`}</p><p className="mt-2 max-w-3xl text-sm leading-6 text-[#655e52]">{territoriesFocus ? "Nome basta para ligar publicações. Mapa só com autorização." : "Escolha a dimensão, salve, depois relacione conteúdos ou adicione mídia."}</p></div>{editingId && <Button variant="outline" size="sm" onClick={reset}><X className="mr-1 h-3.5 w-3.5" />Cancelar edição</Button>}</div>
       <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={event => { event.preventDefault(); const mapData = dimension === "Território" ? { latitude: latitude || undefined, longitude: longitude || undefined, mapVisibility } : {}; if (editingId) update.mutate({ id: editingId, name, description: description || null, parentId: parentId ? Number(parentId) : null, ...mapData }); else create.mutate({ dimension, name, description: description || undefined, parentId: parentId ? Number(parentId) : undefined, ...mapData }); }}>
-        <label className="grid gap-2 text-sm font-medium">O que você está cadastrando?<select disabled={Boolean(editingId)} value={dimension} onChange={event => { setDimension(event.target.value as Dimension); setParentId(""); }} className="h-10 rounded-md border bg-white px-3 disabled:opacity-60">{dimensions.map(item => <option key={item}>{item}</option>)}</select></label>
+        <label className="grid gap-2 text-sm font-medium">O que você está cadastrando?<select disabled={Boolean(editingId) || territoriesFocus} value={dimension} onChange={event => { setDimension(event.target.value as Dimension); setParentId(""); }} className="h-10 rounded-md border bg-white px-3 disabled:opacity-60">{dimensions.map(item => <option key={item}>{item}</option>)}</select></label>
         <label className="grid gap-2 text-sm font-medium">Nome<Input required minLength={2} value={name} onChange={event => setName(event.target.value)} placeholder={`Nome de ${dimension.toLowerCase()}`} /></label>
         <label className="grid gap-2 text-sm font-medium">Relacionado a <span className="font-normal text-[#655e52]">(opcional)</span><select value={parentId} onChange={event => setParentId(event.target.value)} className="h-10 rounded-md border bg-white px-3"><option value="">Sem relação superior</option>{parents.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
         <label className="grid gap-2 text-sm font-medium">Descrição ou contexto <span className="font-normal text-[#655e52]">(opcional)</span><Textarea value={description} onChange={event => setDescription(event.target.value)} placeholder="Explique como este item deve aparecer e ser encontrado no acervo." /></label>

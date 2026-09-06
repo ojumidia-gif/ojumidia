@@ -64,8 +64,8 @@ export function CoverageMediaPanel({
   const utils = trpc.useUtils();
   const { data: library } = trpc.media.list.useQuery();
   const stage = useMediaStage();
-  const [origin, setOrigin] = useState("");
-  const [credit, setCredit] = useState("");
+  const [origin, setOrigin] = useState("Operação Ojú");
+  const [credit, setCredit] = useState("Equipe Ojú");
   const [purpose, setPurpose] = useState(
     documentaryPhotos
       ? "Fotografia documental"
@@ -324,7 +324,7 @@ export function CoverageMediaPanel({
           onChange={(event) =>
             setCaption(event.target.value)
           }
-          placeholder="Ex.: Mãe Oci de Iemanjá homenageada"
+          placeholder="Ex.: retrato autorizado no terreiro"
         />
       </label>
 
