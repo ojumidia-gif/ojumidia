@@ -16,7 +16,7 @@ export function OjuMethod({ compact = false }: { compact?: boolean }) {
             <h2 className="mt-3 max-w-lg font-serif text-3xl leading-[.98] sm:text-4xl">{content.title}</h2>
             <p className="mt-4 max-w-lg text-sm leading-6 text-white/65">{content.description}</p>
           </div>
-          <ol className={`grid gap-px border border-white/10 bg-white/10 ${compact ? "sm:grid-cols-5" : "sm:grid-cols-3 lg:grid-cols-5"}`}>
+          <ol className={`grid gap-px border border-white/10 bg-white/10 ${compact ? "sm:grid-cols-2 xl:grid-cols-5" : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"}`}>
             {content.items.map((step, index) => {
               const Icon = icons[index];
               return (

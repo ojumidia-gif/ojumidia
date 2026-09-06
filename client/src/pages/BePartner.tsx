@@ -34,7 +34,7 @@ export default function BePartner() {
     <div className="min-h-screen overflow-x-hidden bg-[#070605] text-white">
       <PageMeta title="Ser Parceiro Ojú" description="Quem documenta no território pode pedir para operar com a Ojú. O acesso de criador parceiro só existe depois de conversa com a Equipe Ojú." />
       <PublicHeader cinematic />
-      <main className="container grid gap-12 pb-20 pt-32 lg:grid-cols-[1.05fr_.95fr]">
+      <main className="container grid gap-10 pb-20 pt-28 sm:gap-12 sm:pt-32 lg:grid-cols-[1.05fr_.95fr]">
         <section>
           <Handshake className="h-8 w-8 text-[#ef9e59]" />
           <p className="mt-8 text-[10px] font-bold uppercase tracking-[.16em] text-[#ef9e59]">Parceiro Ojú</p>

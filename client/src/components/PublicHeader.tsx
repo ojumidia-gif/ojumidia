@@ -133,7 +133,7 @@ export function PublicHeader({
                 </div>
               </div>
             ))}
-            {rest.length ? <div className="grid grid-cols-2 gap-1 text-xs font-bold uppercase tracking-[.08em]">{rest.map(item => <Link key={item.href} href={item.href} onClick={close} className="rounded px-2 py-3 hover:text-[#ed9c58]">{item.label}</Link>)}</div> : null}
+            {rest.length ? <div className="grid grid-cols-1 gap-1 text-sm font-semibold min-[420px]:grid-cols-2">{rest.map(item => <Link key={item.href} href={item.href} onClick={close} className="rounded px-2 py-3 hover:text-[#ed9c58]">{item.label}</Link>)}</div> : null}
           </div>
         </nav>
       )}

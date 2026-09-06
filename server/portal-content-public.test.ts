@@ -10,6 +10,6 @@ describe("conteúdo institucional administrável", () => {
     expect(method).toContain('usePortalContent("Global")');
     expect(services).toContain('usePortalContent("Serviços")');
     expect(home).toContain('usePortalContent("Home")');
-    expect(method).toContain("sm:grid-cols-5");
+    expect(method).toContain("xl:grid-cols-5");
   });
 });

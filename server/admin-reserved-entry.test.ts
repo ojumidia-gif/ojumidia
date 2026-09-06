@@ -10,8 +10,8 @@ describe("ingresso administrativo reservado", () => {
     expect(home).toContain('setLocation("/admin")');
     expect(home).toContain("onBrandClick={signalAdminEntry}");
     expect(footer).toContain("FooterMark onClick={onBrandClick}");
+    expect(footer).toContain("public-footer-nav");
     expect(footer).toContain("flex-col items-center");
-    expect(footer).toContain("justify-center");
     expect(home).not.toContain("Área administrativa");
   });
 });

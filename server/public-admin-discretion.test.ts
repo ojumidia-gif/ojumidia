@@ -7,7 +7,7 @@ describe("discrição do Centro Administrativo", () => {
     const css = readFileSync(resolve(process.cwd(), "client/src/index.css"), "utf8");
     const home = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
     expect(css).toContain('a[href="/admin"] { display: none !important; }');
-    expect(css).toContain("p.absolute.bottom-7.right-7 { display: none; }");
+    expect(css).toContain(".hero-admin-hint { display: none; }");
     expect(home).not.toContain('href="/admin"');
   });
 });
