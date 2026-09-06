@@ -14,6 +14,7 @@ import {
 } from "../drizzle/schema";
 import { getDb } from "./db";
 import { recordAuditEvent } from "./partnerScope";
+import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { storageDeleteConfirmed, storageInspect, type StorageInspectResult } from "./storage";
 
 type Database = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -99,8 +100,8 @@ export function uploadSessionCleanupClass(session: Pick<UploadRow, "status" | "c
 }
 
 export function confirmationMatchesMedia(media: Pick<MediaRow, "id" | "filename">, confirmation: string) {
-  const expected = (media.filename?.trim() || `mídia #${media.id}`).toLocaleLowerCase("pt-BR");
-  return confirmation.trim().toLocaleLowerCase("pt-BR") === expected;
+  const expected = media.filename?.trim() || `mídia #${media.id}`;
+  return confirmPhrasesMatch(expected, confirmation);
 }
 
 export async function collectMediaUsages(db: Database, mediaId: number): Promise<MediaUsage[]> {

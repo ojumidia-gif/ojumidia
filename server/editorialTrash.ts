@@ -1,5 +1,8 @@
 import { and, eq, isNotNull, lte, or } from "drizzle-orm";
 import {
+  advertisements,
+  communityEvents,
+  contracts,
   editorialActivities,
   highlightSuggestions,
   publicationMedia,
@@ -71,6 +74,25 @@ export async function permanentlyPurgePublication(
     .where(eq(highlightSuggestions.publicationId, publication.id));
 
   await db
+    .delete(editorialActivities)
+    .where(eq(editorialActivities.publicationId, publication.id));
+
+  await db
+    .update(contracts)
+    .set({ publicationId: null })
+    .where(eq(contracts.publicationId, publication.id));
+
+  await db
+    .update(communityEvents)
+    .set({ publicationId: null })
+    .where(eq(communityEvents.publicationId, publication.id));
+
+  await db
+    .update(advertisements)
+    .set({ sourcePublicationId: null })
+    .where(eq(advertisements.sourcePublicationId, publication.id));
+
+  await db
     .delete(publications)
     .where(eq(publications.id, publication.id));
 }
@@ -101,14 +123,6 @@ export async function purgeExpiredEditorialTrash(
       actorId,
       "Expurgo automático após 24 horas na Lixeira Editorial.",
     );
-
-    await db.insert(editorialActivities).values({
-      publicationId: publication.id,
-      actorId,
-      fromStatus: "Arquivada",
-      toStatus: "Arquivada",
-      note: "Expurgo automático da Lixeira Editorial após o prazo de retenção.",
-    });
   }
 
   return {

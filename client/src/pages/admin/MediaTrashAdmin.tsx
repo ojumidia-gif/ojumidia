@@ -2,7 +2,8 @@ import { AlertTriangle, RotateCcw, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
@@ -51,16 +52,16 @@ export default function MediaTrashAdmin() {
         </section>
       ) : <EmptyAdmin text="Nenhuma mídia está na Lixeira. O Acervo ativo não lista exclusões lógicas." />}
       {target && principal ? (
-        <AlertDialog open onOpenChange={open => { if (!open) { setTarget(null); setConfirmation(""); } }}>
+        <AlertDialog open onOpenChange={open => { if (!open && !purge.isPending) { setTarget(null); setConfirmation(""); } }}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir definitivamente?</AlertDialogTitle>
               <AlertDialogDescription>Irreversível: some do Acervo, da Lixeira e do Tigris. Não haverá Restaurar. A Auditoria registra o evento, não o arquivo.</AlertDialogDescription>
             </AlertDialogHeader>
-            <label className="grid gap-2 text-sm font-medium">Digite o nome exato: <b>{expected}</b><Input value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="off" /></label>
+            <label className="grid gap-2 text-sm font-medium">Digite o nome para confirmar. Maiúsculas e acentos não impedem. <b>{expected}</b><Input value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="off" onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }} /></label>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction disabled={confirmation.trim().toLowerCase() !== expected.trim().toLowerCase() || purge.isPending} className="bg-[#8b4d24] text-white hover:bg-[#723b1a]" onClick={event => { event.preventDefault(); purge.mutate({ id: target.id, confirmation }); }}>{purge.isPending ? "Excluindo..." : "Excluir definitivamente"}</AlertDialogAction>
+              <AlertDialogCancel disabled={purge.isPending}>Cancelar</AlertDialogCancel>
+              <Button type="button" disabled={!confirmPhrasesMatch(expected, confirmation) || purge.isPending} className="bg-[#8b4d24] text-white hover:bg-[#723b1a]" onClick={() => purge.mutate({ id: target.id, confirmation })}>{purge.isPending ? "Excluindo..." : "Excluir definitivamente"}</Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

@@ -9,6 +9,7 @@ import { publishEditorialEvent } from "../editorialEvents";
 import { canUseCommercialLocation, canUseCommercialMedia, canUseCommercialNarrative, canUseOnPortal, type CommercialEditorialAuthorization } from "../commercialEditorialAuthorization";
 import { activePartnerMemberships, assertPartnerScope, authorizedTerritoryIdsForMembership, canAccessCentralPublication, partnerTerritoryIds, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 import { editorialTrashDeadline, isEditorialTrashExpired, permanentlyPurgePublication } from "../editorialTrash";
+import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { isHomeCurated, publicationIdsFullyInTerritoryScope, sortHomeCurated } from "../editorialScale";
 
 function slugify(value: string) {
@@ -763,8 +764,12 @@ export const editorialRouter = router({
     const db = await requireDb();
     const current = (await db.select().from(publications).where(eq(publications.id, input.id)).limit(1))[0];
     if (!current || !current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "Esta publicação não está disponível para expurgo definitivo." });
-    if (input.confirmation.trim().toLowerCase() !== current.title.trim().toLowerCase()) throw new TRPCError({ code: "BAD_REQUEST", message: "Digite o título exato da publicação para confirmar a exclusão definitiva." });
-    await permanentlyPurgePublication(db, current, ctx.user.id, "Expurgo definitivo confirmado manualmente pelo Super Admin na Lixeira Editorial.");
+    if (!confirmPhrasesMatch(current.title, input.confirmation)) throw new TRPCError({ code: "BAD_REQUEST", message: "Digite o título da publicação para confirmar a exclusão definitiva. Maiúsculas e acentos não impedem a confirmação." });
+    try {
+      await permanentlyPurgePublication(db, current, ctx.user.id, "Expurgo definitivo confirmado manualmente pelo Super Admin na Lixeira Editorial.");
+    } catch (error) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Não foi possível excluir definitivamente esta publicação." });
+    }
     publishEditorialEvent("publication-permanently-purged", input.id);
     return { success: true };
   }),
