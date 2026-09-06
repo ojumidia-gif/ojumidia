@@ -21,6 +21,8 @@ describe("inventário de rotas, menus e destinos", () => {
   it("declara as rotas públicas do menu, destinos, legais e CMS", () => {
     expect(paths).toContain("/termos-de-uso");
     expect(paths).toContain("/privacidade");
+    expect(paths).toContain("/ser-parceiro");
+    expect(paths).toContain("/admin/candidaturas");
     for (const dest of siteDestinations) {
       expect(paths).toContain(dest.publicHref);
       expect(paths).toContain(dest.adminHref.split("?")[0]);
@@ -34,6 +36,7 @@ describe("inventário de rotas, menus e destinos", () => {
     const policy = readFileSync(resolve(process.cwd(), "server/publicNavPolicy.ts"), "utf8");
     expect(policy).toContain('"/termos-de-uso"');
     expect(policy).toContain('"/privacidade"');
+    expect(policy).toContain('"/ser-parceiro"');
   });
 
   it("liga cada item do menu admin a uma rota existente", () => {

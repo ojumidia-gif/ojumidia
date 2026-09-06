@@ -28,6 +28,7 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
       { label: "Acervo", href: "/acervo", order: 11, active: true, featured: false },
       { label: "Serviços", href: "/servicos", order: 12, active: true, featured: false },
       { label: "Chamar a Ojú", href: "/planejar-um-registro", order: 13, active: true, featured: true },
+      { label: "Ser parceiro", href: "/ser-parceiro", order: 14, active: true, featured: false },
     ] },
   },
   {
@@ -35,7 +36,7 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
     sectionKey: "footer",
     label: "Rodapé",
     displayOrder: 20,
-    content: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Instagram", href: "https://instagram.com/oju.fotografia", external: true }], legalItems: [{ label: "Termos de uso", href: "/termos-de-uso" }, { label: "Privacidade e LGPD", href: "/privacidade" }, { label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
+    content: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Ser parceiro", href: "/ser-parceiro" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Instagram", href: "https://instagram.com/oju.fotografia", external: true }], legalItems: [{ label: "Termos de uso", href: "/termos-de-uso" }, { label: "Privacidade e LGPD", href: "/privacidade" }, { label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
   },
   {
     page: "Global",

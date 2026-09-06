@@ -11,6 +11,7 @@ import { activePartnerMemberships, assertPartnerScope, canAccessCentralPublicati
 import { editorialTrashDeadline, isEditorialTrashExpired, permanentlyPurgePublication } from "../editorialTrash";
 import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { isHomeCurated, sortHomeCurated } from "../editorialScale";
+import { groupDuplicateTeamIds, pickReusableTeam } from "@shared/teamCredits";
 
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -20,12 +21,19 @@ async function resolveTeamId(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   teamId?: number | null,
   teamCredit?: string | null,
+  createdBy?: number,
 ) {
-  if (teamId) return teamId;
+  if (teamId) {
+    const current = (await db.select().from(teams).where(eq(teams.id, teamId)).limit(1))[0];
+    if (current && !current.archivedAt) return current.id;
+  }
   const name = teamCredit?.trim();
   if (!name) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe ou selecione a equipe responsável." });
+  const catalog = await db.select().from(teams);
+  const reusable = pickReusableTeam(catalog, name);
+  if (reusable) return reusable.id;
   const slug = `${slugify(name)}-${Date.now().toString(36)}`;
-  const created = await db.insert(teams).values({ name, slug });
+  const created = await db.insert(teams).values({ name, slug, createdBy: createdBy ?? null });
   return Number(created[0].insertId);
 }
 
@@ -471,7 +479,7 @@ export const editorialRouter = router({
     }
     const base = slugify(input.title) || "publicacao";
     const slug = `${base}-${Date.now().toString(36)}`;
-    const teamId = await resolveTeamId(db, input.teamId, input.teamCredit);
+    const teamId = await resolveTeamId(db, input.teamId, input.teamCredit, ctx.user.id);
     const { teamCredit: _teamCredit, partnerId: _partnerId, territoryId: _territoryId, ...publicationInput } = input;
     const result = await db.insert(publications).values({ ...publicationInput, partnerId: scope.partnerId, photoLimit: input.contentKind === "Fotografia documental" ? 5 : (input.photoLimit ?? 5), videoLimit: input.contentKind === "Fotografia documental" ? 0 : (input.videoLimit ?? 2), teamId, slug, createdBy: ctx.user.id, status: "Rascunho", isPublic: false });
     const publicationId = Number(result[0].insertId);
@@ -491,7 +499,7 @@ export const editorialRouter = router({
     if (!canEditPublication(role, current[0].status as ContentStatus)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode editar nesta etapa." });
     const { id, taxonomyIds, expectedVersion, teamCredit, revisionNote, ...values } = input;
     if (current[0].version !== expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de salvar." });
-    const resolvedTeamId = teamCredit ? await resolveTeamId(db, values.teamId, teamCredit) : values.teamId;
+    const resolvedTeamId = teamCredit ? await resolveTeamId(db, values.teamId, teamCredit, ctx.user.id) : values.teamId;
     const updateValues: Partial<typeof publications.$inferInsert> = { ...values };
     let heldForEditorialAuthorization = false;
     if (updateValues.commercialRequestId !== undefined && updateValues.commercialRequestId !== null) {
@@ -888,17 +896,92 @@ export const editorialRouter = router({
     return { photographer, items, total, hasMore: input.offset + records.length < total };
   }),
 
-  teams: protectedProcedure.query(async () => {
+  teams: protectedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
-    return db.select().from(teams).orderBy(teams.name);
+    const rows = await db.select().from(teams).orderBy(teams.name);
+    const usageRows = await db.select({ teamId: publications.teamId }).from(publications).where(isNotNull(publications.teamId));
+    const used = new Map<number, number>();
+    for (const row of usageRows) {
+      if (!row.teamId) continue;
+      used.set(row.teamId, (used.get(row.teamId) || 0) + 1);
+    }
+    const principal = ctx.user.role === "administrador principal";
+    const myTeamIds = principal
+      ? new Set<number>()
+      : new Set((await db.select({ teamId: publications.teamId }).from(publications).where(and(eq(publications.createdBy, ctx.user.id), isNotNull(publications.teamId)))).map(row => row.teamId).filter((id): id is number => typeof id === "number"));
+    const visible = rows.filter(row => {
+      if (principal) return true;
+      if (row.archivedAt) return false;
+      return canAccessOwnOperatorRecord(ctx.user.role, ctx.user.id, row.createdBy) || myTeamIds.has(row.id);
+    });
+    return visible.map(row => ({ ...row, usageCount: used.get(row.id) || 0 }));
   }),
 
   createTeam: protectedProcedure.input(z.object({ name: z.string().min(2).max(160), description: z.string().max(1000).optional() })).mutation(async ({ ctx, input }) => {
     assertAdmin(ctx.user.role as EditorialRole);
     const db = await requireDb();
+    const catalog = await db.select().from(teams);
+    const reusable = pickReusableTeam(catalog, input.name);
+    if (reusable) return { id: reusable.id, reused: true };
     const slug = `${slugify(input.name)}-${Date.now().toString(36)}`;
-    const result = await db.insert(teams).values({ ...input, slug });
-    return { id: Number(result[0].insertId) };
+    const result = await db.insert(teams).values({ name: input.name.trim(), description: input.description, slug, createdBy: ctx.user.id });
+    return { id: Number(result[0].insertId), reused: false };
+  }),
+
+  archiveTeam: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    assertAdmin(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const current = (await db.select().from(teams).where(eq(teams.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Equipe não encontrada." });
+    if (ctx.user.role !== "administrador principal" && !canAccessOwnOperatorRecord(ctx.user.role, ctx.user.id, current.createdBy)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Esta equipe é de outro admin." });
+    }
+    await db.update(teams).set({ archivedAt: new Date(), archivedBy: ctx.user.id }).where(eq(teams.id, input.id));
+    await recordAuditEvent(db, { actorId: ctx.user.id, resourceType: "team", resourceId: input.id, action: "team-archived", previousState: { name: current.name }, detail: "Equipe arquivada. Matérias que já usam este crédito preservam o nome." });
+    return { success: true };
+  }),
+
+  restoreTeam: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    assertPrincipal(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const current = (await db.select().from(teams).where(eq(teams.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Equipe não encontrada." });
+    await db.update(teams).set({ archivedAt: null, archivedBy: null }).where(eq(teams.id, input.id));
+    await recordAuditEvent(db, { actorId: ctx.user.id, resourceType: "team", resourceId: input.id, action: "team-restored", detail: "Equipe restaurada para novos créditos." });
+    return { success: true };
+  }),
+
+  removeTeam: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    assertAdmin(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const current = (await db.select().from(teams).where(eq(teams.id, input.id)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Equipe não encontrada." });
+    if (ctx.user.role !== "administrador principal" && !canAccessOwnOperatorRecord(ctx.user.role, ctx.user.id, current.createdBy)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Esta equipe é de outro admin." });
+    }
+    const used = await db.select({ value: count() }).from(publications).where(eq(publications.teamId, input.id));
+    if (Number(used[0]?.value || 0) > 0) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Esta equipe ainda credita matérias. Arquive em vez de excluir, para o histórico não sumir." });
+    }
+    await db.delete(teams).where(eq(teams.id, input.id));
+    await recordAuditEvent(db, { actorId: ctx.user.id, resourceType: "team", resourceId: input.id, action: "team-removed", previousState: { name: current.name }, detail: "Equipe sem matérias excluída do catálogo de créditos." });
+    return { success: true };
+  }),
+
+  mergeDuplicateTeams: protectedProcedure.mutation(async ({ ctx }) => {
+    assertPrincipal(ctx.user.role as EditorialRole);
+    const db = await requireDb();
+    const catalog = await db.select().from(teams);
+    const groups = groupDuplicateTeamIds(catalog);
+    let merged = 0;
+    for (const group of groups) {
+      if (!group.absorbIds.length) continue;
+      await db.update(publications).set({ teamId: group.keepId }).where(inArray(publications.teamId, group.absorbIds));
+      await db.update(teams).set({ archivedAt: new Date(), archivedBy: ctx.user.id }).where(inArray(teams.id, group.absorbIds));
+      merged += group.absorbIds.length;
+    }
+    await recordAuditEvent(db, { actorId: ctx.user.id, resourceType: "team", action: "team-merged", nextState: { groups: groups.length, archived: merged }, detail: "Duplicatas de crédito unificadas. As matérias passaram a apontar para a equipe mais antiga de cada nome." });
+    return { groups: groups.length, archived: merged };
   }),
 });
 

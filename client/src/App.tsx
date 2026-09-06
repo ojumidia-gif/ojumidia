@@ -72,6 +72,8 @@ import CommunityHub from "./pages/CommunityHub";
 import PlanRegistration from "./pages/PlanRegistration";
 import MiniclipWatch from "./pages/MiniclipWatch";
 import LegalDocument from "./pages/LegalDocument";
+import BePartner from "./pages/BePartner";
+import JoinRequestsAdmin from "./pages/admin/JoinRequestsAdmin";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -108,6 +110,7 @@ function Router() {
       <Route path={"/conheca-a-oju"} component={AboutOju} />
       <Route path={"/termos-de-uso"} component={() => <LegalDocument kind="terms" />} />
       <Route path={"/privacidade"} component={() => <LegalDocument kind="privacy" />} />
+      <Route path={"/ser-parceiro"} component={BePartner} />
       <Route path={"/admin/acesso-local"} component={LocalDevLogin} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/admin/guia"} component={AdminGuides} />
@@ -130,6 +133,7 @@ function Router() {
       <Route path={"/admin/nova-instituicao"} component={InstitutionRegistrationAdmin} />
       <Route path={"/admin/visibilidade-institucional"} component={InstitutionVisibilityAdmin} />
       <Route path={"/admin/colaboradores"} component={CollaboratorsAdmin} />
+      <Route path={"/admin/candidaturas"} component={JoinRequestsAdmin} />
       <Route path={"/admin/nova-memoria-oral"} component={OralMemoryUploadAdmin} />
       <Route path={"/admin/notificacoes-acolhimento"} component={CareNotificationsAdmin} />
       <Route path={"/admin/revisar-memorias"} component={MemoryReviewAdmin} />

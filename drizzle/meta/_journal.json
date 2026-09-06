@@ -316,6 +316,20 @@
       "when": 1788670000000,
       "tag": "0044_taxonomy_owner",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "5",
+      "when": 1788680000000,
+      "tag": "0045_team_lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "5",
+      "when": 1788690000000,
+      "tag": "0046_admin_join_requests",
+      "breakpoints": true
     }
   ]
 }

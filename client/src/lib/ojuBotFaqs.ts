@@ -84,6 +84,13 @@ export const ojuBotFaqs: OjuBotFaq[] = [
     href: "/admin/miniclipes",
   },
   {
+    id: "parceiro",
+    question: "Como alguém vira Parceiro Ojú?",
+    answer: "Pelo site público em Ser parceiro. O pedido não cria login. Só o Super Admin conversa, convite Google e, se for admin, termo gov.br. Quem não produz pode ser banido; o painel mostra o pulso, sem banimento automático.",
+    tags: ["parceiro", "candidatura", "admin", "convite", "banir"],
+    href: "/admin/candidaturas",
+  },
+  {
     id: "lgpd",
     question: "Onde estão os termos e a LGPD?",
     answer: "No rodapé: Termos de uso e Privacidade e LGPD. Formulários públicos só usam seus dados para responder o pedido.",

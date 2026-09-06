@@ -48,6 +48,7 @@ describe("lacunas Admin/CMS — política, território e privilégio", () => {
       items: [{ label: "Histórias", href: "/historias", order: 1, active: true, featured: true }],
     }));
     expect(JSON.parse(json).items[0].href).toBe("/historias");
+    expect(JSON.parse(sanitizePublicNavigation(JSON.stringify({ items: [{ label: "Ser parceiro", href: "/ser-parceiro" }] }))).items[0].href).toBe("/ser-parceiro");
     expect(() => sanitizePublicNavigation(JSON.stringify({ items: [{ label: "Painel secreto", href: "/admin/secret" }] }))).toThrow(/não é uma rota pública/);
   });
 });

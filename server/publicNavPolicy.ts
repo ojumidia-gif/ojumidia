@@ -14,6 +14,7 @@ export const ALLOWED_PUBLIC_HREFS = [
   "/fotografia-documental",
   "/planejar-um-registro",
   "/contato",
+  "/ser-parceiro",
   "/apoie-uma-memoria",
   "/licenciar-midia",
   "/instituicoes",

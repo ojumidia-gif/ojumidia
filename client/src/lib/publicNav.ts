@@ -21,11 +21,17 @@ export const publicNavGroups = [
     id: "chamar",
     label: "Chamar a Ojú",
     description: "Escuta, planejamento e registro com cuidado.",
-    hrefs: ["/planejar-um-registro", "/servicos", "/contato"],
+    hrefs: ["/planejar-um-registro", "/ser-parceiro", "/servicos", "/contato"],
   },
 ] as const;
 
 export type PublicNavLink = { label: string; href: string; featured?: boolean; order?: number; active?: boolean };
+
+export function ensurePublicPartnerLink<T extends { href: string; label?: string }>(items: T[]): T[] {
+  if (items.some(item => item.href === "/ser-parceiro")) return items;
+  const extra = { href: "/ser-parceiro", label: "Ser parceiro" } as T;
+  return [...items, extra];
+}
 
 export function groupPublicNav(links: PublicNavLink[]) {
   const byHref = new Map(links.map(item => [item.href, item]));

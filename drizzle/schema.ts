@@ -122,6 +122,26 @@ export const collaboratorAccessGrants = mysqlTable("collaboratorAccessGrants", {
   index("collaborator_grant_status_idx").on(table.status, table.role),
 ]);
 
+export const joinRequestPractices = ["Fotografia", "Vídeo", "Produção territorial", "Casa ou coletivo", "Outro"] as const;
+export const joinRequestStatuses = ["Recebida", "Em conversa", "Aprovada", "Recusada", "Arquivada"] as const;
+
+export const adminJoinRequests = mysqlTable("adminJoinRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 180 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  whatsapp: varchar("whatsapp", { length: 40 }).notNull(),
+  territoryText: varchar("territoryText", { length: 240 }).notNull(),
+  practice: mysqlEnum("practice", joinRequestPractices).notNull(),
+  message: text("message").notNull(),
+  status: mysqlEnum("status", joinRequestStatuses).default("Recebida").notNull(),
+  reviewNote: text("reviewNote"),
+  reviewedBy: int("reviewedBy"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("join_request_status_idx").on(table.status, table.createdAt),
+]);
+
 export const administratorResponsibilityTermStatuses = ["Gerado", "Aguardando assinatura gov.br", "Assinado via gov.br", "Arquivado"] as const;
 
 export const administratorResponsibilityTerms = mysqlTable("administratorResponsibilityTerms", {
@@ -182,6 +202,9 @@ export const teams = mysqlTable("teams", {
   name: varchar("name", { length: 160 }).notNull(),
   slug: varchar("slug", { length: 180 }).notNull().unique(),
   description: text("description"),
+  createdBy: int("createdBy"),
+  archivedAt: timestamp("archivedAt"),
+  archivedBy: int("archivedBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

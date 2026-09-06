@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { portalContentDefaults, usePortalContent } from "@/lib/portalContent";
 import { mergeLegalFooterItems } from "@/lib/legalDocuments";
+import { ensurePublicPartnerLink } from "@/lib/publicNav";
 
 function FooterMark({ onClick }: { onClick?: () => void }) {
   const image = <img src="/oju-assets/oju-midia-marca.png" alt="Ojú Mídia" className="h-9 w-28 object-contain object-center brightness-0 invert" />;
@@ -23,6 +24,7 @@ export function PublicFooter({
     portalContentDefaults.Global.footer as unknown as { items: Array<{ label: string; href: string; external?: boolean }>; legalItems: Array<{ label: string; href?: string }> },
   );
   const legalItems = mergeLegalFooterItems(footer?.legalItems || []);
+  const footerItems = ensurePublicPartnerLink(footer?.items || []);
   const tone = cinematic
     ? "border-white/10 bg-black text-[10px] font-bold uppercase tracking-[.08em] text-white/60"
     : "border-[#1f1c16]/10 bg-[#1a1712] text-[10px] font-bold uppercase tracking-[.08em] text-white/60";
@@ -34,7 +36,7 @@ export function PublicFooter({
         {footer ? (
           <>
             <div className="flex flex-wrap gap-5">
-              {footer.items.map(item => item.external
+              {footerItems.map(item => item.external
                 ? <a key={item.href} href={item.href} target="_blank" rel="noreferrer">{item.label}</a>
                 : <Link key={item.href} href={item.href}>{item.label}</Link>)}
             </div>

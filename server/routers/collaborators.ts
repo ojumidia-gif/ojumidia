@@ -1,9 +1,10 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { administratorResponsibilityTerms, collaboratorAccessGrants, users } from "../../drizzle/schema";
+import { administratorResponsibilityTerms, collaboratorAccessGrants, mediaAssets, publications, users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { recordAuditEvent, syncPartnerMemberFromGrant } from "../partnerScope";
+import { classifyAdminPulse } from "@shared/adminPulse";
 import { protectedProcedure, router } from "../_core/trpc";
 
 const collaboratorRoles = ["criador", "editor", "aprovador", "administrador"] as const;
@@ -63,12 +64,34 @@ export const collaboratorsRouter = router({
     const latestTermByGrant = new Map<number, typeof terms[number]>();
     terms.forEach(term => { if (!latestTermByGrant.has(term.grantId)) latestTermByGrant.set(term.grantId, term); });
     const superAdmins = accounts.filter(account => account.role === "administrador principal" && account.adminAccess);
+    const userIds = grants.map(grant => grant.userId).filter((id): id is number => typeof id === "number");
+    const pubRows = userIds.length ? await db.select({ createdBy: publications.createdBy }).from(publications).where(inArray(publications.createdBy, userIds)) : [];
+    const mediaRows = userIds.length ? await db.select({ createdBy: mediaAssets.createdBy }).from(mediaAssets).where(inArray(mediaAssets.createdBy, userIds)) : [];
+    const publicationCount = new Map<number, number>();
+    const mediaCount = new Map<number, number>();
+    for (const row of pubRows) {
+      if (!row.createdBy) continue;
+      publicationCount.set(row.createdBy, (publicationCount.get(row.createdBy) || 0) + 1);
+    }
+    for (const row of mediaRows) {
+      if (!row.createdBy) continue;
+      mediaCount.set(row.createdBy, (mediaCount.get(row.createdBy) || 0) + 1);
+    }
     return {
       superAdmins,
       grants: grants.map(grant => {
         const term = latestTermByGrant.get(grant.id);
         const safeTerm = term ? (() => { const { signedDocumentUrl: _signedDocumentUrl, signedStorageKey: _signedStorageKey, ...safe } = term; return { ...safe, hasSignedDocument: Boolean(_signedDocumentUrl && _signedStorageKey) }; })() : null;
-        return { ...grant, account: accountsByEmail.get(normalizeEmail(grant.email)) ?? null, responsibilityTerm: safeTerm };
+        const account = accountsByEmail.get(normalizeEmail(grant.email)) ?? null;
+        const pubs = account ? publicationCount.get(account.id) || 0 : 0;
+        const media = account ? mediaCount.get(account.id) || 0 : 0;
+        const pulse = classifyAdminPulse({
+          grantStatus: grant.status,
+          lastSignedIn: account?.lastSignedIn,
+          publicationCount: pubs,
+          mediaCount: media,
+        });
+        return { ...grant, account, responsibilityTerm: safeTerm, publicationCount: pubs, mediaCount: media, pulse };
       }),
     };
   }),

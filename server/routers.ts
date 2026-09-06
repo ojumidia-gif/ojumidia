@@ -14,6 +14,7 @@ import { portalContentRouter } from "./routers/portalContent";
 import { partnersRouter } from "./routers/partners";
 import { operationsRouter } from "./routers/operations";
 import { deskRouter } from "./routers/desk";
+import { joinRequestsRouter } from "./routers/joinRequests";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -40,6 +41,7 @@ export const appRouter = router({
   partners: partnersRouter,
   operations: operationsRouter,
   desk: deskRouter,
+  joinRequests: joinRequestsRouter,
 });
 
 export type AppRouter = typeof appRouter;

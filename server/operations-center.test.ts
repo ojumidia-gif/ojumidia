@@ -17,6 +17,8 @@ describe("Central de Pendências Operacionais", () => {
   it("não trata rascunho de contrato como pendência operacional", () => {
     const source = readFileSync(resolve(process.cwd(), "server/routers/operations.ts"), "utf8");
     expect(source).toContain('eq(contracts.status, "Enviado")');
+    expect(source).toContain("/admin/candidaturas");
+    expect(source).toContain("adminJoinRequests");
     expect(source).not.toContain('inArray(contracts.status, ["Rascunho", "Enviado"])');
   });
 });

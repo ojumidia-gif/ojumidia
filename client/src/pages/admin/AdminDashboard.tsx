@@ -24,6 +24,7 @@ const siteControls = [
   { href: "/admin/conteudo-portal", title: "Textos do portal", text: "Menus, home, páginas. Isto muda o site." },
   { href: "/admin/miniclipes", title: "Fundo vivo", text: "Abertura nacional da Home. Só Super Admin." },
   { href: "/admin/parceiros", title: "Parceiros", text: "Parceiros Ojú, territórios e escopos." },
+  { href: "/admin/candidaturas", title: "Candidaturas", text: "Pedidos públicos para ser parceiro. Só você aprova ou recusa." },
 ] as const;
 
 export default function AdminDashboard() {

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "wouter";
 import { portalContentDefaults, usePortalContent } from "@/lib/portalContent";
-import { groupPublicNav } from "@/lib/publicNav";
+import { groupPublicNav, ensurePublicPartnerLink } from "@/lib/publicNav";
 import { PublicFooter } from "./PublicFooter";
 
 let publicFooterHosts = 0;
@@ -70,7 +70,7 @@ export function PublicHeader({
   const close = () => { setOpen(false); setActiveGroup(null); };
   const { block } = usePortalContent("Global");
   const navigation = block("navigation", portalContentDefaults.Global.navigation as unknown as { items: Array<{ label: string; href: string; order?: number; active?: boolean; featured?: boolean }> });
-  const links = [...(navigation?.items || [])].filter(item => item.active !== false).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const links = ensurePublicPartnerLink([...(navigation?.items || [])].filter(item => item.active !== false).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
   const { grouped, rest } = groupPublicNav(links);
 
   return (

@@ -410,7 +410,7 @@ export const mediaRouter = router({
     return defaultHeroTransition;
   }),
   users: protectedProcedure.query(async ({ ctx }) => {
-    requireAdmin(ctx.user.role);
+    requirePrincipal(ctx.user.role);
     const db = await requireDb();
     return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, lastSignedIn: users.lastSignedIn }).from(users).orderBy(users.name);
   }),

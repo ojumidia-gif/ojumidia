@@ -1,4 +1,4 @@
-import { BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandshake, Home, Image, LifeBuoy, ListFilter, MapPinned, Route, ScrollText, Settings, Sparkles, Trash2, Users, Wallet } from "lucide-react";
+import { BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandshake, Home, Image, LifeBuoy, ListFilter, MapPinned, Route, ScrollText, Settings, Sparkles, Trash2, UserPlus, Users, Wallet } from "lucide-react";
 
 export type AdminNavItem = {
   label: string;
@@ -51,6 +51,8 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Parceiros",
     items: [
       { label: "Parceiros Ojú", href: "/admin/parceiros", icon: MapPinned, principalOnly: true },
+      { label: "Candidaturas", href: "/admin/candidaturas", icon: UserPlus, principalOnly: true },
+      { label: "Colaboradores", href: "/admin/colaboradores", icon: Users, principalOnly: true },
     ],
   },
   {
@@ -93,6 +95,7 @@ export const principalOnlyAdminPaths = [
   "/admin/conteudo-portal",
   "/admin/auditoria",
   "/admin/colaboradores",
+  "/admin/candidaturas",
   "/admin/politicas-comerciais",
   "/admin/avisos-repasse",
   "/admin/anuncios",

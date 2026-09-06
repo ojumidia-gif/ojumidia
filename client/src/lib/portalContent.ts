@@ -26,8 +26,9 @@ export const portalContentDefaults = {
       { label: "Acervo", href: "/acervo", order: 11, active: true, featured: false },
       { label: "Serviços", href: "/servicos", order: 12, active: true, featured: false },
       { label: "Chamar a Ojú", href: "/planejar-um-registro", order: 13, active: true, featured: true },
+      { label: "Ser parceiro", href: "/ser-parceiro", order: 14, active: true, featured: false },
     ] },
-    footer: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Instagram", href: "https://instagram.com/oju.fotografia", external: true }], legalItems: [{ label: "Termos de uso", href: "/termos-de-uso" }, { label: "Privacidade e LGPD", href: "/privacidade" }, { label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
+    footer: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Ser parceiro", href: "/ser-parceiro" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Instagram", href: "https://instagram.com/oju.fotografia", external: true }], legalItems: [{ label: "Termos de uso", href: "/termos-de-uso" }, { label: "Privacidade e LGPD", href: "/privacidade" }, { label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
     method: { eyebrow: "Método Ojú", title: "Cuidado antes da câmera.", description: "Registrar começa quando a Ojú compreende o que está sendo vivido, o que precisa permanecer privado e o que pode atravessar o tempo.", items: ojuMethod },
   },
   Home: {

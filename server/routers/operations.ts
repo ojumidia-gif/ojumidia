@@ -1,7 +1,9 @@
-import { and, desc, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lte, notInArray, or } from "drizzle-orm";
 import { z } from "zod";
 import {
   administratorResponsibilityTerms,
+  adminDeskMessages,
+  adminJoinRequests,
   auditEvents,
   authorizationTerms,
   commercialEditorialAuthorizations,
@@ -10,7 +12,6 @@ import {
   communityCareRequests,
   communityEvents,
   contracts,
-  adminDeskMessages,
   highlightSuggestions,
   institutionVisibilitySubscriptions,
   institutions,
@@ -25,6 +26,7 @@ import { getDb } from "../db";
 import { EDITORIAL_TRASH_RETENTION_MS } from "../editorialTrash";
 import { activePartnerMemberships, partnerTerritoryIds } from "../partnerScope";
 import { protectedProcedure, router } from "../_core/trpc";
+import { routineAuditActions } from "@shared/auditView";
 
 type Priority = "Crítica" | "Atenção" | "Acompanhamento";
 type PendingItem = {
@@ -133,6 +135,19 @@ export const operationsRouter = router({
     careRows.forEach(care => add({ id: `care-${care.id}`, category: "Acolhimento", priority: care.status === "Recebida" ? "Crítica" : "Atenção", title: `Pedido de acolhimento: ${care.requestType}`, description: "Pedido reservado exige acompanhamento responsável; dados de contato não são exibidos aqui.", href: "/admin/notificacoes-acolhimento", createdAt: care.updatedAt, dueAt: null, partnerId: care.partnerId, territoryId: care.territoryId }, care.managedByUserId));
     uploadRows.forEach(session => add({ id: `upload-${session.id}`, category: "Upload", priority: session.status === "Falhou" ? "Crítica" : "Atenção", title: session.filename, description: session.status === "Falhou" ? (session.errorMessage || "O envio falhou e pode ser retomado com o mesmo identificador.") : `Arquivo em “${session.status}”. Você pode continuar trabalhando enquanto o processamento termina.`, href: "/admin/midias", createdAt: session.updatedAt, dueAt: null, partnerId: session.partnerId, territoryId: session.territoryId }, session.userId));
     if (principal) {
+      const joinRows = await db.select().from(adminJoinRequests).where(inArray(adminJoinRequests.status, ["Recebida", "Em conversa"])).orderBy(desc(adminJoinRequests.createdAt));
+      joinRows.forEach(row => items.push({
+        id: `join-request-${row.id}`,
+        category: "Candidaturas",
+        priority: row.status === "Recebida" ? "Atenção" : "Acompanhamento",
+        title: row.name,
+        description: `${row.status}: pedido público para ser Parceiro Ojú.`,
+        href: "/admin/candidaturas",
+        createdAt: row.createdAt,
+        dueAt: null,
+        partnerId: null,
+        territoryId: null,
+      }));
       const responsibilityTerms = await db.select().from(administratorResponsibilityTerms).where(eq(administratorResponsibilityTerms.status, "Aguardando assinatura gov.br")).orderBy(desc(administratorResponsibilityTerms.createdAt));
       responsibilityTerms.forEach(term => items.push({ id: `responsibility-${term.id}`, category: "Governança", priority: "Crítica", title: term.email, description: "Administrador autorizado aguarda assinatura do termo de responsabilidade via gov.br.", href: "/admin/colaboradores", createdAt: term.createdAt, dueAt: null, partnerId: null, territoryId: null }));
       const deskRows = await db.select().from(adminDeskMessages).where(eq(adminDeskMessages.status, "Aberta")).orderBy(desc(adminDeskMessages.createdAt));
@@ -153,9 +168,20 @@ export const operationsRouter = router({
     const summary = { total: ordered.length, critical: ordered.filter(item => item.priority === "Crítica").length, attention: ordered.filter(item => item.priority === "Atenção").length, followUp: ordered.filter(item => item.priority === "Acompanhamento").length };
     return { summary, items: ordered.slice(0, input.limit), scope: principal ? "global" : "territorial" };
   }),
-  auditLog: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(200).default(80) }).optional()).query(async ({ ctx, input }) => {
+  auditLog: protectedProcedure.input(z.object({
+    limit: z.number().int().min(1).max(200).default(40),
+    offset: z.number().int().min(0).default(0),
+    view: z.enum(["operacao", "completa"]).default("operacao"),
+  }).optional()).query(async ({ ctx, input }) => {
     if (ctx.user.role !== "administrador principal") throw new Error("Somente o Super Admin consulta o registro administrativo.");
     const db = await requireDb();
-    return db.select().from(auditEvents).orderBy(desc(auditEvents.createdAt)).limit(input?.limit ?? 80);
+    const view = input?.view ?? "operacao";
+    const limit = input?.limit ?? 40;
+    const offset = input?.offset ?? 0;
+    const where = view === "operacao" ? notInArray(auditEvents.action, [...routineAuditActions]) : undefined;
+    const rows = where
+      ? await db.select().from(auditEvents).where(where).orderBy(desc(auditEvents.createdAt)).limit(limit).offset(offset)
+      : await db.select().from(auditEvents).orderBy(desc(auditEvents.createdAt)).limit(limit).offset(offset);
+    return rows;
   }),
 });

@@ -9,6 +9,7 @@ describe("Ojú Bot", () => {
     expect(lixeira.some(item => item.id === "lixeira")).toBe(true);
     expect(matchOjuBotFaqs("outro admin").some(item => item.id === "carteira")).toBe(true);
     expect(matchOjuBotFaqs("lgpd").some(item => item.id === "lgpd")).toBe(true);
+    expect(matchOjuBotFaqs("parceiro candidatura").some(item => item.id === "parceiro")).toBe(true);
   });
 
   it("não inventa resposta quando a busca não casa", () => {
