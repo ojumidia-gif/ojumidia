@@ -48,7 +48,7 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
     sectionKey: "hero",
     label: "Abertura da Home",
     displayOrder: 10,
-    content: { eyebrow: "Ojú: o olhar que registra", title: "Memória preta, casa e chão que não se apaga.", description: "Documentamos culturas afro-brasileiras, religiosidades de matriz africana e os territórios que as sustentam — com contexto, crédito e autorização.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro", secondaryLabel: "Olhar histórias", secondaryHref: "/historias" },
+    content: { eyebrow: "Ojú: o olhar que registra", title: "Memória negra, casa e chão que não se apaga.", description: "Documentamos culturas afro-brasileiras, religiosidades de matriz africana e os territórios que as sustentam — com contexto, crédito e autorização.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro", secondaryLabel: "Olhar histórias", secondaryHref: "/historias" },
   },
   {
     page: "Home",

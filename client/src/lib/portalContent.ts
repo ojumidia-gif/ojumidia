@@ -30,7 +30,7 @@ export const portalContentDefaults = {
     method: { eyebrow: "Método Ojú", title: "Cuidado antes da câmera.", description: "Registrar começa quando a Ojú compreende o que está sendo vivido, o que precisa permanecer privado e o que pode atravessar o tempo.", items: ojuMethod },
   },
   Home: {
-    hero: { eyebrow: "Ojú: o olhar que registra", title: "Memória preta, casa e chão que não se apaga.", description: "Documentamos culturas afro-brasileiras, religiosidades de matriz africana e os territórios que as sustentam — com contexto, crédito e autorização. O sagrado só entra quando a casa autoriza.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro", secondaryLabel: "Olhar histórias", secondaryHref: "/historias" },
+    hero: { eyebrow: "Ojú: o olhar que registra", title: "Memória negra, casa e chão que não se apaga.", description: "Documentamos culturas afro-brasileiras, religiosidades de matriz africana e os territórios que as sustentam — com contexto, crédito e autorização. O sagrado só entra quando a casa autoriza.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro", secondaryLabel: "Olhar histórias", secondaryHref: "/historias" },
     planning: { title: "Sua história também merece ser registrada.", description: "A Ojú começa pela escuta do que precisa permanecer antes de propor fotografia, vídeo ou documentação integrada.", ctaLabel: "Chamar a Ojú", ctaHref: "/planejar-um-registro" },
     featured: { eyebrow: "Em destaque", title: "Histórias recentes", emptyMessage: "A Home mostra somente conteúdos escolhidos pela curadoria nacional.", allLabel: "Ir ao acervo", allHref: "/acervo" },
     editorialFronts: { items: [
