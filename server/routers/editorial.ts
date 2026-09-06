@@ -338,12 +338,12 @@ export const editorialRouter = router({
     const taxonomyIds = taxonomyLinks.map(link => link.taxonomyId);
     const publicationTaxonomy = taxonomyIds.length ? await db.select().from(taxonomies).where(inArray(taxonomies.id, taxonomyIds)) : [];
     const photographerIds = Array.from(new Set(media.map(item => item.photographerId).filter((id): id is number => typeof id === "number")));
-    const photographers = photographerIds.length ? await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, publicSlug: networkExecutors.publicSlug, publicVisible: networkExecutors.publicVisible, profileNote: networkExecutors.profileNote }).from(networkExecutors).where(inArray(networkExecutors.id, photographerIds)) : [];
+    const photographers = photographerIds.length ? await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, publicSlug: networkExecutors.publicSlug, publicVisible: networkExecutors.publicVisible, profileNote: networkExecutors.profileNote, instagramHandle: networkExecutors.instagramHandle }).from(networkExecutors).where(inArray(networkExecutors.id, photographerIds)) : [];
     const photographerById = new Map(photographers.map(item => [item.id, item]));
     const orderedMedia = media.sort((a, b) => (links.find(link => link.mediaId === a.id)?.displayOrder ?? 0) - (links.find(link => link.mediaId === b.id)?.displayOrder ?? 0)).map(item => {
       const photographer = item.photographerId ? photographerById.get(item.photographerId) : undefined;
       const displayOrder = links.find(link => link.mediaId === item.id)?.displayOrder ?? 0;
-      return { ...item, isCover: displayOrder === 0, photographer: photographer ? { id: photographer.id, displayName: photographer.displayName, slug: photographer.publicVisible ? photographer.publicSlug : null, profileNote: photographer.publicVisible ? photographer.profileNote : null } : null };
+      return { ...item, isCover: displayOrder === 0, photographer: photographer ? { id: photographer.id, displayName: photographer.displayName, slug: photographer.publicVisible ? photographer.publicSlug : null, profileNote: photographer.publicVisible ? photographer.profileNote : null, instagramHandle: photographer.publicVisible ? photographer.instagramHandle : null } : null };
     });
     return { ...toPortalPublication(result[0], authorization), media: orderedMedia, taxonomies: publicationTaxonomy };
   }),
@@ -780,13 +780,13 @@ export const editorialRouter = router({
     const whereClause = and(eq(networkExecutors.status, "Ativo"), eq(networkExecutors.publicVisible, true), isNotNull(networkExecutors.publicSlug));
     const totalRow = await db.select({ value: count() }).from(networkExecutors).where(whereClause);
     const total = Number(totalRow[0]?.value || 0);
-    const items = await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, slug: networkExecutors.publicSlug, profileNote: networkExecutors.profileNote, specialty: networkExecutors.specialty, territoryId: networkExecutors.territoryId }).from(networkExecutors).where(whereClause).orderBy(networkExecutors.displayName).limit(limit).offset(offset);
+    const items = await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, slug: networkExecutors.publicSlug, profileNote: networkExecutors.profileNote, specialty: networkExecutors.specialty, territoryId: networkExecutors.territoryId, instagramHandle: networkExecutors.instagramHandle }).from(networkExecutors).where(whereClause).orderBy(networkExecutors.displayName).limit(limit).offset(offset);
     return { items, total, hasMore: offset + items.length < total };
   }),
 
   photographerBySlug: publicProcedure.input(z.object({ slug: z.string().min(1), limit: z.number().int().min(1).max(24).default(12), offset: z.number().int().min(0).default(0) })).query(async ({ input }) => {
     const db = await requireDb();
-    const photographer = (await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, slug: networkExecutors.publicSlug, profileNote: networkExecutors.profileNote, specialty: networkExecutors.specialty, territoryId: networkExecutors.territoryId }).from(networkExecutors).where(and(eq(networkExecutors.publicSlug, input.slug), eq(networkExecutors.publicVisible, true), eq(networkExecutors.status, "Ativo"))).limit(1))[0];
+    const photographer = (await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, slug: networkExecutors.publicSlug, profileNote: networkExecutors.profileNote, specialty: networkExecutors.specialty, territoryId: networkExecutors.territoryId, instagramHandle: networkExecutors.instagramHandle }).from(networkExecutors).where(and(eq(networkExecutors.publicSlug, input.slug), eq(networkExecutors.publicVisible, true), eq(networkExecutors.status, "Ativo"))).limit(1))[0];
     if (!photographer) return null;
     const credited = await db.select({ publicationId: publicationMedia.publicationId }).from(publicationMedia).innerJoin(mediaAssets, eq(publicationMedia.mediaId, mediaAssets.id)).where(and(eq(mediaAssets.photographerId, photographer.id), isNull(mediaAssets.deletedAt)));
     const publicationIds = Array.from(new Set(credited.map(item => item.publicationId)));

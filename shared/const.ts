@@ -34,3 +34,12 @@ export const decodeOAuthState = (state: string): OAuthState => {
   }
   return { redirectUri: decoded };
 };
+
+/** Home shows a window of each fundo vivo clip; the file itself may be up to 60s. */
+export const HOME_MINICLIP_DISPLAY_SECONDS = 15;
+export const HOME_MINICLIP_TRANSITION_MS = 1100;
+export const HOME_MINICLIP_SEQUENCE_LIMIT = 4;
+export const HOME_MINICLIP_MAX_DURATION_SECONDS = 60;
+export const HOME_MINICLIP_PRELOAD_AHEAD_MS = 2000;
+export const HOME_MINICLIP_MUTE_STORAGE_KEY = "oju.homeMiniclip.muted";
+export const HOME_MINICLIP_CURATION_SETTING = "homeMiniclipCurationSignals";

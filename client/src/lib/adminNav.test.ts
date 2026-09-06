@@ -16,5 +16,6 @@ describe("rotas administrativas restritas ao Super Admin", () => {
     expect(isPrincipalOnlyAdminPath("/admin/destaques")).toBe(true);
     expect(isPrincipalOnlyAdminPath("/admin/home-preview/12")).toBe(true);
     expect(isPrincipalOnlyAdminPath("/admin/publicacoes")).toBe(false);
+    expect(visibleAdminNav("administrador", true).find(group => group.id === "content")?.label).toBe("Publicar agora");
   });
 });

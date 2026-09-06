@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { EditorialBody } from "@/components/EditorialBody";
 
 export default function PublicationPreview() {
   const [, params] = useRoute("/admin/preview/:id");
@@ -22,7 +23,7 @@ export default function PublicationPreview() {
       {cover?.assetUrl ? <figure className="mt-10 overflow-hidden rounded border border-white/15">{cover.mediaType === "vídeo" ? <video controls className="aspect-video w-full" src={cover.assetUrl} /> : <img src={cover.assetUrl} alt={cover.filename || data.title} className="w-full" />}<figcaption className="px-4 py-3 text-xs text-white/55">Capa · crédito visível no portal</figcaption></figure> : null}
       {data.commercialEditorial && !data.commercialEditorial.authorized ? <aside className="mt-7 border-l-2 border-[#a33a23] bg-[#2a1410] px-5 py-4"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#ef9e59]">Material contratado em guarda privada</p><p className="mt-2 text-sm leading-6 text-white/65">Não vai ao portal até a autorização editorial expressa.</p></aside> : null}
       {data.taxonomies?.length ? <section className="mt-7"><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#ed9c58]">Relações documentais</p><div className="mt-3 flex flex-wrap gap-2">{data.taxonomies.map(item => <span key={item.id} className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/70">{item.dimension} · {item.name}</span>)}</div></section> : null}
-      <p className="mt-10 whitespace-pre-wrap font-serif text-xl leading-9 text-white/85">{data.body || data.summary || "Sem texto editorial adicionado."}</p>
+      <EditorialBody className="mt-10" text={data.body || data.summary || "Sem texto editorial adicionado."} />
       <p className="mt-10 border-t border-white/10 pt-4 text-sm text-white/50">Esta prévia é o mesmo olhar do site. Enquanto o status não for Publicada, o público não vê.</p>
     </article> : <p className="container pt-16">Conteúdo não encontrado.</p>}
   </div>;

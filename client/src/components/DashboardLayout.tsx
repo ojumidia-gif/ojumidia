@@ -48,8 +48,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
     );
   }
-  const groups = visibleAdminNav(user.role);
   const partnerLabel = context.data?.scope === "partner" ? context.data.partners[0] : null;
+  const groups = visibleAdminNav(user.role, Boolean(partnerLabel));
   const Sidebar = () => (
     <aside className="flex h-full w-[272px] flex-col bg-[#242017] p-5 text-[#eae4d7]">
       <div className="mb-6"><OjuMark compact /></div>

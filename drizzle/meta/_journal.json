@@ -288,6 +288,13 @@
       "when": 1788630000000,
       "tag": "0040_editorial_platform_scale",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1788640000000,
+      "tag": "0041_authorized_instagram_presence",
+      "breakpoints": true
     }
   ]
 }

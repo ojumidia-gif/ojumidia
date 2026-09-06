@@ -34,6 +34,7 @@ export default function PhotographersAdmin() {
             displayName: String(form.get("name")),
             email: String(form.get("email") || "") || null,
             whatsapp: String(form.get("whatsapp") || "") || null,
+            instagramHandle: String(form.get("instagram") || "") || null,
             specialty: String(form.get("specialty")) as "Fotografia" | "Vídeo" | "Documentário" | "Edição" | "Produção" | "Outro",
             profileNote: String(form.get("note") || "") || null,
           });
@@ -44,6 +45,8 @@ export default function PhotographersAdmin() {
           <select name="specialty" className="h-10 rounded-md border bg-white px-3"><option>Fotografia</option><option>Vídeo</option><option>Documentário</option><option>Edição</option><option>Produção</option><option>Outro</option></select>
           <Input name="email" type="email" placeholder="E-mail (opcional)" />
           <Input name="whatsapp" placeholder="WhatsApp (opcional)" />
+          <Input name="instagram" placeholder="@instagram autorizado (opcional)" />
+          <p className="text-xs leading-5 text-[#655e52]">O @ só aparece no portal e no crédito se a ficha estiver visível. Não entra na Home.</p>
           <Textarea name="note" placeholder="Apresentação curta para o portal" />
           <Button disabled={createExecutor.isPending} className="bg-[#242017] text-white">Cadastrar</Button>
         </form>
@@ -62,6 +65,13 @@ export default function PhotographersAdmin() {
                 ) : null}
               </div>
               <SiteReadiness items={photographerSiteGaps(item)} readyText="Pronto para /fotografos." />
+              <div className="flex flex-wrap gap-2">
+                <Input defaultValue={item.instagramHandle ? `@${item.instagramHandle}` : ""} placeholder="@instagram autorizado" className="max-w-xs" onBlur={event => {
+                  const next = event.target.value.trim();
+                  if ((item.instagramHandle ? `@${item.instagramHandle}` : "") === next) return;
+                  updateExecutor.mutate({ id: item.id, instagramHandle: next || null });
+                }} />
+              </div>
             </article>
           )) : <EmptyAdmin text="Nenhum fotógrafo cadastrado. Crie a ficha e publique no portal." />}
         </div>

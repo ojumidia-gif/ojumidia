@@ -68,12 +68,14 @@ import DocumentaryMemories from "./pages/DocumentaryMemories";
 import Services from "./pages/Services";
 import CommunityHub from "./pages/CommunityHub";
 import PlanRegistration from "./pages/PlanRegistration";
+import MiniclipWatch from "./pages/MiniclipWatch";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/miniclipe/:id"} component={MiniclipWatch} />
       <Route path={"/busca"} component={Search} />
       <Route path={"/historias"} component={StoriesPreview} />
       <Route path={"/memorias-documentais"} component={DocumentaryMemories} />

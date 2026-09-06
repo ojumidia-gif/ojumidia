@@ -1,6 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { and, count, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { z } from "zod";
+import { HOME_MINICLIP_CURATION_SETTING, HOME_MINICLIP_DISPLAY_SECONDS, HOME_MINICLIP_MAX_DURATION_SECONDS, HOME_MINICLIP_SEQUENCE_LIMIT, HOME_MINICLIP_TRANSITION_MS } from "@shared/const";
+import {
+  allowAnonymousCurationSignal,
+  encodeBackgroundClipTerms,
+  incrementHomeMiniclipCurationSignal,
+  parseCaptionTrackUrl,
+  parseHomeMiniclipCurationSignals,
+} from "@shared/homeMiniclip";
 import { commercialMiniclips, mediaAssets, networkExecutors, settings, uploadSessions, users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
@@ -54,11 +62,11 @@ async function resolvePhotographerCredit(db: NonNullable<Awaited<ReturnType<type
   }
   return { photographerId: photographer.id, credit: photographer.displayName || credit };
 }
-export const heroTransitionSchema = z.object({ displaySeconds: z.number().int().min(5).max(60), transitionMilliseconds: z.number().int().min(300).max(3000) });
-export const defaultHeroTransition = { displaySeconds: 14, transitionMilliseconds: 1100 };
-function parseTransition(value?: string) {
-  try { return heroTransitionSchema.parse(JSON.parse(value || "")); } catch { return defaultHeroTransition; }
-}
+export const heroTransitionSchema = z.object({
+  displaySeconds: z.literal(HOME_MINICLIP_DISPLAY_SECONDS),
+  transitionMilliseconds: z.literal(HOME_MINICLIP_TRANSITION_MS),
+});
+export const defaultHeroTransition = { displaySeconds: HOME_MINICLIP_DISPLAY_SECONDS, transitionMilliseconds: HOME_MINICLIP_TRANSITION_MS } as const;
 export function canActivateBackgroundClip(clip: Pick<typeof mediaAssets.$inferSelect, "mediaType" | "publicationAllowed" | "state">) {
   return clip.mediaType === "vídeo" && clip.publicationAllowed && clip.state === "Ativo";
 }
@@ -81,12 +89,50 @@ export const mediaRouter = router({
     const db = await requireDb();
     const commercial = await db.select().from(mediaAssets).innerJoin(commercialMiniclips, eq(mediaAssets.id, commercialMiniclips.mediaId)).where(and(eq(commercialMiniclips.status, "Ativo"), eq(commercialMiniclips.homeFeatured, true), eq(commercialMiniclips.authorizedForHome, true), eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(commercialMiniclips.updatedAt)).limit(1);
     if (commercial[0]) return [commercial[0].mediaAssets];
-    return db.select().from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.backgroundPriority), desc(mediaAssets.createdAt)).limit(4);
+    return db.select().from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.backgroundPriority), desc(mediaAssets.createdAt)).limit(HOME_MINICLIP_SEQUENCE_LIMIT);
   }),
-  homeBackgroundConfig: publicProcedure.query(async () => {
+  homeBackgroundConfig: publicProcedure.query(async () => defaultHeroTransition),
+  publicBackgroundClip: publicProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => {
     const db = await requireDb();
-    const stored = (await db.select().from(settings).where(eq(settings.settingKey, "homeHeroVideoTransition")).limit(1))[0];
-    return parseTransition(stored?.settingValue);
+    const clip = (await db.select().from(mediaAssets).where(and(
+      eq(mediaAssets.id, input.id),
+      eq(mediaAssets.mediaType, "vídeo"),
+      eq(mediaAssets.publicationAllowed, true),
+      eq(mediaAssets.state, "Ativo"),
+      isNull(mediaAssets.deletedAt),
+    )).limit(1))[0];
+    if (!clip) throw new TRPCError({ code: "NOT_FOUND", message: "Miniclipe indisponível." });
+    const commercial = (await db.select({ id: commercialMiniclips.id }).from(commercialMiniclips).where(and(
+      eq(commercialMiniclips.mediaId, clip.id),
+      eq(commercialMiniclips.status, "Ativo"),
+      eq(commercialMiniclips.homeFeatured, true),
+      eq(commercialMiniclips.authorizedForHome, true),
+    )).limit(1))[0];
+    if (!clip.backgroundEligible && !commercial) throw new TRPCError({ code: "NOT_FOUND", message: "Miniclipe indisponível." });
+    return { id: clip.id, assetUrl: clip.assetUrl, credit: clip.credit, origin: clip.origin, filename: clip.filename, durationSeconds: clip.durationSeconds, captionTrackUrl: parseCaptionTrackUrl(clip.terms) };
+  }),
+  homeMiniclipCuration: protectedProcedure.query(async ({ ctx }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const stored = (await db.select().from(settings).where(eq(settings.settingKey, HOME_MINICLIP_CURATION_SETTING)).limit(1))[0];
+    return parseHomeMiniclipCurationSignals(stored?.settingValue);
+  }),
+  recordHomeMiniclipSignal: publicProcedure.input(z.object({
+    action: z.enum(["watch", "mute", "unmute"]),
+    mediaId: z.number().int().positive().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    const forwarded = ctx.req.headers["x-forwarded-for"];
+    const ip = typeof forwarded === "string" && forwarded.trim()
+      ? forwarded.split(",")[0].trim()
+      : ("ip" in ctx.req && typeof ctx.req.ip === "string" && ctx.req.ip) || ctx.req.socket?.remoteAddress || "unknown";
+    if (!allowAnonymousCurationSignal(ip)) return { accepted: false as const };
+    const db = await requireDb();
+    const stored = (await db.select().from(settings).where(eq(settings.settingKey, HOME_MINICLIP_CURATION_SETTING)).limit(1))[0];
+    const next = incrementHomeMiniclipCurationSignal(parseHomeMiniclipCurationSignals(stored?.settingValue), input.action, input.mediaId);
+    const settingValue = JSON.stringify(next);
+    if (stored) await db.update(settings).set({ settingValue }).where(eq(settings.id, stored.id));
+    else await db.insert(settings).values({ settingKey: HOME_MINICLIP_CURATION_SETTING, settingValue });
+    return { accepted: true as const };
   }),
   backgroundClips: protectedProcedure.query(async ({ ctx }) => {
     requirePrincipal(ctx.user.role);
@@ -316,13 +362,15 @@ export const mediaRouter = router({
     }
   }),
   createBackgroundClip: protectedProcedure.input(z.object({
-    assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência do vídeo precisa ser válida." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), durationSeconds: z.number().int().min(1).max(60), priority: z.number().int().min(0).max(99),
+    assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência do vídeo precisa ser válida." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280),     durationSeconds: z.number().int().min(1).max(60), priority: z.number().int().min(0).max(99), captionTrackUrl: z.string().trim().max(2048).optional(),
   })).mutation(async ({ ctx, input }) => {
     requirePrincipal(ctx.user.role);
     const db = await requireDb();
     const activeCount = await db.select({ id: mediaAssets.id }).from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.state, "Ativo")));
-    if (activeCount.length >= 4) throw new TRPCError({ code: "BAD_REQUEST", message: "A sequência do fundo vivo comporta até quatro miniclipes. Remova um da sequência antes de adicionar outro." });
-    const result = await db.insert(mediaAssets).values({ mediaType: "vídeo", assetUrl: input.assetUrl, storageKey: input.storageKey, filename: input.filename, origin: input.origin, credit: input.credit, authorization: input.authorization, purpose: input.purpose, publicationAllowed: true, backgroundEligible: true, backgroundPriority: input.priority, durationSeconds: input.durationSeconds, createdBy: ctx.user.id });
+    if (activeCount.length >= HOME_MINICLIP_SEQUENCE_LIMIT) throw new TRPCError({ code: "BAD_REQUEST", message: "A sequência do fundo vivo comporta até quatro miniclipes. Remova um da sequência antes de adicionar outro." });
+    const captionTrackUrl = input.captionTrackUrl?.trim();
+    if (captionTrackUrl && !encodeBackgroundClipTerms(captionTrackUrl)) throw new TRPCError({ code: "BAD_REQUEST", message: "A faixa de legenda precisa ser um arquivo .vtt interno do Acervo, autorizado pela casa." });
+    const result = await db.insert(mediaAssets).values({ mediaType: "vídeo", assetUrl: input.assetUrl, storageKey: input.storageKey, filename: input.filename, origin: input.origin, credit: input.credit, authorization: input.authorization, purpose: input.purpose, publicationAllowed: true, backgroundEligible: true, backgroundPriority: input.priority, durationSeconds: input.durationSeconds, terms: encodeBackgroundClipTerms(captionTrackUrl), createdBy: ctx.user.id });
     const id = Number(result[0].insertId); publishEditorialEvent("background-clip-created", id);
     return { id };
   }),
@@ -331,23 +379,34 @@ export const mediaRouter = router({
     const db = await requireDb();
     const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
     if (!current || current.mediaType !== "vídeo") throw new TRPCError({ code: "NOT_FOUND", message: "Miniclipe não encontrado." });
-    if (input.active && (!canActivateBackgroundClip(current) || !current.durationSeconds || current.durationSeconds > 60)) throw new TRPCError({ code: "BAD_REQUEST", message: "O miniclipe precisa estar ativo, autorizado e ter no máximo 60 segundos." });
+    if (input.active && (!canActivateBackgroundClip(current) || !current.durationSeconds || current.durationSeconds > HOME_MINICLIP_MAX_DURATION_SECONDS)) throw new TRPCError({ code: "BAD_REQUEST", message: "O miniclipe precisa estar ativo, autorizado e ter no máximo 60 segundos." });
     if (input.active && !current.backgroundEligible) {
       const activeCount = await db.select({ id: mediaAssets.id }).from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.state, "Ativo")));
-      if (activeCount.length >= 4) throw new TRPCError({ code: "BAD_REQUEST", message: "A sequência do fundo vivo comporta até quatro miniclipes. Remova um da sequência antes de ativar outro." });
+      if (activeCount.length >= HOME_MINICLIP_SEQUENCE_LIMIT) throw new TRPCError({ code: "BAD_REQUEST", message: "A sequência do fundo vivo comporta até quatro miniclipes. Remova um da sequência antes de ativar outro." });
     }
     await db.update(mediaAssets).set({ backgroundEligible: input.active, backgroundPriority: input.active ? (input.priority ?? current.backgroundPriority) : 0 }).where(eq(mediaAssets.id, input.id)); publishEditorialEvent("background-clip-updated", input.id);
     return { success: true };
   }),
-  saveHomeBackgroundConfig: protectedProcedure.input(heroTransitionSchema).mutation(async ({ ctx, input }) => {
+  setBackgroundCaption: protectedProcedure.input(z.object({ id: z.number().int().positive(), captionTrackUrl: z.string().trim().max(2048).optional() })).mutation(async ({ ctx, input }) => {
     requirePrincipal(ctx.user.role);
     const db = await requireDb();
-    const settingValue = JSON.stringify(input);
+    const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
+    if (!current || current.mediaType !== "vídeo") throw new TRPCError({ code: "NOT_FOUND", message: "Miniclipe não encontrado." });
+    const captionTrackUrl = input.captionTrackUrl?.trim();
+    if (captionTrackUrl && !encodeBackgroundClipTerms(captionTrackUrl)) throw new TRPCError({ code: "BAD_REQUEST", message: "A faixa de legenda precisa ser um arquivo .vtt interno do Acervo, autorizado pela casa." });
+    await db.update(mediaAssets).set({ terms: encodeBackgroundClipTerms(captionTrackUrl) }).where(eq(mediaAssets.id, input.id));
+    publishEditorialEvent("background-clip-updated", input.id);
+    return { success: true };
+  }),
+  saveHomeBackgroundConfig: protectedProcedure.mutation(async ({ ctx }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const settingValue = JSON.stringify(defaultHeroTransition);
     const existing = (await db.select({ id: settings.id }).from(settings).where(eq(settings.settingKey, "homeHeroVideoTransition")).limit(1))[0];
     if (existing) await db.update(settings).set({ settingValue, updatedBy: ctx.user.id }).where(eq(settings.id, existing.id));
     else await db.insert(settings).values({ settingKey: "homeHeroVideoTransition", settingValue, updatedBy: ctx.user.id });
     publishEditorialEvent("home-background-config-updated");
-    return input;
+    return defaultHeroTransition;
   }),
   users: protectedProcedure.query(async ({ ctx }) => {
     requireAdmin(ctx.user.role);

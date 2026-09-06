@@ -5,6 +5,7 @@ import { mediaAssets, partnerMembers, partners, partnerTerritories, taxonomies, 
 import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { activePartnerMemberships, assertTerritoryTaxonomies, recordAuditEvent } from "../partnerScope";
+import { normalizeInstagramHandle } from "@shared/instagramHandle";
 
 const partnerStatuses = ["Rascunho", "Em revisão", "Ativo", "Suspenso", "Desativado"] as const;
 const memberRoles = ["Gestor territorial", "Operador territorial", "Curador territorial"] as const;
@@ -34,6 +35,7 @@ const partnerInput = z.object({
   logoMediaId: z.number().int().positive().nullable().optional(),
   profileMediaId: z.number().int().positive().nullable().optional(),
   publicVisibility: z.boolean().optional(),
+  instagramHandle: z.string().max(80).nullable().optional(),
   status: z.enum(partnerStatuses).optional(),
 });
 
@@ -69,7 +71,10 @@ export const partnersRouter = router({
     requirePrincipal(ctx.user.role);
     const db = await requireDb();
     await Promise.all([assertPartnerMedia(db, input.logoMediaId), assertPartnerMedia(db, input.profileMediaId)]);
-    const result = await db.insert(partners).values({ ...input, description: input.description?.trim() || null, contactText: input.contactText?.trim() || null, status: input.status ?? "Rascunho", publicVisibility: input.publicVisibility ?? false, createdBy: ctx.user.id });
+    if (input.instagramHandle?.trim() && !normalizeInstagramHandle(input.instagramHandle)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Informe um @ do Instagram válido, só com o handle autorizado pela casa." });
+    }
+    const result = await db.insert(partners).values({ ...input, description: input.description?.trim() || null, contactText: input.contactText?.trim() || null, instagramHandle: normalizeInstagramHandle(input.instagramHandle), status: input.status ?? "Rascunho", publicVisibility: input.publicVisibility ?? false, createdBy: ctx.user.id });
     const id = Number(result[0].insertId);
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: id, resourceType: "partner", resourceId: id, action: "partner-created", nextState: { status: input.status ?? "Rascunho", publicVisibility: input.publicVisibility ?? false }, detail: "Parceiro Ojú criado em estado controlado." });
     return { id };
@@ -87,7 +92,10 @@ export const partnersRouter = router({
       if (!territoryCount) throw new TRPCError({ code: "BAD_REQUEST", message: "Defina ao menos um território antes de ativar o Parceiro Ojú." });
     }
     const { id, expectedVersion, ...values } = input;
-    const update = await db.update(partners).set({ ...values, description: values.description === undefined ? undefined : values.description?.trim() || null, contactText: values.contactText === undefined ? undefined : values.contactText?.trim() || null, approvedBy: nextStatus === "Ativo" ? ctx.user.id : current.approvedBy, approvedAt: nextStatus === "Ativo" ? (current.approvedAt ?? new Date()) : current.approvedAt, version: current.version + 1 }).where(and(eq(partners.id, id), eq(partners.version, expectedVersion)));
+    if (values.instagramHandle !== undefined && values.instagramHandle?.trim() && !normalizeInstagramHandle(values.instagramHandle)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Informe um @ do Instagram válido, só com o handle autorizado pela casa." });
+    }
+    const update = await db.update(partners).set({ ...values, description: values.description === undefined ? undefined : values.description?.trim() || null, contactText: values.contactText === undefined ? undefined : values.contactText?.trim() || null, instagramHandle: values.instagramHandle === undefined ? undefined : normalizeInstagramHandle(values.instagramHandle), approvedBy: nextStatus === "Ativo" ? ctx.user.id : current.approvedBy, approvedAt: nextStatus === "Ativo" ? (current.approvedAt ?? new Date()) : current.approvedAt, version: current.version + 1 }).where(and(eq(partners.id, id), eq(partners.version, expectedVersion)));
     if (!update[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Este parceiro foi atualizado por outra pessoa. Reabra o registro antes de salvar." });
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: id, resourceType: "partner", resourceId: id, action: "partner-updated", previousState: { status: current.status, version: current.version }, nextState: { status: nextStatus, version: current.version + 1 }, detail: "Identidade ou governança territorial de parceiro atualizada." });
     return { success: true, version: current.version + 1 };
@@ -130,5 +138,18 @@ export const partnersRouter = router({
     else await db.insert(partnerMembers).values({ partnerId: input.partnerId, userId: input.userId, createdBy: ctx.user.id, ...values });
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: input.partnerId, territoryId: input.territoryId ?? null, resourceType: "partner-member", resourceId: input.userId, action: "partner-member-set", previousState: existing ? { status: existing.status, operationalRole: existing.operationalRole, territoryId: existing.territoryId } : null, nextState: input, detail: "Membro associado ou atualizado no Parceiro Ojú." });
     return { success: true };
+  }),
+  setMyInstagramHandle: protectedProcedure.input(z.object({ partnerId: z.number().int().positive(), handle: z.string().max(80).nullable() })).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const memberships = await activePartnerMemberships(db, ctx.user.id);
+    const allowed = ctx.user.role === "administrador principal" || memberships.some(item => item.partnerId === input.partnerId);
+    if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode informar o Instagram do Parceiro Ojú em que opera." });
+    const current = (await db.select().from(partners).where(eq(partners.id, input.partnerId)).limit(1))[0];
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Parceiro Ojú não encontrado." });
+    const instagramHandle = normalizeInstagramHandle(input.handle);
+    if (input.handle?.trim() && !instagramHandle) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe um @ do Instagram válido, só com o handle autorizado pela casa." });
+    await db.update(partners).set({ instagramHandle, version: current.version + 1 }).where(eq(partners.id, current.id));
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.id, resourceType: "partner", resourceId: current.id, action: "partner-instagram-updated", previousState: { instagramHandle: current.instagramHandle }, nextState: { instagramHandle }, detail: "Handle de Instagram autorizado pela casa, para crédito público. Não altera a Home nacional." });
+    return { success: true, instagramHandle };
   }),
 });

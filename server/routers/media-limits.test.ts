@@ -25,11 +25,14 @@ describe("limites documentais e fundo vivo", () => {
     expect(canActivateBackgroundClip({ mediaType: "vídeo", publicationAllowed: false, state: "Ativo" })).toBe(false);
   });
 
-  it("mantém a transição do fundo vivo dentro de um intervalo controlado", () => {
+  it("trava a janela da Home em 15 segundos com transição suave", () => {
     expect(heroTransitionSchema.parse(defaultHeroTransition)).toEqual(defaultHeroTransition);
     expect(heroTransitionSchema.safeParse({ displaySeconds: 4, transitionMilliseconds: 1100 }).success).toBe(false);
-    expect(heroTransitionSchema.safeParse({ displaySeconds: 14, transitionMilliseconds: 3100 }).success).toBe(false);
-    expect(heroTransitionSchema.safeParse({ displaySeconds: 18, transitionMilliseconds: 800 }).success).toBe(true);
+    expect(heroTransitionSchema.safeParse({ displaySeconds: 15, transitionMilliseconds: 3100 }).success).toBe(false);
+    expect(heroTransitionSchema.safeParse({ displaySeconds: 18, transitionMilliseconds: 800 }).success).toBe(false);
+    expect(heroTransitionSchema.safeParse({ displaySeconds: 15, transitionMilliseconds: 1100 }).success).toBe(true);
+    expect(routerSource).toContain("publicBackgroundClip");
+    expect(routerSource).toContain("recordHomeMiniclipSignal");
   });
 
   it("emite eventos para manter o portal sincronizado com o Acervo", () => {

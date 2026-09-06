@@ -13,6 +13,7 @@ import { CoverageMediaPanel } from "./CoverageMediaPanel";
 import { CoverageTaxonomiesPanel } from "./CoverageTaxonomiesPanel";
 import { InstitutionalCoveragePanel } from "./InstitutionalCoveragePanel";
 import { SiteReadiness } from "./_shared";
+import { EditorialBody } from "@/components/EditorialBody";
 
 const destinations: Record<string, string> = {
   "História": "Portal → Histórias",
@@ -65,7 +66,12 @@ export default function PublicationEdit() {
     <Link href="/admin/publicacoes" className="inline-flex items-center gap-2 text-sm font-semibold"><ArrowLeft className="h-4 w-4" />Voltar aos conteúdos</Link>
     <p className="mt-6 text-xs font-bold uppercase tracking-[.12em] text-[#806817]">{data.contentKind} · {destinations[data.contentKind] || "Portal"}</p>
     <h1 className="mt-2 font-serif text-5xl">{isPublished ? "Revisar publicação" : "Preparar o conteúdo"}</h1>
-    <p className="mt-3 max-w-2xl text-sm leading-6 text-[#655e52]">O site só recebe o conteúdo depois da revisão e da aprovação. Complete o texto e as fotos, depois avance uma etapa de cada vez.</p>
+    <p className="mt-3 max-w-2xl text-sm leading-6 text-[#655e52]">Um caminho só: texto, território, fotos. O site recebe depois da revisão e da aprovação.</p>
+    <nav className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
+      <a href="#texto" className="rounded-full bg-[#eee9dc] px-3 py-1.5">1. Texto</a>
+      <a href="#territorio" className="rounded-full bg-[#eee9dc] px-3 py-1.5">2. Território</a>
+      <a href="#midia" className="rounded-full bg-[#eee9dc] px-3 py-1.5">3. Fotos e vídeos</a>
+    </nav>
     <ol className="mt-6 grid gap-2 sm:grid-cols-4 text-sm">
       {editorialPipeline.map((step, index) => {
         const currentIndex = editorialPipeline.indexOf(data.status as typeof editorialPipeline[number]);
@@ -89,12 +95,24 @@ export default function PublicationEdit() {
     {conflict && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b95140]/30 bg-[#fff1ec] p-4 text-sm text-[#7a3126]"><span>Este conteúdo mudou em outra sessão. Recarregue para revisar a versão atual antes de salvar.</span><Button size="sm" type="button" onClick={() => { setConflict(false); utils.editorial.preview.invalidate({ id }); }}>Recarregar versão</Button></div>}
     {isPublished && <div className="mt-4 rounded-xl border border-[#806817]/30 bg-[#fff7dc] p-4 text-sm text-[#655e52]"><strong className="text-[#5d4700]">Conteúdo publicado.</strong> As correções entram no portal imediatamente e ficam registradas no histórico editorial.</div>}
     <section className="mt-6 grid gap-3 rounded-2xl border border-[#242017]/10 bg-[#eee9dc] p-5 text-sm sm:grid-cols-2"><p><strong>Criação:</strong> {nameOf(data.createdBy)} · {new Date(data.createdAt).toLocaleString("pt-BR")}</p><p><strong>Última edição:</strong> {data.editedBy ? nameOf(data.editedBy) : "Ainda não editada"}</p><p><strong>Aprovação:</strong> {data.approvedBy ? nameOf(data.approvedBy) : "Pendente"}</p><p><strong>Publicação:</strong> {data.publishedAt ? new Date(data.publishedAt).toLocaleString("pt-BR") : "Pendente"}</p></section>
-    <form onSubmit={event => { event.preventDefault(); update.mutate(payload); }} className="admin-card mt-8 grid gap-5 p-6">
+    <form id="texto" onSubmit={event => { event.preventDefault(); update.mutate(payload); }} className="admin-card mt-8 grid gap-5 p-6">
       <label className="grid gap-2 text-sm font-medium">Título<Input required value={title} onChange={event => setTitle(event.target.value)} /></label>
       <label className="grid gap-2 text-sm font-medium">Subtítulo<Input value={subtitle} onChange={event => setSubtitle(event.target.value)} /></label>
       <label className="grid gap-2 text-sm font-medium">Crédito ou equipe responsável<Input value={teamCredit} onChange={event => setTeamCredit(event.target.value)} placeholder="Ex.: Equipe Ojú · Fotografia: Nome" /></label>
       <label className="grid gap-2 text-sm font-medium">Resumo<Textarea value={summary} onChange={event => setSummary(event.target.value)} /></label>
-      <label className="grid gap-2 text-sm font-medium">Texto editorial<Textarea className="min-h-64" value={body} onChange={event => setBody(event.target.value)} /></label>
+      <div className="grid gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium">Texto editorial</p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => setBody(current => `${current.trim() ? `${current.trim()}\n\n` : ""}## Trecho\n`)}>Trecho</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setBody(current => `${current.trim() ? `${current.trim()}\n\n` : ""}> Destaque autorizado.\n`)}>Destaque</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setBody(current => `${current}**destaque**`)}>Negrito</Button>
+          </div>
+        </div>
+        <p className="text-xs leading-5 text-[#655e52]">Parágrafo em branco separa trechos. ## para subtítulo. &gt; para destaque. **palavra** para ênfase. Nada de nomes, pontos ou cantos como enfeite.</p>
+        <Textarea className="min-h-64" value={body} onChange={event => setBody(event.target.value)} />
+        {(body || summary) ? <div className="rounded-xl bg-[#120f0c] p-5"><p className="mb-3 text-[10px] font-semibold uppercase tracking-[.14em] text-[#c9a27a]">Como o portal lê</p><EditorialBody text={body || summary} /></div> : null}
+      </div>
       <section className="rounded-xl border border-[#242017]/10 bg-[#f7f3e9] p-4"><p className="text-sm font-semibold">Links externos opcionais</p><p className="mt-1 text-xs leading-5 text-[#655e52]">O portal mantém até 5 fotos e 2 vídeos curtos. Capa atual: {cover ? cover.filename || `#${cover.id}` : "ainda sem capa — marque abaixo."}</p><div className="mt-3 grid gap-3 md:grid-cols-2"><Input type="url" value={externalAlbumUrl} onChange={event => setExternalAlbumUrl(event.target.value)} placeholder="Álbum completo"/><Input type="url" value={externalVideoUrl} onChange={event => setExternalVideoUrl(event.target.value)} placeholder="Vídeo completo"/></div></section>
       {isPublished && <label className="grid gap-2 text-sm font-medium">Motivo da revisão<Textarea value={revisionNote} onChange={event => setRevisionNote(event.target.value)} /></label>}
       <div className="flex flex-wrap justify-end gap-3">
@@ -103,8 +121,16 @@ export default function PublicationEdit() {
         <Button disabled={update.isPending} className="bg-[#242017] text-white">{update.isPending ? "Salvando..." : isPublished ? "Publicar revisão" : "Salvar texto"}</Button>
       </div>
     </form>
-    {data.contentKind !== "Fotografia documental" && <CoverageTaxonomiesPanel publicationId={id} version={data.version} initialIds={data.taxonomies.map(item => item.id)} contentKind={data.contentKind} />}
-    {data.contentKind === "Cobertura" && <InstitutionalCoveragePanel publication={data} />}
-    <CoverageMediaPanel publicationId={id} coverageTitle={data.title} contentKind={data.contentKind} documentaryPhotos={data.contentKind === "Fotografia documental"} existingMedia={data.media.map(media => ({ id: media.id, mediaType: media.mediaType, filename: media.filename, isCover: media.isCover }))} eventNames={data.taxonomies.filter(taxonomy => taxonomy.dimension === "Evento").map(taxonomy => taxonomy.name)} />
+    <section id="territorio" className="mt-10">
+      <h2 className="font-serif text-3xl">2. Território e relações</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">Ligue o conteúdo ao chão autorizado. Sem território, o portal não considera o material pronto.</p>
+      {data.contentKind !== "Fotografia documental" && <CoverageTaxonomiesPanel publicationId={id} version={data.version} initialIds={data.taxonomies.map(item => item.id)} contentKind={data.contentKind} />}
+      {data.contentKind === "Cobertura" && <InstitutionalCoveragePanel publication={data} />}
+    </section>
+    <section id="midia" className="mt-10">
+      <h2 className="font-serif text-3xl">3. Fotos e vídeos</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">Até 5 fotos e 2 vídeos curtos, com crédito. Marque a capa. O portal não recebe arquivo solto.</p>
+      <CoverageMediaPanel publicationId={id} coverageTitle={data.title} contentKind={data.contentKind} documentaryPhotos={data.contentKind === "Fotografia documental"} existingMedia={data.media.map(media => ({ id: media.id, mediaType: media.mediaType, filename: media.filename, isCover: media.isCover }))} eventNames={data.taxonomies.filter(taxonomy => taxonomy.dimension === "Evento").map(taxonomy => taxonomy.name)} />
+    </section>
   </div></DashboardLayout>;
 }

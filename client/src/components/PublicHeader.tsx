@@ -70,7 +70,7 @@ export function PublicHeader({
                   <p className="text-[10px] font-semibold normal-case tracking-normal text-[#c45c26]">{group.description}</p>
                   <div className="mt-3 grid gap-1">
                     {group.items.map(item => (
-                      <Link key={item.href} href={item.href} className="rounded px-2 py-2 text-[11px] hover:bg-white/10 hover:text-[#ed9c58]">{item.label}</Link>
+                      <Link key={item.href} href={item.href} className="rounded px-2 py-2 text-sm font-semibold normal-case tracking-normal hover:bg-white/10 hover:text-[#ed9c58]">{item.label}</Link>
                     ))}
                   </div>
                 </div>
@@ -105,8 +105,8 @@ export function PublicHeader({
             {grouped.map(group => (
               <div key={group.id}>
                 <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#c45c26]">{group.label}</p>
-                <p className="mt-1 text-xs font-normal normal-case tracking-normal text-white/55">{group.description}</p>
-                <div className="mt-3 grid grid-cols-2 gap-1 text-xs font-bold uppercase tracking-[.08em]">
+                <p className={`mt-1 text-xs font-normal normal-case tracking-normal ${cinematic ? "text-white/55" : "text-[#655e52]"}`}>{group.description}</p>
+                <div className="mt-3 grid grid-cols-2 gap-1 text-sm font-semibold">
                   {group.items.map(item => (
                     <Link key={item.href} href={item.href} onClick={close} className="rounded px-2 py-3 hover:bg-white/10 hover:text-[#ed9c58]">{item.label}</Link>
                   ))}

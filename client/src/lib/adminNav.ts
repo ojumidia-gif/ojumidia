@@ -91,11 +91,12 @@ export function isPrincipalOnlyAdminPath(pathname: string) {
   return principalOnlyAdminPaths.some(path => pathname === path || pathname.startsWith(`${path}/`));
 }
 
-export function visibleAdminNav(role: string | undefined) {
+export function visibleAdminNav(role: string | undefined, partnerScoped = false) {
   const principal = role === "administrador principal";
   return adminNavGroups
     .map(group => ({
       ...group,
+      label: partnerScoped && group.id === "content" ? "Publicar agora" : group.label,
       items: group.items.filter(item => {
         if (item.href === "/admin/publicacoes" && group.id === "system") return false;
         return principal || !item.principalOnly;

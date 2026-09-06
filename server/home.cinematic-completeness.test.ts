@@ -10,6 +10,7 @@ describe("completude da Home cinematográfica", () => {
     expect(home).toContain("Divulgação contratada");
     expect(home).toContain("onClick={playHero}");
     expect(home).toContain("onClick={toggleMute}");
+    expect(home).toContain("window.open");
     expect(header).toContain("setOpen(value => !value)");
     expect(header).toContain("onMenuClick?.()");
   });
