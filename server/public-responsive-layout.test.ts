@@ -11,8 +11,9 @@ describe("layout público responsivo", () => {
     expect(html).toContain("viewport-fit=cover");
     expect(html).not.toContain("maximum-scale=1");
     expect(css).toContain(".public-footer-nav");
-    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
-    expect(css).toContain("grid-template-columns: 1fr");
-    expect(footer).toContain('className="public-footer-nav"');
+    expect(css).toContain("justify-content: center");
+    expect(css).not.toContain("justify-content: flex-end");
+    expect(footer).toContain("public-footer-nav");
+    expect(footer).toContain("flex-col items-center");
   });
 });
