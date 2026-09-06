@@ -7,7 +7,7 @@ const source = (file: string) => readFileSync(resolve(process.cwd(), file), "utf
 describe("contato institucional e monitoramento de vigências", () => {
   it("mantém o e-mail público da Ojú separado do acesso administrativo", () => {
     const contact = source("client/src/pages/Contact.tsx");
-    expect(contact).toContain('const CONTACT_EMAIL = "ojumidia@gmail.com"');
+    expect(contact).toContain("OJU_CONTACT_EMAIL");
     expect(contact).toContain("mailto:${CONTACT_EMAIL}");
     expect(contact).toContain("dúvida, sugestão, solicitação ou proposta de parceria");
     expect(contact).toContain("Preparar e-mail para a Ojú");

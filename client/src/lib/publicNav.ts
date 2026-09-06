@@ -1,6 +1,7 @@
 export const OJU_WHATSAPP_URL = "https://wa.me/5592920019527";
 export const OJU_WHATSAPP_LABEL = "(92) 92001-9527";
-export const OJU_INSTAGRAM_URL = "https://instagram.com/ojumidia";
+export const OJU_INSTAGRAM_HANDLE = "@oju.fotografia";
+export const OJU_INSTAGRAM_URL = "https://instagram.com/oju.fotografia";
 export const OJU_CONTACT_EMAIL = "ojumidia@gmail.com";
 
 export const publicNavGroups = [

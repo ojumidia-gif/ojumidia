@@ -26,7 +26,7 @@ export const portalContentDefaults = {
       { label: "Serviços", href: "/servicos", order: 11, active: true, featured: false },
       { label: "Chamar a Ojú", href: "/planejar-um-registro", order: 12, active: true, featured: true },
     ] },
-    footer: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Redes sociais", href: "https://instagram.com/ojumidia", external: true }], legalItems: [{ label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
+    footer: { items: [{ label: "Sobre a Ojú", href: "/sobre" }, { label: "Comunidade", href: "/comunidade" }, { label: "Contato", href: "/contato" }, { label: "Cuidado", href: "/cuidado-e-consentimento" }, { label: "Instagram", href: "https://instagram.com/oju.fotografia", external: true }], legalItems: [{ label: "Cuidado e consentimento", href: "/cuidado-e-consentimento" }] },
     method: { eyebrow: "Método Ojú", title: "Cuidado antes da câmera.", description: "Registrar começa quando a Ojú compreende o que está sendo vivido, o que precisa permanecer privado e o que pode atravessar o tempo.", items: ojuMethod },
   },
   Home: {
