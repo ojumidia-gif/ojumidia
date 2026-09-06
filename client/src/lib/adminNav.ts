@@ -3,6 +3,7 @@ import { BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandsh
 export type AdminNavItem = {
   label: string;
   partnerLabel?: string;
+  principalLabel?: string;
   href: string;
   icon: typeof Home;
   principalOnly?: boolean;
@@ -25,7 +26,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Painel", href: "/admin", icon: Home },
       { label: "Guia", href: "/admin/guia", icon: Route },
-      { label: "Canal Ojú", href: "/admin/canal", icon: LifeBuoy },
+      { label: "Canal Ojú", principalLabel: "Caixa Canal Ojú", href: "/admin/canal", icon: LifeBuoy },
       { label: "Pendências", href: "/admin/pendencias", icon: ListFilter, partnerHidden: true },
     ],
   },
@@ -129,7 +130,7 @@ export function visibleAdminNav(role: string | undefined, partnerScoped = false)
         })
         .map(item => ({
           ...item,
-          label: partnerScoped ? (item.partnerLabel || item.label) : item.label,
+          label: partnerScoped ? (item.partnerLabel || item.label) : (principal ? (item.principalLabel || item.label) : item.label),
         })),
     }))
     .filter(group => group.items.length > 0);

@@ -18,7 +18,7 @@ export default function CanalOjuAdmin() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [reply, setReply] = useState<Record<number, string>>({});
-  const mine = trpc.desk.mine.useQuery();
+  const mine = trpc.desk.mine.useQuery(undefined, { enabled: !principal });
   const inbox = trpc.desk.inbox.useQuery(undefined, { enabled: principal, refetchInterval: 20_000 });
   const send = trpc.desk.send.useMutation({
     onSuccess: () => {
@@ -41,10 +41,13 @@ export default function CanalOjuAdmin() {
   });
 
   return (
-    <AdminPage eyebrow="Canal Ojú" title={principal ? "Mensagens da operação." : "Fale com o Super Admin."}>
+    <AdminPage eyebrow="Canal Ojú" title={principal ? "Caixa da operação." : "Fale com o Super Admin."}>
       <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">
-        Ojú Bot, no canto da tela, responde primeiro com textos prontos. Este canal é a caixa do Super Admin: erro, código, sugestão ou o que o bot não cobriu.
+        {principal
+          ? "Ojú Bot é só para admin comum e usuário novo. Aqui vocês recebem dúvida, erro, código e sugestão — e respondem."
+          : "Ojú Bot, no canto da tela, responde primeiro com textos prontos. Se não achar, envie para o Super Admin neste canal."}
       </p>
+      {principal ? null : (
       <form
         className="admin-card mb-7 grid gap-4 p-5"
         onSubmit={event => {
@@ -63,6 +66,7 @@ export default function CanalOjuAdmin() {
         {pagePath ? <p className="text-xs text-[#655e52]">Tela de origem: {pagePath}</p> : null}
         <div className="flex justify-end"><Button disabled={send.isPending} className="bg-[#242017] text-white">{send.isPending ? "Enviando..." : "Enviar ao Super Admin"}</Button></div>
       </form>
+      )}
 
       {principal ? (
         <section className="mb-7">
@@ -95,6 +99,7 @@ export default function CanalOjuAdmin() {
         </section>
       ) : null}
 
+      {principal ? null : (
       <section>
         <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Suas mensagens</p>
         {mine.data?.length ? (
@@ -109,6 +114,7 @@ export default function CanalOjuAdmin() {
           </div>
         ) : <p className="mt-3 text-sm text-[#655e52]">Você ainda não enviou nada neste canal.</p>}
       </section>
+      )}
     </AdminPage>
   );
 }

@@ -28,5 +28,8 @@ describe("guia e Canal Ojú", () => {
     expect(guide).toContain('FIRST_GUIDE_STORAGE_KEY = "oju-hide-first-guide"');
     expect(bot).toContain("Não achei. Enviar ao Canal Ojú");
     expect(bot).toContain("Código:");
+    expect(bot).toContain('user?.role === "administrador principal"');
+    const canal = readFileSync(resolve(process.cwd(), "client/src/pages/admin/CanalOjuAdmin.tsx"), "utf8");
+    expect(canal).toContain("Ojú Bot é só para admin comum");
   });
 });

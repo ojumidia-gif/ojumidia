@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { hideFirstGuide, isFirstGuideHidden, showFirstGuideAgain } from "@/lib/adminGuide";
 import { siteDestinations } from "@/lib/siteDestinations";
 import { AdminPage } from "./_shared";
 
 export default function AdminGuides() {
+  const { user } = useAuth();
+  const principal = user?.role === "administrador principal";
   const [ready, setReady] = useState(false);
   const [hidden, setHidden] = useState(true);
   useEffect(() => {
@@ -15,7 +18,9 @@ export default function AdminGuides() {
   return (
     <AdminPage eyebrow="Primeiro dia" title="Do rascunho ao site, em três passos.">
       <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">
-        Cada cartão é um destino público. Crie, complete o mínimo e publique no site. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot. Se não achar resposta pronta, envie ao Canal Ojú.
+        {principal
+          ? "Cada cartão é um destino público. Crie, complete o mínimo e publique no site. Dúvidas da equipe chegam no Canal Ojú. Ojú Bot não aparece para Super Admin."
+          : "Cada cartão é um destino público. Crie, complete o mínimo e publique no site. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot. Se não achar resposta pronta, envie ao Canal Ojú."}
       </p>
       {ready ? (
         <div className="mb-6 flex flex-wrap items-center gap-3">

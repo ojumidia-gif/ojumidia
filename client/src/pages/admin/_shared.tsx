@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { hideFirstGuide, isFirstGuideHidden } from "@/lib/adminGuide";
 import { siteDestinationById } from "@/lib/siteDestinations";
 
@@ -23,6 +24,8 @@ export function SiteReadiness({ items, readyText }: { items: string[]; readyText
 }
 
 export function FirstUserWelcome() {
+  const { user } = useAuth();
+  const principal = user?.role === "administrador principal";
   const [ready, setReady] = useState(false);
   const [hidden, setHidden] = useState(true);
   useEffect(() => {
@@ -37,7 +40,9 @@ export function FirstUserWelcome() {
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Primeiro uso</p>
           <p className="mt-1 font-serif text-2xl">Criar, completar e publicar no site.</p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">
-            Cada destino público tem três passos. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot, canto da tela. Se a resposta pronta não existir, envie ao Canal Ojú.
+            {principal
+              ? "Cada destino público tem três passos. A Home nacional é só Super Admin. Dúvidas da equipe chegam no Canal Ojú. Ojú Bot é só para admin comum."
+              : "Cada destino público tem três passos. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot, canto da tela. Se a resposta pronta não existir, envie ao Canal Ojú."}
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => { hideFirstGuide(); setHidden(true); }}>Não exibir mais</Button>
@@ -63,6 +68,8 @@ export function ThreeStepsGuide({ steps }: { steps: [string, string, string] }) 
 }
 
 export function AdminFlowGuide({ destinationId }: { destinationId: string }) {
+  const { user } = useAuth();
+  const principal = user?.role === "administrador principal";
   const dest = siteDestinationById(destinationId);
   const [ready, setReady] = useState(false);
   const [hidden, setHidden] = useState(true);
@@ -86,7 +93,7 @@ export function AdminFlowGuide({ destinationId }: { destinationId: string }) {
           <li key={step} className="rounded-xl bg-white/80 px-4 py-3"><strong>{index + 1}.</strong> {step}</li>
         ))}
       </ol>
-      <p className="mt-3 text-xs text-[#655e52]">Dúvida depois: Ojú Bot, canto da tela. Se não achar resposta, envia ao Canal Ojú.</p>
+      <p className="mt-3 text-xs text-[#655e52]">{principal ? "A equipe manda dúvida e sugestão no Canal Ojú. Ojú Bot não aparece para Super Admin." : "Dúvida depois: Ojú Bot, canto da tela. Se não achar resposta, envia ao Canal Ojú."}</p>
     </section>
   );
 }

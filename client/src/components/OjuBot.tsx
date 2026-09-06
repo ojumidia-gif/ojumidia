@@ -5,12 +5,14 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { makeDeskErrorCode, matchOjuBotFaqs, type OjuBotFaq } from "@/lib/ojuBotFaqs";
 import { trpc } from "@/lib/trpc";
 
 const categories = ["Dúvida", "Erro", "Estabilidade", "Outro"] as const;
 
 export function OjuBot() {
+  const { user } = useAuth();
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -35,7 +37,8 @@ export function OjuBot() {
   const faqs = useMemo(() => matchOjuBotFaqs(query), [query]);
   const noMatch = query.trim().length >= 3 && faqs.length === 0;
 
-  if (location === "/admin/canal") return null;
+  const principal = user?.role === "administrador principal";
+  if (principal || location === "/admin/canal") return null;
 
   function openTicket(prefill?: string) {
     setTicket(true);

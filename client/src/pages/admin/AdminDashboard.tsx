@@ -116,7 +116,7 @@ export default function AdminDashboard() {
         <p className="mb-3 text-xs font-bold uppercase tracking-[.14em] text-[#806817]">{principal ? "Operação" : "Publicar no site"}</p>
         <div className="mb-4 flex flex-wrap gap-2">
           <Link href="/admin/guia" className="rounded-full bg-[#242017] px-3 py-2 text-sm font-semibold text-white">Guia criar → publicar</Link>
-          <Link href="/admin/canal" className="rounded-full border border-[#242017]/20 px-3 py-2 text-sm font-semibold">Canal Ojú</Link>
+          <Link href="/admin/canal" className="rounded-full border border-[#242017]/20 px-3 py-2 text-sm font-semibold">{principal ? "Caixa Canal Ojú" : "Canal Ojú"}</Link>
         </div>
         <div className="flex flex-wrap gap-2">
           {siteDestinations.map(item => (

@@ -30,6 +30,13 @@ describe("rotas administrativas restritas ao Super Admin", () => {
     expect(isPrincipalOnlyAdminPath("/admin/publicacoes")).toBe(false);
   });
 
+  it("mostra a caixa do Canal Ojú no menu do Super Admin, sem mudar o atalho do admin comum", () => {
+    const principal = visibleAdminNav("administrador principal").flatMap(group => group.items);
+    const common = visibleAdminNav("administrador").flatMap(group => group.items);
+    expect(principal.find(item => item.href === "/admin/canal")?.label).toBe("Caixa Canal Ojú");
+    expect(common.find(item => item.href === "/admin/canal")?.label).toBe("Canal Ojú");
+  });
+
   it("deixa o painel do parceiro só com o trabalho do território, sem CMS do site", () => {
     const groups = visibleAdminNav("administrador", true);
     const hrefs = groups.flatMap(group => group.items.map(item => item.href));
