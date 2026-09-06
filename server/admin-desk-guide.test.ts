@@ -30,7 +30,7 @@ describe("guia e Canal Ojú", () => {
     expect(bot).toContain("Código:");
     expect(bot).toContain('user?.role === "administrador principal"');
     const canal = readFileSync(resolve(process.cwd(), "client/src/pages/admin/CanalOjuAdmin.tsx"), "utf8");
-    expect(canal).toContain("Ojú Bot é só para admin comum");
+    expect(canal).toContain("Ojú Bot é só para criador parceiro");
     expect(canal).toContain("Arquivar");
     expect(canal).toContain("Excluir");
     expect(canal).toContain("Desarquivar");

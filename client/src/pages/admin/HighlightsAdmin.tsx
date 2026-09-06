@@ -15,7 +15,7 @@ export default function HighlightsAdmin() {
   const [changes, setChanges] = useState<Record<number, { placement: typeof options[number]; relevance: number; featured: boolean; homeOrder: number; highlightExpiresAt: string }>>({});
   const save = trpc.editorial.setFeatured.useMutation({ onSuccess: () => { toast.success("Curadoria atualizada. A capa entra em Histórias recentes em instantes."); utils.editorial.adminList.invalidate(); utils.editorial.featured.invalidate(); }, onError: error => toast.error(error.message) });
   const published = data?.items || [];
-  return <AdminPage eyebrow="Super Admin · Home nacional" title="A Home é uma escolha editorial.">
+  return <AdminPage eyebrow="Equipe Ojú · Home nacional" title="A Home é uma escolha editorial.">
     <p className="mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">Marque <strong>Mostrar em Histórias recentes</strong> para a foto de capa aparecer na Home. Publicar no portal não faz isso sozinho.</p>
     <div className="mb-7"><SiteReadiness items={!isLoading && !published.length ? ["Ainda não há conteúdo publicado para curar na Home nacional."] : []} readyText={!isLoading && published.length ? "A capa autorizada do conteúdo é a que a Home usa." : undefined} /></div>
     {isLoading ? <p>Carregando conteúdos publicados...</p> : published.length ? <div className="grid gap-4">

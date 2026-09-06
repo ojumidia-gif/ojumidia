@@ -24,7 +24,7 @@ export function OjuBot() {
   const [errorCode, setErrorCode] = useState("");
   const send = trpc.desk.send.useMutation({
     onSuccess: () => {
-      toast.success("Enviado ao Canal Ojú do Super Admin.");
+      toast.success("Enviado ao Canal Ojú da Equipe Ojú.");
       setTicket(false);
       setSubject("");
       setBody("");
@@ -54,7 +54,7 @@ export function OjuBot() {
           <header className="flex items-center justify-between bg-[#242017] px-4 py-3 text-white">
             <div>
               <p className="text-sm font-semibold">Ojú Bot</p>
-              <p className="text-[11px] text-[#d9d1c3]">Respostas prontas. Se não achar, manda ao Super Admin.</p>
+              <p className="text-[11px] text-[#d9d1c3]">Respostas prontas. Se não achar, manda à Equipe Ojú.</p>
             </div>
             <button type="button" className="rounded-full p-1 hover:bg-white/10" onClick={() => setOpen(false)} aria-label="Fechar Ojú Bot"><X className="h-4 w-4" /></button>
           </header>

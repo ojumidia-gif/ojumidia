@@ -46,7 +46,7 @@ export default function MediaTrashAdmin() {
                   <Button size="sm" variant="outline" onClick={() => restore.mutate({ id: item.id })} disabled={restore.isPending}><RotateCcw className="mr-2 h-4 w-4" />Restaurar</Button>
                   <Button size="sm" variant="outline" className="border-[#8b4d24] text-[#8b4d24]" onClick={() => { setTarget(item); setConfirmation(""); }}><Trash2 className="mr-2 h-4 w-4" />Excluir definitivamente</Button>
                 </div>
-              ) : <p className="text-xs text-[#655e52]">Somente o Super Admin restaura ou expurga.</p>}
+              ) : <p className="text-xs text-[#655e52]">Somente a Equipe Ojú restaura ou expurga.</p>}
             </article>
           ))}
         </section>
@@ -66,7 +66,7 @@ export default function MediaTrashAdmin() {
           </AlertDialogContent>
         </AlertDialog>
       ) : null}
-      {!principal ? <section className="mt-6 admin-card max-w-2xl p-6"><AlertTriangle className="h-6 w-6 text-[#8b4d24]" /><p className="mt-4 text-sm leading-6 text-[#655e52]">A consulta respeita o seu território. Expurgar é exclusivo do Super Admin.</p></section> : null}
+      {!principal ? <section className="mt-6 admin-card max-w-2xl p-6"><AlertTriangle className="h-6 w-6 text-[#8b4d24]" /><p className="mt-4 text-sm leading-6 text-[#655e52]">A consulta respeita o seu território. Expurgar é exclusivo da Equipe Ojú.</p></section> : null}
     </AdminPage>
   );
 }

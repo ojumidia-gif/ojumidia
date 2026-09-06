@@ -17,7 +17,7 @@ export default function JoinRequestsAdmin() {
   return (
     <AdminPage eyebrow="Rede" title="Candidaturas a Parceiro Ojú.">
       <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">
-        Pedidos do site público. Aprovar aqui não cria login: em seguida abra Colaboradores, convide o e-mail Google, defina território e, se for admin, anexe o termo gov.br. Recusar ou arquivar fecha o pedido sem acesso.
+        Pedidos do site público. Aprovar aqui não cria login: em seguida abra Colaboradores, convide o e-mail Google, defina território e, se for criador parceiro, anexe o termo gov.br. Recusar ou arquivar fecha o pedido sem acesso.
       </p>
       {list.isLoading ? <p className="text-sm text-[#655e52]">Carregando candidaturas...</p> : list.data?.items.length ? (
         <div className="grid gap-4">

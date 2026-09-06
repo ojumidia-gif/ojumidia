@@ -15,7 +15,7 @@ export default function HomePreview() {
         {isLoading ? <p className="mt-12">Montando a prévia da Home...</p> : data ? (
           <section className="mt-8 overflow-hidden rounded-2xl bg-[#070605] text-white">
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#ed9c58]">Prévia da Home nacional · Super Admin</p>
+              <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#ed9c58]">Prévia da Home nacional · Equipe Ojú</p>
               <span className="rounded-full border border-white/15 px-3 py-1 text-xs">{data.homePlacement}</span>
             </div>
             <div className="grid min-h-[390px] items-end gap-8 p-8 md:grid-cols-[1.1fr_.9fr] md:p-12">

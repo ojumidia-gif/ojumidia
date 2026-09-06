@@ -137,7 +137,7 @@ export default function PublicationEdit() {
 
     {data.status !== "Publicada" ? <div className="mt-4"><SiteReadiness items={gaps} readyText="Pronto. Publique no site." /></div> : null}
     {conflict && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b95140]/30 bg-[#fff1ec] p-4 text-sm text-[#7a3126]"><span>Outra pessoa salvou primeiro.</span><Button size="sm" type="button" onClick={() => { setConflict(false); utils.editorial.preview.invalidate({ id }); }}>Recarregar</Button></div>}
-    {isPublished && <p className="mt-4 text-sm text-[#655e52]">No portal. Home só com Super Admin. Aqui você aprimora o texto, crédito e links.</p>}
+    {isPublished && <p className="mt-4 text-sm text-[#655e52]">No portal. Home com a Equipe Ojú. Aqui você aprimora o texto, crédito e links.</p>}
 
     {(isPublished || wizardStep === 1) ? (
     <form id="texto" onSubmit={event => { event.preventDefault(); update.mutate(payload); }} className="admin-card mt-8 grid gap-5 p-6">
@@ -193,7 +193,7 @@ export default function PublicationEdit() {
 
     {isPublished ? <section id="home" className="admin-card mt-10 p-6">
       <h2 className="font-serif text-3xl">Home e Histórias recentes</h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">Publicar não coloca a foto na Home. Só o Super Admin marca a vitrine nacional.</p>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">Publicar não coloca a foto na Home. A Equipe Ojú marca a vitrine nacional.</p>
       {cover ? <p className="mt-3 text-xs text-[#655e52]">Capa atual: {cover.filename || `#${cover.id}`}</p> : <p className="mt-3 text-xs text-[#8b4d24]">Sem capa marcada — a Home ficaria sem foto.</p>}
       {user?.role === "administrador principal" ? (
         <div className="mt-5 grid gap-4">
@@ -212,7 +212,7 @@ export default function PublicationEdit() {
         </div>
       ) : (
         <div className="mt-5">
-          <p className="text-sm text-[#655e52]">Só o Super Admin coloca na Home.</p>
+          <p className="text-sm text-[#655e52]">A Equipe Ojú coloca na Home.</p>
           <Button type="button" variant="outline" className="mt-3" disabled={suggestHighlight.isPending || data.homePlacement !== "Nenhum" || data.manualFeatured} onClick={() => suggestHighlight.mutate({ publicationId: id, note: "Pedido para aparecer em Histórias recentes com a foto de capa." })}>{data.homePlacement !== "Nenhum" || data.manualFeatured ? "Já está na Home" : "Pedir Histórias recentes"}</Button>
         </div>
       )}

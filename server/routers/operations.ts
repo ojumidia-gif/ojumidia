@@ -23,6 +23,7 @@ import {
   uploadSessions,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
+import { ensureAdminJoinRequestsTable } from "../joinRequestsTable";
 import { EDITORIAL_TRASH_RETENTION_MS } from "../editorialTrash";
 import { activePartnerMemberships, partnerTerritoryIds } from "../partnerScope";
 import { protectedProcedure, router } from "../_core/trpc";
@@ -135,6 +136,7 @@ export const operationsRouter = router({
     careRows.forEach(care => add({ id: `care-${care.id}`, category: "Acolhimento", priority: care.status === "Recebida" ? "Crítica" : "Atenção", title: `Pedido de acolhimento: ${care.requestType}`, description: "Pedido reservado exige acompanhamento responsável; dados de contato não são exibidos aqui.", href: "/admin/notificacoes-acolhimento", createdAt: care.updatedAt, dueAt: null, partnerId: care.partnerId, territoryId: care.territoryId }, care.managedByUserId));
     uploadRows.forEach(session => add({ id: `upload-${session.id}`, category: "Upload", priority: session.status === "Falhou" ? "Crítica" : "Atenção", title: session.filename, description: session.status === "Falhou" ? (session.errorMessage || "O envio falhou e pode ser retomado com o mesmo identificador.") : `Arquivo em “${session.status}”. Você pode continuar trabalhando enquanto o processamento termina.`, href: "/admin/midias", createdAt: session.updatedAt, dueAt: null, partnerId: session.partnerId, territoryId: session.territoryId }, session.userId));
     if (principal) {
+      await ensureAdminJoinRequestsTable(db);
       const joinRows = await db.select().from(adminJoinRequests).where(inArray(adminJoinRequests.status, ["Recebida", "Em conversa"])).orderBy(desc(adminJoinRequests.createdAt));
       joinRows.forEach(row => items.push({
         id: `join-request-${row.id}`,

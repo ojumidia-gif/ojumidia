@@ -25,7 +25,7 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
     href: "/termos-de-uso",
     eyebrow: "Termos de uso",
     title: "Como este site pode ser usado.",
-    description: "Estes termos regem o uso do portal público da Ojú Mídia e dos formulários de contato, planejamento e cuidado. O Centro Administrativo tem regras próprias de acesso, responsabilidade e auditoria.",
+    description: "Estes termos regem o uso do portal público da Ojú Mídia e dos formulários de contato, planejamento, parceria e cuidado. O painel interno da Equipe Ojú e dos Parceiros Ojú tem regras próprias de acesso, responsabilidade e auditoria.",
     sections: [
       {
         title: "Quem somos",
@@ -38,7 +38,7 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
         title: "O que o portal oferece",
         paragraphs: [
           "O site público reúne histórias, coberturas, documentários, projetos, fotografia documental, territórios, fotógrafos, instituições, agenda e memórias que receberam autorização editorial para circular.",
-          "Publicar no portal não coloca o conteúdo na vitrine da Home. A Home nacional é curadoria do Super Admin.",
+          "Publicar no portal não coloca o conteúdo na vitrine da Home. A Home nacional é curadoria da Equipe Ojú.",
           "Espaços identificados como divulgação contratada não fazem parte da curadoria documental.",
         ],
       },
@@ -47,7 +47,7 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
         paragraphs: [
           "Você pode navegar, ler, assistir e compartilhar links públicos do portal para fins pessoais, educativos ou de divulgação da memória autorizada, sempre com crédito visível quando houver.",
           "É proibido copiar, revender, reutilizar em campanha, treinar sistemas automáticos ou republicar imagens, áudios e textos sem licença. Pedidos de uso passam por /licenciar-midia.",
-          "É proibido tentar acessar o Centro Administrativo sem autorização, alterar dados de terceiros, burlar consentimento, expor localização ou contato que a casa marcou como privado, ou usar o canal de cuidado para emergência médica ou policial.",
+          "É proibido tentar acessar o painel interno da Ojú sem autorização, alterar dados de terceiros, burlar consentimento, expor localização ou contato que a casa marcou como privado, ou usar o canal de cuidado para emergência médica ou policial.",
         ],
       },
       {
@@ -61,15 +61,16 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
       {
         title: "Formulários públicos",
         paragraphs: [
-          "Pedidos de planejamento, cobertura, contato, licenciamento, apoio à memória e cuidado documental são solicitações. Não criam contrato automaticamente nem publicam nada no portal.",
+          "Pedidos de planejamento, cobertura, contato, licenciamento, apoio à memória, parceria e cuidado documental são solicitações. Não criam contrato automaticamente nem publicam nada no portal. O canal Ser parceiro também não cria login sozinho.",
           "Informações enviadas devem ser verdadeiras no que for possível. Não envie dados de terceiros sem base legítima para isso.",
         ],
       },
       {
-        title: "Contas administrativas",
+        title: "Parceiros Ojú e Equipe Ojú",
         paragraphs: [
-          "Administradores só operam a própria carteira. Ninguém altera o conteúdo de outro admin. O Super Admin governa o site, a Home, o catálogo nacional e a lixeira.",
-          "Papel de administrador comum exige termo de responsabilidade assinado via gov.br. Sessões, auditoria e documentos privados seguem as regras internas da Ojú.",
+          "Quem opera conteúdo no território o faz como Parceiro Ojú, com acesso de criador parceiro: cria, edita e publica somente o que é seu. Ninguém altera o conteúdo de outro parceiro.",
+          "A Equipe Ojú cuida do portal, da Home nacional, do catálogo compartilhado e das lixeiras internas. Pedido em Ser parceiro não cria login sozinho.",
+          "Acesso de criador parceiro, quando exigido, passa por termo de responsabilidade assinado via gov.br. Sessões, auditoria e documentos privados seguem as regras internas da Ojú.",
         ],
       },
       {
@@ -92,7 +93,7 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
     href: "/privacidade",
     eyebrow: "Privacidade e LGPD",
     title: "Como tratamos dados pessoais.",
-    description: "Este aviso descreve o tratamento de dados pessoais no portal e nos formulários da Ojú Mídia, nos termos da Lei nº 13.709/2018 (LGPD). Não substitui contratos, termos de autorização ou o termo de responsabilidade de administradores.",
+    description: "Este aviso descreve o tratamento de dados pessoais no portal e nos formulários da Ojú Mídia, nos termos da Lei nº 13.709/2018 (LGPD). Não substitui contratos, termos de autorização ou o termo de responsabilidade do criador parceiro.",
     sections: [
       {
         title: "Controladora e contato",
@@ -107,7 +108,7 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
           "Navegação pública: dados técnicos mínimos para exibir o site (por exemplo endereço IP em registros de servidor). Não usamos publicidade comportamental no portal.",
           "Formulários: nome, contato, e-mail, WhatsApp, território informado, contexto da história, tipo de pedido e mensagens que você escreveu. No canal de cuidado, também o tipo de solicitação e o protocolo de acompanhamento.",
           "Contratação e produção: dados necessários à proposta, entrega, autorização editorial, créditos e, quando couber, documentos assinados via gov.br.",
-          "Centro Administrativo: identificação da conta autorizada, papel, trilha de auditoria, mídias enviadas e conteúdos criados pela própria pessoa.",
+          "Painel interno: identificação da conta autorizada, papel, trilha de auditoria, mídias enviadas e conteúdos criados pela própria pessoa.",
         ],
       },
       {
@@ -117,7 +118,7 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
           "Cuidado documental e acolhimento reservado: consentimento e, quando aplicável, proteção da vida ou da incolumidade, sem transformar o canal em emergência pública.",
           "Publicar memória autorizada: consentimento da casa ou da pessoa e obrigação de crédito/contexto.",
           "Segurança, auditoria, prevenção a abuso e cumprimento de dever legal: legítimo interesse e obrigação legal, na medida necessária.",
-          "Sessão de administradores: execução da relação de trabalho ou colaboração e segurança da operação.",
+          "Sessão de Parceiro Ojú ou da Equipe Ojú: execução da relação de colaboração e segurança da operação.",
         ],
       },
       {
@@ -133,15 +134,15 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
         paragraphs: [
           "Não vendemos dados pessoais.",
           "Podemos compartilhar com a equipe autorizada da Ojú, Parceiros Ojú no território do pedido, prestadores de hospedagem, armazenamento de mídia e autenticação, e autoridades quando a lei exigir.",
-          "Arquivos e termos comerciais restritos não são públicos. Administradores comuns não acessam a carteira de outro admin.",
+          "Arquivos e termos comerciais restritos não são públicos. Cada criador parceiro acessa somente a própria carteira.",
         ],
       },
       {
         title: "Armazenamento, cookies e retenção",
         paragraphs: [
           "Mídias e dados operacionais ficam em infraestrutura de nuvem contratada. Isso pode envolver tratamento fora do Brasil, com salvaguardas contratuais dos provedores.",
-          "Cookies e armazenamentos locais do portal público são técnicos (por exemplo preferência de som do miniclipe). O login administrativo usa cookie de sessão. Não há painel de anúncios baseado em rastreio no site público.",
-          "Pedidos comerciais e de cuidado permanecem o tempo necessário para atendimento, obrigação legal, defesa de direitos e segurança da casa. Conteúdo publicado permanece enquanto a autorização e a curadoria permitirem. Lixeiras internas têm prazos próprios definidos pelo Super Admin.",
+          "Cookies e armazenamentos locais do portal público são técnicos (por exemplo preferência de som do miniclipe). O login do painel usa cookie de sessão. Não há painel de anúncios baseado em rastreio no site público.",
+          "Pedidos comerciais e de cuidado permanecem o tempo necessário para atendimento, obrigação legal, defesa de direitos e segurança da casa. Conteúdo publicado permanece enquanto a autorização e a curadoria permitirem. Lixeiras internas têm prazos próprios definidos pela Equipe Ojú.",
         ],
       },
       {

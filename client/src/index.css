@@ -3,10 +3,13 @@
 
 @theme inline { --font-sans: "Source Sans 3", "Segoe UI", sans-serif; --font-serif: "Fraunces", "Times New Roman", serif; --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-border: var(--border); --color-ring: var(--ring); --radius-lg: var(--radius); }
 :root { --radius: 0.85rem; --oju-dende: #c45c26; --oju-indigo: #2c3a6b; --oju-paz: #f4efe6; --oju-terra: #3c2a1d; --background: oklch(0.962 0.008 85); --foreground: oklch(0.22 0.016 83); --card: oklch(0.985 0.005 88); --card-foreground: oklch(0.22 0.016 83); --primary: oklch(0.62 0.14 48); --primary-foreground: oklch(0.98 0.01 90); --muted: oklch(0.92 0.013 87); --muted-foreground: oklch(0.47 0.019 84); --border: oklch(0.83 0.018 84); --ring: oklch(0.55 0.12 48); }
-@layer base { * { @apply border-border outline-ring/50; } body { @apply bg-background text-foreground font-sans; } button:not(:disabled), a[href], select:not(:disabled), input:not(:disabled), textarea:not(:disabled) { @apply cursor-pointer; } }
+@layer base { * { @apply border-border outline-ring/50; } html, body { overflow-x: hidden; } body { @apply bg-background text-foreground font-sans; } button:not(:disabled), a[href], select:not(:disabled), input:not(:disabled), textarea:not(:disabled) { @apply cursor-pointer; } }
 @layer components { .container { width: 100%; margin-inline: auto; padding-inline: 1.25rem; max-width: 1440px; } .editorial-kicker { @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-[#806817]; } .admin-card { @apply rounded-2xl border border-[#242017]/10 bg-[#f9f7f1] shadow-[0_1px_0_rgba(32,28,20,0.04)]; } }
 @media (min-width: 640px) { .container { padding-inline: 2rem; } }
-@media (max-width: 639px) { h1.break-words { font-size: 3rem; line-height: 0.98; overflow-wrap: anywhere; } }
+@media (max-width: 639px) {
+  h1.break-words { font-size: 2.35rem; line-height: 0.98; overflow-wrap: anywhere; }
+  h1 { overflow-wrap: anywhere; }
+}
 
 /* O Centro Administrativo permanece acessível apenas por caminho conhecido e sessão autorizada; o portal não o promove visualmente. */
 a[href="/admin"] { display: none !important; }

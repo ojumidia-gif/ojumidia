@@ -4,16 +4,16 @@ export function canPublishStraight(role: string | undefined) {
 
 export function nextEditorialAction(role: string | undefined, status: string) {
   if (canPublishStraight(role) && (status === "Rascunho" || status === "Em revisão" || status === "Aprovada")) {
-    return { label: "Publicar no site", hint: "Entra no portal. A Home continua só com o Super Admin." };
+    return { label: "Publicar no site", hint: "Entra no portal. A Home nacional continua com a Equipe Ojú." };
   }
   if (status === "Rascunho" && (role === "criador" || role === "editor")) {
-    return { label: "Pedir revisão", hint: "Um aprovador ou admin libera depois para o site." };
+    return { label: "Pedir revisão", hint: "Um aprovador ou criador parceiro libera depois para o site." };
   }
   if (status === "Em revisão" && (role === "aprovador" || canPublishStraight(role))) {
-    return { label: "Aprovar", hint: "Depois um administrador publica no site." };
+    return { label: "Aprovar", hint: "Depois um criador parceiro publica no site." };
   }
   if (status === "Aprovada" && canPublishStraight(role)) {
-    return { label: "Publicar no site", hint: "Entra no portal. A Home continua só com o Super Admin." };
+    return { label: "Publicar no site", hint: "Entra no portal. A Home nacional continua com a Equipe Ojú." };
   }
   return null;
 }

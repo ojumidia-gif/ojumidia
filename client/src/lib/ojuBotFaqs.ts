@@ -26,7 +26,7 @@ export const ojuBotFaqs: OjuBotFaq[] = [
   {
     id: "home",
     question: "Por que não aparece na Home?",
-    answer: "Publicar no site e aparecer na Home são coisas diferentes. O Super Admin escolhe a vitrine em Destaques. O conteúdo publicado já está no endereço público.",
+    answer: "Publicar no site e aparecer na Home são coisas diferentes. A Equipe Ojú escolhe a vitrine nacional. O conteúdo publicado já está no endereço público.",
     tags: ["home", "destaque", "vitrine", "site"],
     href: "/admin/guia",
   },
@@ -45,9 +45,9 @@ export const ojuBotFaqs: OjuBotFaq[] = [
   },
   {
     id: "carteira",
-    question: "Posso editar o conteúdo de outro admin?",
-    answer: "Não. Cada admin só vê e altera o que criou. Território do catálogo nacional dá para ligar, não para mudar. Super Admin vê o site inteiro.",
-    tags: ["admin", "editar", "outro", "meu", "carteira"],
+    question: "Posso editar o conteúdo de outro parceiro?",
+    answer: "Não. Cada criador parceiro só vê e altera o que criou. Território do catálogo nacional dá para ligar, não para mudar. A Home e o site inteiro ficam com a Equipe Ojú.",
+    tags: ["admin", "parceiro", "editar", "outro", "meu", "carteira"],
   },
   {
     id: "fotografo",
@@ -73,20 +73,20 @@ export const ojuBotFaqs: OjuBotFaq[] = [
   {
     id: "lixeira",
     question: "Como excluo uma publicação de vez?",
-    answer: "Só Super Admin. Lixeira editorial → Excluir definitivamente. Digite o título (acento não impede). As fotos ficam no Acervo.",
+    answer: "Essa exclusão definitiva fica com a Equipe Ojú. Você publica e edita o que criou; a lixeira nacional não é do criador parceiro.",
     tags: ["lixeira", "excluir", "apagar", "definitivo"],
   },
   {
     id: "miniclipe",
     question: "Miniclipe vai para a Home?",
-    answer: "O miniclipe da contratação liga-se ao pedido. A sequência da Home nacional é só Super Admin.",
+    answer: "O miniclipe da contratação liga-se ao pedido. A sequência da Home nacional fica com a Equipe Ojú.",
     tags: ["miniclipe", "home", "vídeo", "contratação"],
     href: "/admin/miniclipes",
   },
   {
     id: "parceiro",
     question: "Como alguém vira Parceiro Ojú?",
-    answer: "Pelo site público em Ser parceiro. O pedido não cria login. Só o Super Admin conversa, convite Google e, se for admin, termo gov.br. Quem não produz pode ser banido; o painel mostra o pulso, sem banimento automático.",
+    answer: "Pelo site público em Ser parceiro. O pedido não cria login. A Equipe Ojú conversa, convite Google e termo gov.br quando couber. Quem não produz pode perder o acesso; o painel mostra o pulso, sem corte automático.",
     tags: ["parceiro", "candidatura", "admin", "convite", "banir"],
     href: "/admin/candidaturas",
   },

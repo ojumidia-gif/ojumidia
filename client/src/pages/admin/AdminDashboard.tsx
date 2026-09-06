@@ -22,7 +22,7 @@ const workDoors = [
 const siteControls = [
   { href: "/admin/destaques", title: "Home e destaques", text: "Quem entra em Histórias recentes." },
   { href: "/admin/conteudo-portal", title: "Textos do portal", text: "Menus, home, páginas. Isto muda o site." },
-  { href: "/admin/miniclipes", title: "Fundo vivo", text: "Abertura nacional da Home. Só Super Admin." },
+  { href: "/admin/miniclipes", title: "Fundo vivo", text: "Abertura nacional da Home. Só Equipe Ojú." },
   { href: "/admin/parceiros", title: "Parceiros", text: "Parceiros Ojú, territórios e escopos." },
   { href: "/admin/candidaturas", title: "Candidaturas", text: "Pedidos públicos para ser parceiro. Só você aprova ou recusa." },
 ] as const;
@@ -65,7 +65,7 @@ export default function AdminDashboard() {
       {partner ? (
         <>
           <p className="-mt-2 mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">
-            Você trabalha só {partner.territories.map(item => item.name).join(", ") || "o território autorizado"}. Escrever, fotos, lugares e casas. O Super Admin é quem muda o site, a Home e os textos do portal.
+            Você trabalha só {partner.territories.map(item => item.name).join(", ") || "o território autorizado"}. Escrever, fotos, lugares e casas. A Equipe Ojú é quem muda o site, a Home e os textos do portal.
           </p>
           <section className="admin-card mb-6 p-5">
             <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Seu trabalho</p>
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
           <section className="admin-card mb-6 p-5">
             <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Permanecer no Ojú</p>
             <h2 className="mt-2 font-serif text-2xl">Seu Instagram, com consentimento.</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">O @ aparece no diretório e no crédito, não na Home. A identidade pública continua a cargo do Super Admin.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">O @ aparece no diretório e no crédito, não na Home. A identidade pública continua a cargo da Equipe Ojú.</p>
             <form className="mt-4 flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); saveHandle.mutate({ partnerId: partner.partnerId, handle: partnerHandle || null }); }}>
               <Input value={partnerHandle} onChange={event => setPartnerHandle(event.target.value)} placeholder="@sua.conta" className="max-w-xs" />
               <Button type="submit" disabled={saveHandle.isPending} className="bg-[#242017] text-white">Salvar @</Button>
@@ -93,12 +93,12 @@ export default function AdminDashboard() {
         <>
           <p className="-mt-2 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">
             {principal
-              ? "Só o Super Admin muda o site: Home, textos do portal, fundo vivo e quem é parceiro. A operação editorial fica abaixo."
+              ? "A Equipe Ojú muda o site: Home, textos do portal, fundo vivo e quem é parceiro. A operação editorial fica abaixo."
               : "Você alimenta o que o visitante lê. A Home nacional e os textos do portal não aparecem neste painel."}
           </p>
           {principal ? (
             <section className="mb-6">
-              <p className="mb-3 text-xs font-bold uppercase tracking-[.14em] text-[#806817]">O site — só Super Admin</p>
+              <p className="mb-3 text-xs font-bold uppercase tracking-[.14em] text-[#806817]">O site — Equipe Ojú</p>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {siteControls.map(item => (
                   <Link key={item.href} href={item.href} className="admin-card p-4">

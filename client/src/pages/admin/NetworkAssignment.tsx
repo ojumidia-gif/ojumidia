@@ -58,7 +58,7 @@ export function NetworkAssignment({ request }: { request: RequestForNetwork }) {
           <Video className="h-5 w-5 text-[#806817]" />
           <div>
             <p className="text-sm font-semibold">Miniclip da contratação</p>
-            <p className="mt-1 text-xs leading-5 text-[#655e52]">Um vídeo de até 60s, autorizado, ligado a este pedido. Isso é produção/monetização. Só o Super Admin coloca na Home nacional.</p>
+            <p className="mt-1 text-xs leading-5 text-[#655e52]">Um vídeo de até 60s, autorizado, ligado a este pedido. Isso é produção/monetização. A Equipe Ojú coloca na Home nacional.</p>
           </div>
         </div>
         <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); assignMiniclip.mutate({ requestId: request.id, mediaId: Number(form.get("mediaId")), featureOnHome: principal && form.get("home") === "on" }); }}>

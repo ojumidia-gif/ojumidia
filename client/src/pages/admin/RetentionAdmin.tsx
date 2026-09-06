@@ -20,7 +20,7 @@ export default function RetentionAdmin() {
   });
 
   if (!principal) {
-    return <AdminPage eyebrow="Governança" title="Retenção e limpeza"><p className="text-sm text-[#655e52]">Somente o Super Admin administra retenção técnica. Isso não substitui a Lixeira de mídia.</p></AdminPage>;
+    return <AdminPage eyebrow="Governança" title="Retenção e limpeza"><p className="text-sm text-[#655e52]">Somente a Equipe Ojú administra retenção técnica. Isso não substitui a Lixeira de mídia.</p></AdminPage>;
   }
 
   const data = overview.data;
@@ -31,7 +31,7 @@ export default function RetentionAdmin() {
           <div className="w-fit rounded-full bg-[#242017] p-3 text-white"><TimerReset className="h-5 w-5" /></div>
           <div>
             <h2 className="font-serif text-2xl">Artefatos técnicos, não segunda lixeira.</h2>
-            <p className="mt-2 max-w-4xl text-sm leading-6 text-[#655e52]">Mídia do Acervo só some com Excluir definitivamente na Lixeira de mídia. Aqui o Super Admin limpa sessões abandonadas e arquivos técnicos gerados pelo sistema que não viraram Acervo. PDFs de termos nascem no navegador. A Auditoria não se apaga.</p>
+            <p className="mt-2 max-w-4xl text-sm leading-6 text-[#655e52]">Mídia do Acervo só some com Excluir definitivamente na Lixeira de mídia. Aqui a Equipe Ojú limpa sessões abandonadas e arquivos técnicos gerados pelo sistema que não viraram Acervo. PDFs de termos nascem no navegador. A Auditoria não se apaga.</p>
             <p className="mt-3 text-sm"><Link href="/admin/lixeira-midias" className="underline">Abrir Lixeira de mídia</Link></p>
           </div>
         </div>

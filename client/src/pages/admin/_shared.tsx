@@ -41,8 +41,8 @@ export function FirstUserWelcome() {
           <p className="mt-1 font-serif text-2xl">Criar, completar e publicar no site.</p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">
             {principal
-              ? "Cada destino público tem três passos. A Home nacional é só Super Admin. Dúvidas da equipe chegam no Canal Ojú. Ojú Bot é só para admin comum."
-              : "Três passos até o site: texto, território e capa. Depois Publicar. Você só vê e altera o que criou. A Home nacional continua só com o Super Admin. Dúvida: Ojú Bot."}
+              ? "Cada destino público tem três passos. A Home nacional fica com a Equipe Ojú. Dúvidas da equipe chegam no Canal Ojú. Ojú Bot é só para criador parceiro."
+              : "Três passos até o site: texto, território e capa. Depois Publicar. Você só vê e altera o que criou. A Home nacional continua com a Equipe Ojú. Dúvida: Ojú Bot."}
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => { hideFirstGuide(); setHidden(true); }}>Não exibir mais</Button>
@@ -93,7 +93,7 @@ export function AdminFlowGuide({ destinationId }: { destinationId: string }) {
           <li key={step} className="rounded-xl bg-white/80 px-4 py-3"><strong>{index + 1}.</strong> {step}</li>
         ))}
       </ol>
-      <p className="mt-3 text-xs text-[#655e52]">{principal ? "A equipe manda dúvida e sugestão no Canal Ojú. Ojú Bot não aparece para Super Admin." : "Dúvida depois: Ojú Bot, canto da tela. Se não achar resposta, envia ao Canal Ojú."}</p>
+      <p className="mt-3 text-xs text-[#655e52]">{principal ? "A equipe manda dúvida e sugestão no Canal Ojú. Ojú Bot não aparece para a Equipe Ojú." : "Dúvida depois: Ojú Bot, canto da tela. Se não achar resposta, envia ao Canal Ojú."}</p>
     </section>
   );
 }

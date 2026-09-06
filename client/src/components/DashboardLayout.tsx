@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="mx-auto mb-8 w-fit rounded-full border border-[#f6b71b]/50 p-4"><Layers3 className="h-7 w-7 text-[#f6b71b]" /></div>
           <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#f6b71b]">Área restrita</p>
           <h1 className="mt-3 font-serif text-4xl">Você não tem permissão para esta área</h1>
-          <p className="mt-4 leading-7 text-[#ded8ca]">{partnerLabel ? "Esta tela muda o site inteiro. No painel do parceiro você só trabalha o território: escrever, fotos, casas e pedidos." : "Esta rota é exclusiva do Super Admin. O menu não oferece este atalho, e a API continua recusando a operação."}</p>
+          <p className="mt-4 leading-7 text-[#ded8ca]">{partnerLabel ? "Esta tela muda o site inteiro. No painel do parceiro você só trabalha o território: escrever, fotos, casas e pedidos." : "Esta área fica com a Equipe Ojú. O menu não oferece este atalho."}</p>
           <Link href="/admin" className="mt-8 inline-flex items-center rounded-md bg-[#f6b71b] px-4 py-2 text-sm font-medium text-[#242017] hover:bg-[#f3c449]">Voltar ao painel</Link>
         </section>
       </main>
@@ -74,7 +74,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
       <div className="mt-auto border-t border-white/10 pt-4">
         <p className="px-2 text-sm font-medium">{greeting} {user.name || "Equipe Ojú"}</p>
-        <p className="px-2 pt-1 text-xs text-[#aaa190]">{principal ? "Super Admin · o site" : partnerLabel ? "Admin do território" : user.role}</p>
+        <p className="px-2 pt-1 text-xs text-[#aaa190]">{principal ? "Equipe Ojú · o site" : partnerLabel ? "Criador parceiro" : user.role}</p>
         <button onClick={logout} className="mt-4 flex items-center gap-3 px-2 text-sm text-[#d9d1c3] hover:text-white"><LogOut className="h-4 w-4" />Sair</button>
       </div>
     </aside>
@@ -89,9 +89,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="hidden min-w-0 flex-1 text-xs leading-5 text-[#655e52] lg:block">
             {greeting}{" "}
             {principal
-              ? "Super Admin · só você muda o site, a Home e os textos do portal. Parceiros trabalham o território."
+              ? "Equipe Ojú · o site, a Home e os textos do portal. Parceiros trabalham o território."
               : partnerLabel
-                ? `Admin do território · ${partnerLabel.territories.map(item => item.name).join(", ") || "escopo autorizado"}. Sem CMS, sem Home nacional.`
+                ? `Criador parceiro · ${partnerLabel.territories.map(item => item.name).join(", ") || "escopo autorizado"}. Sem CMS, sem Home nacional.`
                 : "Operação editorial · rascunho, revisão, aprovação e só então o portal."}
           </p>
           <div className="ml-auto flex items-center gap-2">

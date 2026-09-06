@@ -51,7 +51,7 @@ export default function CanalOjuAdmin() {
   };
   const send = trpc.desk.send.useMutation({
     onSuccess: () => {
-      toast.success("Enviado ao Super Admin no Canal Ojú.");
+      toast.success("Enviado à Equipe Ojú no Canal Ojú.");
       setSubject("");
       setBody("");
       refreshDesk();
@@ -75,7 +75,7 @@ export default function CanalOjuAdmin() {
   });
   const remove = trpc.desk.remove.useMutation({
     onSuccess: () => {
-      toast.success("Excluída. Some para o Super Admin e para quem enviou.");
+      toast.success("Excluída. Some para a Equipe Ojú e para quem enviou.");
       setDeleteTarget(null);
       setConfirmation("");
       refreshDesk();
@@ -105,11 +105,11 @@ export default function CanalOjuAdmin() {
   }
 
   return (
-    <AdminPage eyebrow="Canal Ojú" title={principal ? "Caixa da operação." : "Fale com o Super Admin."}>
+    <AdminPage eyebrow="Canal Ojú" title={principal ? "Caixa da operação." : "Fale com a Equipe Ojú."}>
       <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">
         {principal
-          ? "Ojú Bot é só para admin comum. Aqui vocês leem, respondem, arquivam ou excluem. Arquivar guarda a conversa. Excluir some para os dois lados, com confirmação do assunto."
-          : "Ojú Bot, no canto da tela, responde primeiro com textos prontos. Se não achar, envie para o Super Admin neste canal."}
+          ? "Ojú Bot é só para criador parceiro. Aqui a Equipe Ojú lê, responde, arquiva ou exclui. Arquivar guarda a conversa. Excluir some para os dois lados, com confirmação do assunto."
+          : "Ojú Bot, no canto da tela, responde primeiro com textos prontos. Se não achar, envie para a Equipe Ojú neste canal."}
       </p>
       {principal ? null : (
       <form
@@ -128,13 +128,13 @@ export default function CanalOjuAdmin() {
         <label className="grid gap-2 text-sm font-medium">Assunto<Input required minLength={4} value={subject} onChange={event => setSubject(event.target.value)} placeholder="Ex.: não consigo publicar a história" /></label>
         <label className="grid gap-2 text-sm font-medium">O que aconteceu<Textarea required minLength={12} value={body} onChange={event => setBody(event.target.value)} placeholder="Descreva a tela, o que tentou e o que apareceu." /></label>
         {pagePath ? <p className="text-xs text-[#655e52]">Tela de origem: {pagePath}</p> : null}
-        <div className="flex justify-end"><Button disabled={send.isPending} className="bg-[#242017] text-white">{send.isPending ? "Enviando..." : "Enviar ao Super Admin"}</Button></div>
+        <div className="flex justify-end"><Button disabled={send.isPending} className="bg-[#242017] text-white">{send.isPending ? "Enviando..." : "Enviar à Equipe Ojú"}</Button></div>
       </form>
       )}
 
       {principal ? (
         <section className="mb-7">
-          <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Caixa do Super Admin</p>
+          <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Caixa da Equipe Ojú</p>
           <h2 className="mt-2 font-serif text-3xl">O que a equipe mandou</h2>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={() => setBucket("ativas")} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${bucket === "ativas" ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>Ativas ({activeCount})</button>
@@ -188,7 +188,7 @@ export default function CanalOjuAdmin() {
                 <p className="font-medium">{item.subject}</p>
                 <p className="mt-1 text-xs text-[#655e52]">{item.category} · {item.status} · {formatWhen(item.createdAt)}</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#655e52]">{item.body}</p>
-                {item.reply ? <p className="mt-3 whitespace-pre-wrap rounded-xl bg-[#e8f0e4] p-3 text-sm text-[#2c683b]">Super Admin: {item.reply}</p> : <p className="mt-2 text-sm text-[#655e52]">{item.status === "Arquivada" ? "Arquivada pelo Super Admin." : "Aguardando resposta."}</p>}
+                {item.reply ? <p className="mt-3 whitespace-pre-wrap rounded-xl bg-[#e8f0e4] p-3 text-sm text-[#2c683b]">Equipe Ojú: {item.reply}</p> : <p className="mt-2 text-sm text-[#655e52]">{item.status === "Arquivada" ? "Arquivada pela Equipe Ojú." : "Aguardando resposta."}</p>}
               </article>
             ))}
           </div>
@@ -201,7 +201,7 @@ export default function CanalOjuAdmin() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir esta mensagem?</AlertDialogTitle>
-              <AlertDialogDescription>Some da caixa do Super Admin e da lista de quem enviou. Não dá para restaurar. A auditoria registra o evento, não o texto.</AlertDialogDescription>
+              <AlertDialogDescription>Some da caixa da Equipe Ojú e da lista de quem enviou. Não dá para restaurar. A auditoria registra o evento, não o texto.</AlertDialogDescription>
             </AlertDialogHeader>
             <label className="grid gap-2 text-sm font-medium">
               Digite o assunto para confirmar. Maiúsculas e acentos não impedem. <b>{deleteTarget.subject}</b>

@@ -32,7 +32,7 @@ export default function PhotographersPublic() {
         ) : (
           <section className="mt-12 border border-dashed border-white/20 p-10">
             <h2 className="font-serif text-3xl">Ainda não há fotógrafos visíveis no portal.</h2>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-white/60">O Super Admin publica a ficha a partir da Rede Ojú. Crédito em mídia continua válido mesmo quando a ficha pública ainda não estiver ativa.</p>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-white/60">A Equipe Ojú publica a ficha a partir da Rede Ojú. Crédito em mídia continua válido mesmo quando a ficha pública ainda não estiver ativa.</p>
           </section>
         )}
       </main>
