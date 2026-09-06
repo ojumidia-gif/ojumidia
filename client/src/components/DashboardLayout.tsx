@@ -3,6 +3,7 @@ import { OjuMark } from "@/components/PublicHeader";
 import { startLogin } from "@/const";
 import { isPrincipalOnlyAdminPath, visibleAdminNav } from "@/lib/adminNav";
 import { isStaticFirebasePreview } from "@/lib/runtimeMode";
+import { useDaypartGreeting } from "@/hooks/useDaypartGreeting";
 import { FolderKanban, Layers3, LogOut, Settings, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -13,6 +14,7 @@ type AuthStatus = { googleOAuth: boolean; localDevLogin: boolean; loginMode: str
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout, error: authError, refresh } = useAuth();
+  const greeting = useDaypartGreeting();
   const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
@@ -69,11 +71,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ))}
       </nav>
       <div className="mt-auto border-t border-white/10 pt-4">
-        <p className="px-2 text-sm font-medium">{user.name || "Equipe Ojú"}</p>
+        <p className="px-2 text-sm font-medium">{greeting} {user.name || "Equipe Ojú"}</p>
         <p className="px-2 pt-1 text-xs capitalize text-[#aaa190]">{user.role === "administrador principal" ? "Super Admin" : user.role}</p>
         <button onClick={logout} className="mt-4 flex items-center gap-3 px-2 text-sm text-[#d9d1c3] hover:text-white"><LogOut className="h-4 w-4" />Sair</button>
       </div>
     </aside>
   );
-  return <div className="min-h-screen bg-[#f2efe7] text-[#242017]"><div className="fixed inset-y-0 left-0 z-30 hidden lg:block"><Sidebar /></div>{open && <div className="fixed inset-0 z-50 bg-black/45 lg:hidden"><div className="h-full"><Sidebar /></div><button onClick={() => setOpen(false)} className="absolute right-5 top-5 rounded-full bg-white p-2"><X className="h-5 w-5" /></button></div>}<div className="min-h-screen lg:pl-[272px]"><header className="flex h-[68px] items-center justify-between gap-4 border-b border-[#242017]/10 bg-[#f7f5ef] px-5 sm:px-8"><button onClick={() => setOpen(true)} className="rounded-lg p-2 lg:hidden"><FolderKanban className="h-5 w-5" /></button><p className="hidden min-w-0 flex-1 text-xs leading-5 text-[#655e52] lg:block">{user.role === "administrador principal" ? "Super Admin · a Home nacional e a curadoria do portal são suas. Parceiros operam só o território." : partnerLabel ? `Parceiro · só ${partnerLabel.territories.map(item => item.name).join(", ") || "o território autorizado"}. A Home nacional não entra nesta carteira.` : "Operação editorial · rascunho, revisão, aprovação e só então o site."}</p><div className="ml-auto flex items-center gap-2"><Link href="/" className="text-sm font-medium text-[#5a5448] hover:text-[#242017]">Ver portal</Link><span className="h-5 border-l border-[#242017]/15" /><Link href="/admin/configuracoes" className="rounded-full bg-[#242017] px-3 py-1.5 text-xs font-semibold text-[#f7f5ef]"><Settings className="mr-1 inline h-3.5 w-3.5" />Configurações</Link></div></header><main className="p-5 sm:p-8">{children}</main></div></div>;
+  return <div className="min-h-screen bg-[#f2efe7] text-[#242017]"><div className="fixed inset-y-0 left-0 z-30 hidden lg:block"><Sidebar /></div>{open && <div className="fixed inset-0 z-50 bg-black/45 lg:hidden"><div className="h-full"><Sidebar /></div><button onClick={() => setOpen(false)} className="absolute right-5 top-5 rounded-full bg-white p-2"><X className="h-5 w-5" /></button></div>}<div className="min-h-screen lg:pl-[272px]"><header className="flex h-[68px] items-center justify-between gap-4 border-b border-[#242017]/10 bg-[#f7f5ef] px-5 sm:px-8"><button onClick={() => setOpen(true)} className="rounded-lg p-2 lg:hidden"><FolderKanban className="h-5 w-5" /></button><p className="hidden min-w-0 flex-1 text-xs leading-5 text-[#655e52] lg:block">{greeting} {user.role === "administrador principal" ? "Super Admin · a Home nacional e a curadoria do portal são suas. Parceiros operam só o território." : partnerLabel ? `Parceiro · só ${partnerLabel.territories.map(item => item.name).join(", ") || "o território autorizado"}. A Home nacional não entra nesta carteira.` : "Operação editorial · rascunho, revisão, aprovação e só então o site."}</p><div className="ml-auto flex items-center gap-2"><Link href="/" className="text-sm font-medium text-[#5a5448] hover:text-[#242017]">Ver portal</Link><span className="h-5 border-l border-[#242017]/15" /><Link href="/admin/configuracoes" className="rounded-full bg-[#242017] px-3 py-1.5 text-xs font-semibold text-[#f7f5ef]"><Settings className="mr-1 inline h-3.5 w-3.5" />Configurações</Link></div></header><main className="p-5 sm:p-8">{children}</main></div></div>;
 }

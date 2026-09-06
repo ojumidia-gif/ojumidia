@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AdminPage, EmptyAdmin, statusStyle } from "./_shared";
+import { useDaypartGreeting } from "@/hooks/useDaypartGreeting";
 
 export default function AdminDashboard() {
   const { data: editorialOverview, isLoading } = trpc.editorial.adminSummary.useQuery(undefined, { refetchInterval: 5000 });
@@ -22,8 +23,7 @@ export default function AdminDashboard() {
   });
   const number = (status: "Rascunho" | "Em revisão" | "Aprovada" | "Publicada" | "Arquivada") => editorialOverview?.counts[status] || 0;
   const uploads = (operations.data?.items || []).filter(item => item.category === "Upload");
-  const hour = new Date().getHours();
-  const hello = hour < 12 ? "Bom dia." : hour < 18 ? "Boa tarde." : "Boa noite.";
+  const hello = useDaypartGreeting();
   const kpis = [
     { label: "Rascunhos", value: number("Rascunho"), icon: FilePenLine, tone: "#e2bf54", href: "/admin/publicacoes?etapa=Rascunho" },
     { label: "Em revisão", value: number("Em revisão"), icon: ClipboardCheck, tone: "#7ba8c6", href: "/admin/publicacoes?etapa=Em%20revis%C3%A3o" },
