@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { OjuMark } from "@/components/PublicHeader";
 import { startLogin } from "@/const";
-import { isPrincipalOnlyAdminPath, visibleAdminNav } from "@/lib/adminNav";
+import { isPartnerHiddenAdminPath, isPrincipalOnlyAdminPath, visibleAdminNav } from "@/lib/adminNav";
 import { isStaticFirebasePreview } from "@/lib/runtimeMode";
 import { useDaypartGreeting } from "@/hooks/useDaypartGreeting";
 import { FolderKanban, Layers3, LogOut, Settings, X } from "lucide-react";
@@ -37,20 +37,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return <main className="min-h-screen bg-[#242017] px-5 text-[#f7f5ef] grid place-items-center"><section className="max-w-md text-center"><div className="mx-auto mb-8 w-fit rounded-full bg-[#f6b71b] p-4"><Layers3 className="h-7 w-7 text-[#242017]" /></div><h1 className="font-serif text-4xl">Centro Administrativo Ojú</h1><p className="mt-4 leading-7 text-[#ded8ca]">{authStatus?.message || "Entre com sua conta autorizada para administrar a operação editorial da Ojú Mídia."}</p>{canGoogle ? <Button onClick={() => startLogin()} className="mt-8 bg-[#f6b71b] text-[#242017] hover:bg-[#f3c449]">Entrar com Google</Button> : canLocal ? <Button asChild className="mt-8 bg-[#f6b71b] text-[#242017] hover:bg-[#f3c449]"><Link href="/admin/acesso-local">Abrir acesso local</Link></Button> : <p className="mt-8 text-sm leading-6 text-[#aaa190]">Não há login administrativo neste ambiente. No desenvolvimento, habilite o acesso local; em produção, configure o OAuth Google.</p>}</section></main>;
   }
   if (!user.adminAccess) return <main className="min-h-screen bg-[#242017] px-5 text-[#f7f5ef] grid place-items-center"><section className="max-w-md text-center"><div className="mx-auto mb-8 w-fit rounded-full border border-[#f6b71b]/50 p-4"><Layers3 className="h-7 w-7 text-[#f6b71b]" /></div><h1 className="font-serif text-4xl">Acesso não autorizado</h1><p className="mt-4 leading-7 text-[#ded8ca]">Sua sessão está ativa, mas esta conta não foi autorizada individualmente para o Centro Administrativo.</p><Button onClick={logout} variant="outline" className="mt-8 border-[#f6b71b] text-[#f6b71b] hover:bg-[#f6b71b] hover:text-[#242017]">Sair desta conta</Button></section></main>;
-  if (user.role !== "administrador principal" && isPrincipalOnlyAdminPath(location)) {
+  const partnerLabel = context.data?.scope === "partner" ? context.data.partners[0] : null;
+  const principal = user.role === "administrador principal";
+  if ((!principal && isPrincipalOnlyAdminPath(location)) || (partnerLabel && isPartnerHiddenAdminPath(location))) {
     return (
       <main className="min-h-screen bg-[#242017] px-5 text-[#f7f5ef] grid place-items-center">
         <section className="max-w-md text-center">
           <div className="mx-auto mb-8 w-fit rounded-full border border-[#f6b71b]/50 p-4"><Layers3 className="h-7 w-7 text-[#f6b71b]" /></div>
           <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#f6b71b]">Área restrita</p>
           <h1 className="mt-3 font-serif text-4xl">Você não tem permissão para esta área</h1>
-          <p className="mt-4 leading-7 text-[#ded8ca]">Esta rota é exclusiva do Super Admin. O menu não oferece este atalho, e a API continua recusando a operação.</p>
+          <p className="mt-4 leading-7 text-[#ded8ca]">{partnerLabel ? "Esta tela muda o site inteiro. No painel do parceiro você só trabalha o território: escrever, fotos, casas e pedidos." : "Esta rota é exclusiva do Super Admin. O menu não oferece este atalho, e a API continua recusando a operação."}</p>
           <Link href="/admin" className="mt-8 inline-flex items-center rounded-md bg-[#f6b71b] px-4 py-2 text-sm font-medium text-[#242017] hover:bg-[#f3c449]">Voltar ao painel</Link>
         </section>
       </main>
     );
   }
-  const partnerLabel = context.data?.scope === "partner" ? context.data.partners[0] : null;
   const groups = visibleAdminNav(user.role, Boolean(partnerLabel));
   const Sidebar = () => (
     <aside className="flex h-full w-[272px] flex-col bg-[#242017] p-5 text-[#eae4d7]">
@@ -72,10 +73,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
       <div className="mt-auto border-t border-white/10 pt-4">
         <p className="px-2 text-sm font-medium">{greeting} {user.name || "Equipe Ojú"}</p>
-        <p className="px-2 pt-1 text-xs capitalize text-[#aaa190]">{user.role === "administrador principal" ? "Super Admin" : user.role}</p>
+        <p className="px-2 pt-1 text-xs text-[#aaa190]">{principal ? "Super Admin · o site" : partnerLabel ? "Admin do território" : user.role}</p>
         <button onClick={logout} className="mt-4 flex items-center gap-3 px-2 text-sm text-[#d9d1c3] hover:text-white"><LogOut className="h-4 w-4" />Sair</button>
       </div>
     </aside>
   );
-  return <div className="min-h-screen bg-[#f2efe7] text-[#242017]"><div className="fixed inset-y-0 left-0 z-30 hidden lg:block"><Sidebar /></div>{open && <div className="fixed inset-0 z-50 bg-black/45 lg:hidden"><div className="h-full"><Sidebar /></div><button onClick={() => setOpen(false)} className="absolute right-5 top-5 rounded-full bg-white p-2"><X className="h-5 w-5" /></button></div>}<div className="min-h-screen lg:pl-[272px]"><header className="flex h-[68px] items-center justify-between gap-4 border-b border-[#242017]/10 bg-[#f7f5ef] px-5 sm:px-8"><button onClick={() => setOpen(true)} className="rounded-lg p-2 lg:hidden"><FolderKanban className="h-5 w-5" /></button><p className="hidden min-w-0 flex-1 text-xs leading-5 text-[#655e52] lg:block">{greeting} {user.role === "administrador principal" ? "Super Admin · a Home nacional e a curadoria do portal são suas. Parceiros operam só o território." : partnerLabel ? `Parceiro · só ${partnerLabel.territories.map(item => item.name).join(", ") || "o território autorizado"}. A Home nacional não entra nesta carteira.` : "Operação editorial · rascunho, revisão, aprovação e só então o site."}</p><div className="ml-auto flex items-center gap-2"><Link href="/" className="text-sm font-medium text-[#5a5448] hover:text-[#242017]">Ver portal</Link><span className="h-5 border-l border-[#242017]/15" /><Link href="/admin/configuracoes" className="rounded-full bg-[#242017] px-3 py-1.5 text-xs font-semibold text-[#f7f5ef]"><Settings className="mr-1 inline h-3.5 w-3.5" />Configurações</Link></div></header><main className="p-5 sm:p-8">{children}</main></div></div>;
+  return (
+    <div className="min-h-screen bg-[#f2efe7] text-[#242017]">
+      <div className="fixed inset-y-0 left-0 z-30 hidden lg:block"><Sidebar /></div>
+      {open && <div className="fixed inset-0 z-50 bg-black/45 lg:hidden"><div className="h-full"><Sidebar /></div><button onClick={() => setOpen(false)} className="absolute right-5 top-5 rounded-full bg-white p-2"><X className="h-5 w-5" /></button></div>}
+      <div className="min-h-screen lg:pl-[272px]">
+        <header className="flex h-[68px] items-center justify-between gap-4 border-b border-[#242017]/10 bg-[#f7f5ef] px-5 sm:px-8">
+          <button onClick={() => setOpen(true)} className="rounded-lg p-2 lg:hidden"><FolderKanban className="h-5 w-5" /></button>
+          <p className="hidden min-w-0 flex-1 text-xs leading-5 text-[#655e52] lg:block">
+            {greeting}{" "}
+            {principal
+              ? "Super Admin · só você muda o site, a Home e os textos do portal. Parceiros trabalham o território."
+              : partnerLabel
+                ? `Admin do território · ${partnerLabel.territories.map(item => item.name).join(", ") || "escopo autorizado"}. Sem CMS, sem Home nacional.`
+                : "Operação editorial · rascunho, revisão, aprovação e só então o portal."}
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/" className="text-sm font-medium text-[#5a5448] hover:text-[#242017]">Ver portal</Link>
+            {principal ? (
+              <>
+                <span className="h-5 border-l border-[#242017]/15" />
+                <Link href="/admin/configuracoes" className="rounded-full bg-[#242017] px-3 py-1.5 text-xs font-semibold text-[#f7f5ef]"><Settings className="mr-1 inline h-3.5 w-3.5" />O site</Link>
+              </>
+            ) : null}
+          </div>
+        </header>
+        <main className="p-5 sm:p-8">{children}</main>
+      </div>
+    </div>
+  );
 }

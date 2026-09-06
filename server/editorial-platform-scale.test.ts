@@ -97,7 +97,7 @@ describe("fluxo editorial guiado", () => {
     expect(editorial).toContain("isCover: displayOrder === 0");
     expect(edit).toContain("Salvar e enviar para revisão");
     expect(edit).toContain("nextEditorialAction");
-    expect(edit).not.toContain("publishDirect");
+    expect(edit).toContain("publishDirect");
     expect(list).not.toContain("publishDirect");
     expect(media).toContain("onCover={setCoverLocalId}");
     expect(media).toContain("Esta foto é a capa do conteúdo.");

@@ -12,6 +12,7 @@ describe("navegação Olhar, Chão e Chamar a Ojú", () => {
       { label: "Chamar a Ojú", href: "/planejar-um-registro" },
       { label: "Sobre", href: "/sobre" },
     ]);
+    expect(publicNavGroups[0].hrefs).toContain("/fotografia-documental");
     expect(grouped[0].items[0].href).toBe("/historias");
     expect(grouped[1].items[0].href).toBe("/territorios");
     expect(grouped[2].items[0].href).toBe("/planejar-um-registro");

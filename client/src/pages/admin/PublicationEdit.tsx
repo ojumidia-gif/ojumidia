@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { editorialPipeline, nextEditorialAction, publicationSiteGaps } from "@/lib/editorialFlow";
+import { nextEditorialAction, publicationSiteGaps } from "@/lib/editorialFlow";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ const destinations: Record<string, string> = {
   "Cobertura": "Portal → Coberturas",
   "Documentário": "Portal → Documentários",
   "Projeto": "Portal → Projetos",
-  "Fotografia documental": "Portal → coleções fotográficas",
+  "Fotografia documental": "Portal → Fotografia documental",
 };
 
 export default function PublicationEdit() {
@@ -28,7 +28,7 @@ export default function PublicationEdit() {
   const [, params] = useRoute("/admin/editar/:id"); const id = Number(params?.id);
   const utils = trpc.useUtils(); const { data, isLoading } = trpc.editorial.preview.useQuery({ id }, { enabled: Boolean(id) });
   const [title, setTitle] = useState(""); const [subtitle, setSubtitle] = useState(""); const [summary, setSummary] = useState(""); const [body, setBody] = useState(""); const [teamCredit, setTeamCredit] = useState(""); const [revisionNote, setRevisionNote] = useState(""); const [externalAlbumUrl, setExternalAlbumUrl] = useState(""); const [externalVideoUrl, setExternalVideoUrl] = useState("");
-  useEffect(() => { if (data) { setTitle(data.title); setSubtitle(data.subtitle || ""); setSummary(data.summary || ""); setBody(data.body || ""); setTeamCredit(data.teamCredit || ""); setExternalAlbumUrl(data.externalAlbumUrl || ""); setExternalVideoUrl(data.externalVideoUrl || ""); } }, [data]);
+  useEffect(() => { if (data) { setTitle(data.title); setSubtitle(data.subtitle || ""); setSummary(data.summary || ""); setBody(data.body || ""); setTeamCredit(data.teamCredit || "Equipe Ojú"); setExternalAlbumUrl(data.externalAlbumUrl || ""); setExternalVideoUrl(data.externalVideoUrl || ""); } }, [data]);
   const [conflict, setConflict] = useState(false);
   const update = trpc.editorial.update.useMutation({
     onSuccess: () => { const published = data?.status === "Publicada"; toast.success(published ? "Revisão publicada." : "Texto salvo."); utils.editorial.adminList.invalidate(); utils.editorial.preview.invalidate({ id }); },
@@ -39,7 +39,7 @@ export default function PublicationEdit() {
       const messages: Record<string, string> = {
         "Em revisão": "Enviado para revisão. Ainda não está no site.",
         Aprovada: "Aprovado. Agora um administrador pode publicar no site.",
-        Publicada: "Publicado no portal.",
+        Publicada: "Publicado no portal. A Home / Histórias recentes só aparece se a curadoria nacional marcar.",
       };
       toast.success(messages[result.status] || "Etapa editorial atualizada.");
       utils.editorial.adminList.invalidate();
@@ -49,52 +49,63 @@ export default function PublicationEdit() {
   });
   const schedule = trpc.editorial.schedulePublish.useMutation({ onSuccess: () => { toast.success("Publicação programada."); utils.editorial.preview.invalidate({ id }); utils.editorial.adminList.invalidate(); }, onError: error => toast.error(error.message) });
   const [scheduledAt, setScheduledAt] = useState("");
+  const [homeOn, setHomeOn] = useState(false);
+  const [homePlacement, setHomePlacement] = useState<"Nenhum" | "Destaque principal" | "Destaque secundário" | "Recomendado">("Recomendado");
+  useEffect(() => {
+    if (!data) return;
+    const curated = data.homePlacement !== "Nenhum" || data.manualFeatured;
+    setHomeOn(curated);
+    setHomePlacement(data.homePlacement === "Nenhum" ? "Recomendado" : data.homePlacement);
+  }, [data]);
+  const setFeatured = trpc.editorial.setFeatured.useMutation({
+    onSuccess: () => { toast.success(homeOn ? "Capa marcada para Histórias recentes na Home." : "Retirado da Home."); utils.editorial.preview.invalidate({ id }); utils.editorial.featured.invalidate(); utils.editorial.adminList.invalidate(); },
+    onError: error => toast.error(error.message),
+  });
+  const suggestHighlight = trpc.editorial.suggestHighlight.useMutation({
+    onSuccess: () => toast.success("Pedido enviado. A Home ainda não mudou."),
+    onError: error => toast.error(error.message),
+  });
+  const publishDirect = trpc.editorial.publishDirect.useMutation({
+    onSuccess: () => { toast.success("No portal."); utils.editorial.adminList.invalidate(); utils.editorial.preview.invalidate({ id }); },
+    onError: error => toast.error(error.message),
+  });
   if (isLoading) return <DashboardLayout><p>Carregando publicação...</p></DashboardLayout>;
   if (!data) return <DashboardLayout><p>Publicação não encontrada.</p></DashboardLayout>;
-  const nameOf = (personId: number | null) => data.contributors.find(person => person.id === personId)?.name || "—";
   const isPublished = data.status === "Publicada";
   const cover = data.media.find(item => item.isCover) || data.media[0];
   const nextAction = nextEditorialAction(user?.role, data.status);
-  const gaps = publicationSiteGaps(data);
-  const payload = { id, expectedVersion: data.version, title, subtitle: subtitle || null, summary: summary || null, body: body || null, teamCredit: teamCredit || null, externalAlbumUrl: externalAlbumUrl || null, externalVideoUrl: externalVideoUrl || null, revisionNote: revisionNote || undefined };
+  const gaps = publicationSiteGaps({ ...data, teamCredit: teamCredit || data.teamCredit, body: body || data.body, summary: summary || data.summary });
+  const canDirect = user?.role === "administrador" || user?.role === "administrador principal";
+  const payload = { id, expectedVersion: data.version, title, subtitle: subtitle || null, summary: summary || null, body: body || null, teamCredit: teamCredit || "Equipe Ojú", externalAlbumUrl: externalAlbumUrl || null, externalVideoUrl: externalVideoUrl || null, revisionNote: revisionNote || undefined };
+  const busy = update.isPending || advance.isPending || publishDirect.isPending;
   const saveThenAdvance = () => {
     update.mutate(payload, {
-      onSuccess: () => advance.mutate({ id, expectedVersion: data.version + 1 }),
+      onSuccess: result => advance.mutate({ id, expectedVersion: result.version }),
     });
   };
-  return <DashboardLayout><div className="mx-auto max-w-4xl">
-    <Link href="/admin/publicacoes" className="inline-flex items-center gap-2 text-sm font-semibold"><ArrowLeft className="h-4 w-4" />Voltar aos conteúdos</Link>
-    <p className="mt-6 text-xs font-bold uppercase tracking-[.12em] text-[#806817]">{data.contentKind} · {destinations[data.contentKind] || "Portal"}</p>
-    <h1 className="mt-2 font-serif text-5xl">{isPublished ? "Revisar publicação" : "Preparar o conteúdo"}</h1>
-    <p className="mt-3 max-w-2xl text-sm leading-6 text-[#655e52]">Um caminho só: texto, território, fotos. O site recebe depois da revisão e da aprovação.</p>
-    <nav className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
-      <a href="#texto" className="rounded-full bg-[#eee9dc] px-3 py-1.5">1. Texto</a>
-      <a href="#territorio" className="rounded-full bg-[#eee9dc] px-3 py-1.5">2. Território</a>
-      <a href="#midia" className="rounded-full bg-[#eee9dc] px-3 py-1.5">3. Fotos e vídeos</a>
+  const goLive = () => {
+    update.mutate(payload, {
+      onSuccess: result => publishDirect.mutate({ id, expectedVersion: result.version }),
+    });
+  };
+  return <DashboardLayout><div className="mx-auto max-w-4xl pb-28">
+    <Link href="/admin/publicacoes" className="inline-flex items-center gap-2 text-sm font-semibold"><ArrowLeft className="h-4 w-4" />Conteúdos</Link>
+    <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[.12em] text-[#806817]">{data.contentKind} · {destinations[data.contentKind] || "Portal"}</p>
+        <h1 className="mt-1 font-serif text-4xl sm:text-5xl">{isPublished ? title : "Completar e publicar"}</h1>
+      </div>
+      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isPublished ? "bg-[#d8eadc] text-[#2c683b]" : "bg-[#eee4c8] text-[#695411]"}`}>{data.status}</span>
+    </div>
+    <nav className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
+      <a href="#texto" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Texto</a>
+      <a href="#territorio" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Território</a>
+      <a href="#midia" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Capa</a>
+      {isPublished ? <a href="#home" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Home</a> : null}
     </nav>
-    <ol className="mt-6 grid gap-2 sm:grid-cols-4 text-sm">
-      {editorialPipeline.map((step, index) => {
-        const currentIndex = editorialPipeline.indexOf(data.status as typeof editorialPipeline[number]);
-        const active = data.status === step || (data.status === "Arquivada" && step === "Publicada");
-        const done = currentIndex > index;
-        return (
-          <li key={step} className={`rounded-xl px-4 py-3 ${active ? "bg-[#fff7dc] ring-1 ring-[#806817]/40" : done ? "bg-[#e8f0e4]" : "bg-[#eee9dc]"}`}>
-            <strong>{index + 1}. {step === "Rascunho" ? "Preparar" : step === "Em revisão" ? "Revisar" : step === "Aprovada" ? "Aprovar" : "No ar"}</strong>
-            <p className="text-xs text-[#655e52]">{step}</p>
-          </li>
-        );
-      })}
-    </ol>
-    {data.status !== "Publicada" ? <div className="mt-5"><SiteReadiness items={gaps} readyText="Texto, capa e território ok. Siga o próximo passo editorial — o site só recebe depois da revisão e da aprovação." /></div> : null}
-    {nextAction && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#806817]/30 bg-[#fff7dc] p-4">
-      <p className="text-sm text-[#655e52]"><strong className="text-[#242017]">Próximo passo:</strong> {nextAction.hint}</p>
-      <Button disabled={advance.isPending || update.isPending} className="bg-[#242017] text-white" onClick={() => data.status === "Rascunho" ? saveThenAdvance() : advance.mutate({ id, expectedVersion: data.version })}>
-        {data.status === "Rascunho" ? "Salvar e enviar para revisão" : nextAction.label}
-      </Button>
-    </div>}
-    {conflict && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b95140]/30 bg-[#fff1ec] p-4 text-sm text-[#7a3126]"><span>Este conteúdo mudou em outra sessão. Recarregue para revisar a versão atual antes de salvar.</span><Button size="sm" type="button" onClick={() => { setConflict(false); utils.editorial.preview.invalidate({ id }); }}>Recarregar versão</Button></div>}
-    {isPublished && <div className="mt-4 rounded-xl border border-[#806817]/30 bg-[#fff7dc] p-4 text-sm text-[#655e52]"><strong className="text-[#5d4700]">Conteúdo publicado.</strong> As correções entram no portal imediatamente e ficam registradas no histórico editorial.</div>}
-    <section className="mt-6 grid gap-3 rounded-2xl border border-[#242017]/10 bg-[#eee9dc] p-5 text-sm sm:grid-cols-2"><p><strong>Criação:</strong> {nameOf(data.createdBy)} · {new Date(data.createdAt).toLocaleString("pt-BR")}</p><p><strong>Última edição:</strong> {data.editedBy ? nameOf(data.editedBy) : "Ainda não editada"}</p><p><strong>Aprovação:</strong> {data.approvedBy ? nameOf(data.approvedBy) : "Pendente"}</p><p><strong>Publicação:</strong> {data.publishedAt ? new Date(data.publishedAt).toLocaleString("pt-BR") : "Pendente"}</p></section>
+    {data.status !== "Publicada" ? <div className="mt-4"><SiteReadiness items={gaps} readyText="Pronto. Publique no site." /></div> : null}
+    {conflict && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b95140]/30 bg-[#fff1ec] p-4 text-sm text-[#7a3126]"><span>Outra pessoa salvou primeiro.</span><Button size="sm" type="button" onClick={() => { setConflict(false); utils.editorial.preview.invalidate({ id }); }}>Recarregar</Button></div>}
+    {isPublished && <p className="mt-4 text-sm text-[#655e52]">No portal. Home só com Super Admin.</p>}
     <form id="texto" onSubmit={event => { event.preventDefault(); update.mutate(payload); }} className="admin-card mt-8 grid gap-5 p-6">
       <label className="grid gap-2 text-sm font-medium">Título<Input required value={title} onChange={event => setTitle(event.target.value)} /></label>
       <label className="grid gap-2 text-sm font-medium">Subtítulo<Input value={subtitle} onChange={event => setSubtitle(event.target.value)} /></label>
@@ -122,15 +133,58 @@ export default function PublicationEdit() {
       </div>
     </form>
     <section id="territorio" className="mt-10">
-      <h2 className="font-serif text-3xl">2. Território e relações</h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">Ligue o conteúdo ao chão autorizado. Sem território, o portal não considera o material pronto.</p>
-      {data.contentKind !== "Fotografia documental" && <CoverageTaxonomiesPanel publicationId={id} version={data.version} initialIds={data.taxonomies.map(item => item.id)} contentKind={data.contentKind} />}
+      <h2 className="font-serif text-3xl">Território</h2>
+      <p className="mt-1 text-sm text-[#655e52]">Obrigatório. Sem território não publica.</p>
+      <CoverageTaxonomiesPanel publicationId={id} version={data.version} initialIds={data.taxonomies.map(item => item.id)} contentKind={data.contentKind} />
       {data.contentKind === "Cobertura" && <InstitutionalCoveragePanel publication={data} />}
     </section>
     <section id="midia" className="mt-10">
-      <h2 className="font-serif text-3xl">3. Fotos e vídeos</h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">Até 5 fotos e 2 vídeos curtos, com crédito. Marque a capa. O portal não recebe arquivo solto.</p>
+      <h2 className="font-serif text-3xl">Capa</h2>
+      <p className="mt-1 text-sm text-[#655e52]">{data.contentKind === "Fotografia documental" ? "Até 5 fotos com data, local e biografia. Marque a capa." : "Até 5 fotos e 2 vídeos. Marque a capa."}</p>
       <CoverageMediaPanel publicationId={id} coverageTitle={data.title} contentKind={data.contentKind} documentaryPhotos={data.contentKind === "Fotografia documental"} existingMedia={data.media.map(media => ({ id: media.id, mediaType: media.mediaType, filename: media.filename, isCover: media.isCover }))} eventNames={data.taxonomies.filter(taxonomy => taxonomy.dimension === "Evento").map(taxonomy => taxonomy.name)} />
     </section>
+    {isPublished ? <section id="home" className="admin-card mt-10 p-6">
+      <h2 className="font-serif text-3xl">4. Home e Histórias recentes</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">Publicar não coloca a foto de capa na Home. Só entra em destaque quando a curadoria nacional marca. A capa é a foto com ordem 0, autorizada e ativa.</p>
+      {cover ? <p className="mt-3 text-xs text-[#655e52]">Capa atual: {cover.filename || `#${cover.id}`}</p> : <p className="mt-3 text-xs text-[#8b4d24]">Sem capa marcada — a Home ficaria sem foto.</p>}
+      {user?.role === "administrador principal" ? (
+        <div className="mt-5 grid gap-4">
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" className="mt-1" checked={homeOn} onChange={event => setHomeOn(event.target.checked)} />
+            <span><strong>Mostrar em Histórias recentes</strong><span className="mt-1 block text-xs text-[#655e52]">A capa deste conteúdo aparece na Home nacional.</span></span>
+          </label>
+          {homeOn ? <label className="grid max-w-xs gap-1 text-xs font-semibold">Posição na Home
+            <select value={homePlacement} onChange={event => setHomePlacement(event.target.value as typeof homePlacement)} className="h-10 rounded-md border bg-white px-2 text-sm font-normal">
+              <option>Destaque principal</option>
+              <option>Destaque secundário</option>
+              <option>Recomendado</option>
+            </select>
+          </label> : null}
+          <div><Button type="button" disabled={setFeatured.isPending} className="bg-[#242017] text-white" onClick={() => setFeatured.mutate({ id, manualFeatured: homeOn, relevance: Math.max(data.relevance, homeOn ? 60 : 0), homePlacement: homeOn ? homePlacement : "Nenhum", homeOrder: data.homeOrder })}>{setFeatured.isPending ? "Salvando..." : "Salvar na Home"}</Button></div>
+        </div>
+      ) : (
+        <div className="mt-5">
+          <p className="text-sm text-[#655e52]">Só o Super Admin coloca na Home.</p>
+          <Button type="button" variant="outline" className="mt-3" disabled={suggestHighlight.isPending || data.homePlacement !== "Nenhum" || data.manualFeatured} onClick={() => suggestHighlight.mutate({ publicationId: id, note: "Pedido para aparecer em Histórias recentes com a foto de capa." })}>{data.homePlacement !== "Nenhum" || data.manualFeatured ? "Já está na Home" : "Pedir Histórias recentes"}</Button>
+        </div>
+      )}
+    </section> : null}
+    {!isPublished ? (
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#242017]/15 bg-[#f7f3e9]/95 px-4 py-3 backdrop-blur">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-[#655e52]">{gaps.length ? gaps[0] : "Pronto para o site."}{gaps.length > 1 ? ` · +${gaps.length - 1}` : ""}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" disabled={busy} onClick={() => update.mutate(payload)}>Salvar</Button>
+            {canDirect ? (
+              <Button type="button" disabled={busy || gaps.length > 0} className="bg-[#242017] text-white" onClick={goLive}>{busy ? "Publicando..." : "Publicar no site"}</Button>
+            ) : nextAction ? (
+              <Button type="button" disabled={busy || (data.status === "Rascunho" && gaps.length > 0)} className="bg-[#242017] text-white" onClick={() => data.status === "Rascunho" ? saveThenAdvance() : advance.mutate({ id, expectedVersion: data.version })}>
+                {data.status === "Rascunho" ? "Salvar e enviar para revisão" : nextAction.label}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    ) : null}
   </div></DashboardLayout>;
 }

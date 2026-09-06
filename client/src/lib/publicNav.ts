@@ -9,7 +9,7 @@ export const publicNavGroups = [
     id: "olhar",
     label: "Olhar",
     description: "Histórias, imagens e filmes que a Ojú autorizou mostrar.",
-    hrefs: ["/historias", "/coberturas", "/documentarios", "/projetos", "/acervo"],
+    hrefs: ["/historias", "/coberturas", "/documentarios", "/projetos", "/fotografia-documental", "/acervo"],
   },
   {
     id: "chao",

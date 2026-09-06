@@ -41,6 +41,20 @@ function assertPrincipal(role: EditorialRole) {
   if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode excluir ou restaurar conteúdos." });
 }
 
+async function portalCoversByPublicationId(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, publicationIds: number[]) {
+  const coverLinks = publicationIds.length ? await db.select().from(publicationMedia).where(inArray(publicationMedia.publicationId, publicationIds)).orderBy(publicationMedia.displayOrder) : [];
+  const mediaIds = Array.from(new Set(coverLinks.map(link => link.mediaId)));
+  const covers = mediaIds.length ? await db.select().from(mediaAssets).where(and(inArray(mediaAssets.id, mediaIds), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))) : [];
+  const coverById = new Map(covers.map(item => [item.id, item]));
+  const firstCoverByPublication = new Map<number, typeof covers[number]>();
+  for (const link of coverLinks) {
+    if (firstCoverByPublication.has(link.publicationId)) continue;
+    const cover = coverById.get(link.mediaId);
+    if (cover) firstCoverByPublication.set(link.publicationId, cover);
+  }
+  return firstCoverByPublication;
+}
+
 async function publicationTerritoryIds(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, publicationId: number) {
   const links = await db.select({ taxonomyId: publicationTaxonomies.taxonomyId }).from(publicationTaxonomies).where(eq(publicationTaxonomies.publicationId, publicationId));
   if (!links.length) return [];
@@ -191,6 +205,7 @@ export const adminListInput = z.object({
   contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]).optional(),
   query: z.string().trim().max(160).optional(),
   publishedOnly: z.boolean().optional(),
+  createdByMe: z.boolean().optional(),
 });
 
 export const editorialRouter = router({
@@ -249,14 +264,9 @@ export const editorialRouter = router({
     const records = await db.select().from(publications).where(whereClause).orderBy(desc(publications.publishedAt), desc(publications.createdAt)).limit(input.limit).offset(input.offset);
     const permitted = await portalAuthorizedPublications(db, records);
     const publicationIds = permitted.map(item => item.publication.id);
-    const coverLinks = publicationIds.length ? await db.select().from(publicationMedia).where(inArray(publicationMedia.publicationId, publicationIds)).orderBy(publicationMedia.displayOrder) : [];
-    const firstCoverByPublication = new Map<number, typeof coverLinks[number]>();
-    for (const link of coverLinks) if (!firstCoverByPublication.has(link.publicationId)) firstCoverByPublication.set(link.publicationId, link);
-    const coverMediaIds = Array.from(new Set(Array.from(firstCoverByPublication.values()).map(link => link.mediaId)));
-    const covers = coverMediaIds.length ? await db.select().from(mediaAssets).where(and(inArray(mediaAssets.id, coverMediaIds), isNull(mediaAssets.deletedAt))) : [];
-    const coverById = new Map(covers.map(item => [item.id, item]));
+    const firstCoverByPublication = await portalCoversByPublicationId(db, publicationIds);
     const items = permitted.map(({ publication, authorization }) => {
-      const cover = coverById.get(firstCoverByPublication.get(publication.id)?.mediaId || 0);
+      const cover = firstCoverByPublication.get(publication.id);
       return { ...toPortalPublication(publication, authorization), coverUrl: cover?.assetUrl ?? null, coverType: cover?.mediaType ?? null, coverCredit: cover?.credit ?? null };
     });
     return { items, total, hasMore: input.offset + records.length < total };
@@ -282,12 +292,8 @@ export const editorialRouter = router({
     const territoryPrioritized = curated.sort((a, b) => (territoryIds?.length ? Number(territoryIds.includes(b.id)) - Number(territoryIds.includes(a.id)) : 0) || Number(geographicPublicationIds.has(b.id)) - Number(geographicPublicationIds.has(a.id)));
     const selected = balanceFeaturedPublications(territoryPrioritized);
     const selectedIds = selected.map(item => item.id);
-    const coverLinks = selectedIds.length ? await db.select().from(publicationMedia).where(inArray(publicationMedia.publicationId, selectedIds)).orderBy(publicationMedia.displayOrder) : [];
-    const firstCoverByPublication = new Map<number, typeof coverLinks[number]>();
-    for (const link of coverLinks) if (!firstCoverByPublication.has(link.publicationId)) firstCoverByPublication.set(link.publicationId, link);
-    const coverMediaIds = Array.from(new Set(Array.from(firstCoverByPublication.values()).map(link => link.mediaId)));
-    const covers = coverMediaIds.length ? await db.select().from(mediaAssets).where(and(inArray(mediaAssets.id, coverMediaIds), isNull(mediaAssets.deletedAt))) : [];
-    const coverById = new Map(covers.map(item => [item.id, item]));
+    const firstCoverByPublication = await portalCoversByPublicationId(db, selectedIds);
+    const covers = Array.from(firstCoverByPublication.values());
     const photographerIds = Array.from(new Set(covers.map(item => item.photographerId).filter((id): id is number => typeof id === "number")));
     const photographers = photographerIds.length ? await db.select().from(networkExecutors).where(inArray(networkExecutors.id, photographerIds)) : [];
     const photographerById = new Map(photographers.map(item => [item.id, item]));
@@ -298,7 +304,7 @@ export const editorialRouter = router({
       if (taxonomy) territoryNameByPublication.set(link.publicationId, taxonomy.name);
     }
     return selected.map(publication => {
-      const cover = coverById.get(firstCoverByPublication.get(publication.id)?.mediaId || 0);
+      const cover = firstCoverByPublication.get(publication.id);
       const photographer = cover?.photographerId ? photographerById.get(cover.photographerId) : undefined;
       return {
         ...toPortalPublication(publication, authorizationByPublicationId.get(publication.id) ?? null),
@@ -359,6 +365,7 @@ export const editorialRouter = router({
     if (input?.status) conditions.push(eq(publications.status, input.status));
     if (input?.contentKind) conditions.push(eq(publications.contentKind, input.contentKind));
     if (input?.publishedOnly) conditions.push(and(eq(publications.status, "Publicada"), eq(publications.isPublic, true))!);
+    if (input?.createdByMe) conditions.push(eq(publications.createdBy, ctx.user.id));
     if (input?.query) {
       const term = `%${input.query}%`;
       conditions.push(or(like(publications.title, term), like(publications.summary, term))!);
@@ -367,7 +374,23 @@ export const editorialRouter = router({
     const totalRow = await db.select({ value: count() }).from(publications).where(whereClause);
     const total = Number(totalRow[0]?.value || 0);
     const items = await db.select().from(publications).where(whereClause).orderBy(desc(publications.updatedAt)).limit(limit).offset(offset);
-    return { items, total, hasMore: offset + items.length < total };
+    const covers = await portalCoversByPublicationId(db, items.map(item => item.id));
+    const creatorIds = Array.from(new Set(items.map(item => item.createdBy).filter((id): id is number => typeof id === "number")));
+    const creators = creatorIds.length ? await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, creatorIds)) : [];
+    const creatorById = new Map(creators.map(person => [person.id, person.name || person.email || "Equipe"]));
+    return {
+      items: items.map(item => {
+        const cover = covers.get(item.id);
+        return {
+          ...item,
+          coverUrl: cover?.assetUrl ?? null,
+          coverType: cover?.mediaType ?? null,
+          createdByName: item.createdBy ? creatorById.get(item.createdBy) || "Equipe" : "Equipe",
+        };
+      }),
+      total,
+      hasMore: offset + items.length < total,
+    };
   }),
 
   adminSummary: protectedProcedure.query(async ({ ctx }) => {
@@ -474,7 +497,7 @@ export const editorialRouter = router({
       if (taxonomyIds.length) await db.insert(publicationTaxonomies).values(taxonomyIds.map(taxonomyId => ({ publicationId: id, taxonomyId })));
     }
     publishEditorialEvent("publication-updated", id);
-    return { success: true };
+    return { success: true, version: current[0].version + 1 };
   }),
 
   attachMedia: protectedProcedure.input(z.object({ publicationId: z.number().int().positive(), mediaId: z.number().int().positive(), caption: z.string().max(1000).optional(), biography: z.string().max(5000).optional(), location: z.string().max(280).optional(), capturedAt: z.date().optional(), asCover: z.boolean().optional() })).mutation(async ({ ctx, input }) => {

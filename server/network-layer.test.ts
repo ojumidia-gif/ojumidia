@@ -35,6 +35,7 @@ describe("camada oficial da Rede Ojú", () => {
     expect(network).toContain('status: "Substituído"');
     expect(network).toContain("authorizedForHome");
     expect(media).toContain("commercialMiniclips");
+    expect(media).toContain("eligibleMiniclips");
     expect(commercial).toContain("homeFeatured: false, authorizedForHome: false");
   });
 

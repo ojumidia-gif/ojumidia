@@ -13,7 +13,7 @@ export default function PublicationPreview() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
         <Link href={params?.id ? `/admin/editar/${params.id}` : "/admin/publicacoes"} className="inline-flex items-center gap-2 text-sm font-semibold text-white/80"><ArrowLeft className="h-4 w-4" />Voltar à edição</Link>
         <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ed9c58]">Prévia como no site · {data?.status || "…"}</p>
-        {params?.id && <Button asChild className="bg-[#ed9c58] text-[#24140b]"><Link href={`/admin/editar/${params.id}`}>Continuar edição</Link></Button>}
+        {params?.id && <Button asChild className="bg-[#ed9c58] text-[#24140b]"><Link href={`/admin/editar/${params.id}`}>Editar</Link></Button>}
       </div>
     </div>
     {isLoading ? <p className="container pt-16">Preparando visualização...</p> : data ? <article className="container max-w-4xl py-16">

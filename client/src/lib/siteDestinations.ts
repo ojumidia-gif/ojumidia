@@ -36,6 +36,15 @@ export const siteDestinations = [
     how: "Crie o rascunho, complete texto e fotos, envie para revisão, aprove e publique em Projetos.",
   },
   {
+    id: "fotografia-documental",
+    label: "Fotografia documental",
+    publicHref: "/fotografia-documental",
+    adminHref: "/admin/publicacoes?tipo=Fotografia%20documental",
+    action: "editorial" as const,
+    contentKind: "Fotografia documental" as const,
+    how: "Crie a coleção, ligue o território, anexe até 5 fotos com data, local e biografia, revise e publique.",
+  },
+  {
     id: "territorios",
     label: "Territórios",
     publicHref: "/territorios",

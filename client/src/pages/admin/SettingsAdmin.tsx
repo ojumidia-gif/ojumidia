@@ -12,7 +12,7 @@ const cards = [
   { href: "/admin/auditoria", icon: ShieldCheck, title: "Auditoria", text: "Logins, permissões, publicação e políticas.", action: "Abrir auditoria", principalOnly: true },
   { href: "/admin/politicas-comerciais", icon: ShieldCheck, title: "Políticas e receitas", text: "Percentuais da Ojú, avisos de repasse e receitas documentais.", action: "Abrir políticas", principalOnly: true },
   { href: "/admin/contratos", icon: FileSignature, title: "Contratos", text: "Documentos comerciais já existentes.", action: "Abrir contratos" },
-  { href: "/admin/anuncios", icon: BadgeDollarSign, title: "Monetização", text: "Anúncios e cartões de serviço.", action: "Abrir anúncios" },
+  { href: "/admin/anuncios", icon: BadgeDollarSign, title: "Monetização", text: "Anúncios e cartões de serviço.", action: "Abrir anúncios", principalOnly: true },
   { href: "/admin/ganhos", icon: WalletCards, title: "Ganhos", text: "Repasses e valores sem percentual fixo no código.", action: "Ver ganhos", principalOnly: true },
 ];
 

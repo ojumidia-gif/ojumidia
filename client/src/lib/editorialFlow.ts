@@ -7,7 +7,7 @@ export function nextEditorialAction(role: string | undefined, status: string) {
     return { label: "Aprovar", hint: "Depois disto um administrador publica no site." };
   }
   if (status === "Aprovada" && admin) {
-    return { label: "Publicar no site", hint: "Só nesta etapa o conteúdo entra no portal." };
+    return { label: "Publicar no site", hint: "Entra no portal. Histórias recentes na Home continua sendo escolha da curadoria." };
   }
   return null;
 }

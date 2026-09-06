@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import { HOME_MINICLIP_CURATION_SETTING, HOME_MINICLIP_DISPLAY_SECONDS, HOME_MINICLIP_MAX_DURATION_SECONDS, HOME_MINICLIP_SEQUENCE_LIMIT, HOME_MINICLIP_TRANSITION_MS } from "@shared/const";
 import {
@@ -139,6 +139,12 @@ export const mediaRouter = router({
     const db = await requireDb();
     return db.select().from(mediaAssets).where(and(eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.backgroundEligible), desc(mediaAssets.backgroundPriority), desc(mediaAssets.createdAt));
   }),
+  eligibleMiniclips: protectedProcedure.query(async ({ ctx }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const scope = await scopedMediaWhere(db, ctx.user, false);
+    return db.select().from(mediaAssets).where(and(scope, eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.state, "Ativo"), eq(mediaAssets.publicationAllowed, true), isNotNull(mediaAssets.durationSeconds), lte(mediaAssets.durationSeconds, 60))).orderBy(desc(mediaAssets.createdAt));
+  }),
   list: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(80).default(40), offset: z.number().int().min(0).default(0) }).optional()).query(async ({ ctx, input }) => {
     requireAdmin(ctx.user.role);
     const db = await requireDb();
@@ -258,7 +264,8 @@ export const mediaRouter = router({
     if (input.mediaType === "vídeo" && !durationSeconds) throw new TRPCError({ code: "BAD_REQUEST", message: "Informe a duração confirmada do vídeo. Vídeos documentais devem ter até 60 segundos." });
     const { uploadId, partnerId: _partnerId, territoryId: _territoryId, photographerId: requestedPhotographerId, ...values } = input;
     const credited = await resolvePhotographerCredit(db, ctx.user, requestedPhotographerId, scopedPartnerId, input.credit);
-    const result = await db.insert(mediaAssets).values({ ...values, credit: credited.credit, photographerId: credited.photographerId, storageKey: upload?.storageKey ?? values.storageKey, filename: upload?.filename ?? values.filename, fileSize: upload?.fileSize ?? undefined, durationSeconds, partnerId: scopedPartnerId, territoryId: scopedTerritoryId, uploadId: uploadId ?? null, checksum: upload?.checksum ?? null, uploadStatus: "Pronto", createdBy: ctx.user.id });
+    const homeSequence = ctx.user.role === "administrador principal" ? { backgroundEligible: values.backgroundEligible ?? false, backgroundPriority: values.backgroundPriority ?? 0 } : { backgroundEligible: false, backgroundPriority: 0 };
+    const result = await db.insert(mediaAssets).values({ ...values, ...homeSequence, credit: credited.credit, photographerId: credited.photographerId, storageKey: upload?.storageKey ?? values.storageKey, filename: upload?.filename ?? values.filename, fileSize: upload?.fileSize ?? undefined, durationSeconds, partnerId: scopedPartnerId, territoryId: scopedTerritoryId, uploadId: uploadId ?? null, checksum: upload?.checksum ?? null, uploadStatus: "Pronto", createdBy: ctx.user.id });
     const id = Number(result[0].insertId);
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: scopedPartnerId, territoryId: scopedTerritoryId, resourceType: "media", resourceId: id, action: "media-registered", nextState: { uploadId: uploadId ?? null, mediaType: input.mediaType, publicationAllowed: input.publicationAllowed }, detail: "Mídia registrada no Acervo; publicação permanece dependente de autorização e curadoria." });
     publishEditorialEvent("media-created", id);
