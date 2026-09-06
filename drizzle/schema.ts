@@ -910,6 +910,27 @@ export const communityCareRequests = mysqlTable("communityCareRequests", {
   index("care_request_partner_idx").on(table.partnerId, table.status),
 ]);
 
+export const adminDeskCategories = ["Dúvida", "Erro", "Estabilidade", "Outro"] as const;
+export const adminDeskStatuses = ["Aberta", "Em atendimento", "Resolvida"] as const;
+
+export const adminDeskMessages = mysqlTable("adminDeskMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  createdBy: int("createdBy").notNull(),
+  category: mysqlEnum("category", adminDeskCategories).notNull(),
+  subject: varchar("subject", { length: 180 }).notNull(),
+  body: text("body").notNull(),
+  pagePath: varchar("pagePath", { length: 320 }),
+  status: mysqlEnum("status", adminDeskStatuses).default("Aberta").notNull(),
+  reply: text("reply"),
+  repliedBy: int("repliedBy"),
+  repliedAt: timestamp("repliedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("admin_desk_status_idx").on(table.status, table.createdAt),
+  index("admin_desk_author_idx").on(table.createdBy, table.createdAt),
+]);
+
 export const settings = mysqlTable("settings", {
   id: int("id").autoincrement().primaryKey(),
   settingKey: varchar("settingKey", { length: 120 }).notNull().unique(),

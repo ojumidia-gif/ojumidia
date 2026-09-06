@@ -11,6 +11,7 @@ describe("destinos públicos do portal", () => {
     for (const dest of siteDestinations) {
       expect(nav).toContain(dest.label);
       expect(dest.how.length).toBeGreaterThan(20);
+      expect(dest.steps).toHaveLength(3);
       expect(dest.adminHref.startsWith("/admin/")).toBe(true);
     }
   });

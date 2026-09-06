@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { AdminPage, EmptyAdmin, SiteReadiness } from "./_shared";
+import { AdminPage, EmptyAdmin, SiteReadiness, AdminFlowGuide } from "./_shared";
 import { TaxonomyMediaPanel } from "./TaxonomyMediaPanel";
 
 const dimensions = ["Tipo de conteúdo", "Tema", "Localização", "Território", "Pessoa/organização", "Evento", "Data"] as const;
@@ -41,6 +41,7 @@ export default function TaxonomiesAdmin() {
 
   return <AdminPage eyebrow={territoriesFocus ? "Portal → Territórios" : "Territórios e taxonomias"} title={territoriesFocus ? "Cadastrar, editar e publicar no mapa." : "Criar, relacionar e documentar."} action={null}>
     {territoriesFocus ? <p className="-mt-4 mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">Cadastre o território. Depois ligue histórias e coberturas no conteúdo. Visibilidade no mapa é opcional e só com autorização da casa.</p> : null}
+    {territoriesFocus ? <AdminFlowGuide destinationId="territorios" /> : null}
     {territoriesFocus ? <div className="mb-6"><SiteReadiness items={(data || []).filter(item => item.dimension === "Território" && item.mapVisibility === "Não divulgar").map(item => `${item.name} ainda fora de /territorios.`)} readyText="Os territórios com visibilidade autorizada já podem aparecer no mapa do portal." /></div> : null}
     <section className="admin-card p-6">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-serif text-2xl">{editingId ? `Editar ${dimension}` : `Cadastrar ${dimension}`}</p><p className="mt-2 max-w-3xl text-sm leading-6 text-[#655e52]">{territoriesFocus ? "Nome basta para ligar publicações. Mapa só com autorização." : "Escolha a dimensão, salve, depois relacione conteúdos ou adicione mídia."}</p></div>{editingId && <Button variant="outline" size="sm" onClick={reset}><X className="mr-1 h-3.5 w-3.5" />Cancelar edição</Button>}</div>

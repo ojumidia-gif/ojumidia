@@ -12,7 +12,8 @@ import { trpc } from "@/lib/trpc";
 import { CoverageMediaPanel } from "./CoverageMediaPanel";
 import { CoverageTaxonomiesPanel } from "./CoverageTaxonomiesPanel";
 import { InstitutionalCoveragePanel } from "./InstitutionalCoveragePanel";
-import { SiteReadiness } from "./_shared";
+import { SiteReadiness, AdminFlowGuide } from "./_shared";
+import { siteDestinationByKind } from "@/lib/siteDestinations";
 import { EditorialBody } from "@/components/EditorialBody";
 
 const destinations: Record<string, string> = {
@@ -104,6 +105,7 @@ export default function PublicationEdit() {
       {isPublished ? <a href="#home" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Home</a> : null}
     </nav>
     {data.status !== "Publicada" ? <div className="mt-4"><SiteReadiness items={gaps} readyText="Pronto. Publique no site." /></div> : null}
+    <div className="mt-4"><AdminFlowGuide destinationId={siteDestinationByKind(data.contentKind)?.id || "historias"} /></div>
     {conflict && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b95140]/30 bg-[#fff1ec] p-4 text-sm text-[#7a3126]"><span>Outra pessoa salvou primeiro.</span><Button size="sm" type="button" onClick={() => { setConflict(false); utils.editorial.preview.invalidate({ id }); }}>Recarregar</Button></div>}
     {isPublished && <p className="mt-4 text-sm text-[#655e52]">No portal. Home só com Super Admin.</p>}
     <form id="texto" onSubmit={event => { event.preventDefault(); update.mutate(payload); }} className="admin-card mt-8 grid gap-5 p-6">

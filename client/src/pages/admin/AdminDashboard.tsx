@@ -6,7 +6,7 @@ import { siteDestinations } from "@/lib/siteDestinations";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { AdminPage, EmptyAdmin, statusStyle } from "./_shared";
+import { AdminPage, EmptyAdmin, FirstUserWelcome, statusStyle } from "./_shared";
 import { useDaypartGreeting } from "@/hooks/useDaypartGreeting";
 
 const workDoors = [
@@ -60,6 +60,7 @@ export default function AdminDashboard() {
         </div>
       )}
     >
+      <FirstUserWelcome />
       {partner ? (
         <>
           <p className="-mt-2 mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">
@@ -113,6 +114,10 @@ export default function AdminDashboard() {
 
       <section className="mb-6">
         <p className="mb-3 text-xs font-bold uppercase tracking-[.14em] text-[#806817]">{principal ? "Operação" : "Publicar no site"}</p>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Link href="/admin/guia" className="rounded-full bg-[#242017] px-3 py-2 text-sm font-semibold text-white">Guia criar → publicar</Link>
+          <Link href="/admin/canal" className="rounded-full border border-[#242017]/20 px-3 py-2 text-sm font-semibold">Canal Ojú</Link>
+        </div>
         <div className="flex flex-wrap gap-2">
           {siteDestinations.map(item => (
             <Link key={item.id} href={item.adminHref} className="rounded-full bg-[#eee9dc] px-3 py-2 text-sm font-semibold">
@@ -189,6 +194,7 @@ export default function AdminDashboard() {
           <p className="mt-7 font-serif text-2xl">O que fazer agora</p>
           <p className="mt-2 text-sm leading-6 text-[#655e52]">{partner ? "Escreva, envie foto, ligue o lugar. Pedir a Home fica no conteúdo já publicado." : "Adicione conteúdo, envie fotos e publique somente depois da revisão."}</p>
           <div className="mt-8 grid gap-2 text-sm font-semibold">
+            <Link href="/admin/guia" className="rounded-xl bg-[#eee9dc] px-4 py-3">Abrir o guia</Link>
             <Link href="/admin/publicacoes" className="rounded-xl bg-[#eee9dc] px-4 py-3">Criar ou editar</Link>
             <Link href="/admin/midias" className="rounded-xl bg-[#eee9dc] px-4 py-3">Enviar fotos ou vídeo</Link>
             {partner ? <Link href="/admin/solicitacoes" className="rounded-xl bg-[#eee9dc] px-4 py-3">Pedidos do território</Link> : <Link href="/admin/solicitacoes" className="rounded-xl bg-[#eee9dc] px-4 py-3">Ver solicitações</Link>}

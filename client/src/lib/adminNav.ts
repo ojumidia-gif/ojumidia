@@ -1,4 +1,4 @@
-import { BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandshake, Home, Image, ListFilter, MapPinned, ScrollText, Settings, Sparkles, Trash2, Users, Wallet } from "lucide-react";
+import { BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandshake, Home, Image, LifeBuoy, ListFilter, MapPinned, Route, ScrollText, Settings, Sparkles, Trash2, Users, Wallet } from "lucide-react";
 
 export type AdminNavItem = {
   label: string;
@@ -24,6 +24,8 @@ export const adminNavGroups: AdminNavGroup[] = [
     partnerLabel: "Início",
     items: [
       { label: "Painel", href: "/admin", icon: Home },
+      { label: "Guia", href: "/admin/guia", icon: Route },
+      { label: "Canal Ojú", href: "/admin/canal", icon: LifeBuoy },
       { label: "Pendências", href: "/admin/pendencias", icon: ListFilter, partnerHidden: true },
     ],
   },

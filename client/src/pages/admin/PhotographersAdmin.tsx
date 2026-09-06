@@ -5,7 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Camera } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { AdminPage, EmptyAdmin, SiteReadiness } from "./_shared";
+import { AdminPage, EmptyAdmin, SiteReadiness, AdminFlowGuide } from "./_shared";
 import { photographerSiteGaps } from "@/lib/editorialFlow";
 
 export default function PhotographersAdmin() {
@@ -24,6 +24,7 @@ export default function PhotographersAdmin() {
   return (
     <AdminPage eyebrow="Portal → Fotógrafos" title="Cadastrar e publicar fichas.">
       <p className="-mt-4 mb-4 max-w-3xl text-sm leading-6 text-[#655e52]">Nome + apresentação. No card: Publicar no site. Crédito nas fotos do Acervo não depende desta ficha.</p>
+      <AdminFlowGuide destinationId="fotografos" />
       <section className="grid gap-7 xl:grid-cols-[380px_1fr]">
         <form className="admin-card grid gap-3 p-5" onSubmit={async event => {
           event.preventDefault();

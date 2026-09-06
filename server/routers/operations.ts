@@ -10,6 +10,7 @@ import {
   communityCareRequests,
   communityEvents,
   contracts,
+  adminDeskMessages,
   highlightSuggestions,
   institutionVisibilitySubscriptions,
   institutions,
@@ -134,6 +135,19 @@ export const operationsRouter = router({
     if (principal) {
       const responsibilityTerms = await db.select().from(administratorResponsibilityTerms).where(eq(administratorResponsibilityTerms.status, "Aguardando assinatura gov.br")).orderBy(desc(administratorResponsibilityTerms.createdAt));
       responsibilityTerms.forEach(term => items.push({ id: `responsibility-${term.id}`, category: "Governança", priority: "Crítica", title: term.email, description: "Administrador autorizado aguarda assinatura do termo de responsabilidade via gov.br.", href: "/admin/colaboradores", createdAt: term.createdAt, dueAt: null, partnerId: null, territoryId: null }));
+      const deskRows = await db.select().from(adminDeskMessages).where(eq(adminDeskMessages.status, "Aberta")).orderBy(desc(adminDeskMessages.createdAt));
+      deskRows.forEach(row => items.push({
+        id: `desk-${row.id}`,
+        category: "Canal Ojú",
+        priority: row.category === "Erro" || row.category === "Estabilidade" ? "Crítica" : "Atenção",
+        title: row.subject,
+        description: `${row.category}: mensagem aberta no Canal Ojú.`,
+        href: "/admin/canal",
+        createdAt: row.createdAt,
+        dueAt: null,
+        partnerId: null,
+        territoryId: null,
+      }));
     }
     const ordered = orderOperationalPendencies(items);
     const summary = { total: ordered.length, critical: ordered.filter(item => item.priority === "Crítica").length, attention: ordered.filter(item => item.priority === "Atenção").length, followUp: ordered.filter(item => item.priority === "Acompanhamento").length };

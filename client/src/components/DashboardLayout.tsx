@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
+import { OjuBot } from "./OjuBot";
 
 type AuthStatus = { googleOAuth: boolean; localDevLogin: boolean; loginMode: string; message: string };
 
@@ -94,6 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 : "Operação editorial · rascunho, revisão, aprovação e só então o portal."}
           </p>
           <div className="ml-auto flex items-center gap-2">
+            <Link href="/admin/guia" className="text-sm font-medium text-[#5a5448] hover:text-[#242017]">Guia</Link>
             <Link href="/" className="text-sm font-medium text-[#5a5448] hover:text-[#242017]">Ver portal</Link>
             {principal ? (
               <>
@@ -104,6 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
         <main className="p-5 sm:p-8">{children}</main>
+        <OjuBot />
       </div>
     </div>
   );

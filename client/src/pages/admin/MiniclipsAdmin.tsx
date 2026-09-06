@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { AdminPage, EmptyAdmin } from "./_shared";
+import { AdminPage, EmptyAdmin, ThreeStepsGuide } from "./_shared";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { HOME_MINICLIP_DISPLAY_SECONDS, HOME_MINICLIP_MAX_DURATION_SECONDS, HOME_MINICLIP_SEQUENCE_LIMIT, HOME_MINICLIP_TRANSITION_MS } from "@shared/const";
 import { parseCaptionTrackUrl } from "@shared/homeMiniclip";
@@ -71,6 +71,7 @@ function ProductionMiniclipsDesk() {
   return (
     <AdminPage eyebrow="Produção e monetização" title="Miniclipes da contratação.">
       <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">Você publica o vídeo curto (até 60s) e liga à cobertura paga. Isso não muda a abertura da Home. O Super Admin é quem escolhe o fundo vivo nacional.</p>
+      <ThreeStepsGuide steps={["Envie o vídeo de até 60s.", "Ligue-o ao pedido em Pedidos.", "A Home nacional continua com o Super Admin."]} />
       <section className="admin-card p-6">
         <div className="flex gap-4">
           <div className="rounded-xl bg-[#f6d978] p-3"><Film className="h-5 w-5" /></div>

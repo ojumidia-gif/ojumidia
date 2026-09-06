@@ -5,6 +5,8 @@ describe("rotas administrativas restritas ao Super Admin", () => {
   it("esconde o que muda o site do Admin comum e deixa miniclipe de produção", () => {
     const labels = visibleAdminNav("administrador").flatMap(group => group.items.map(item => item.href));
     expect(labels).toContain("/admin/publicacoes");
+    expect(labels).toContain("/admin/guia");
+    expect(labels).toContain("/admin/canal");
     expect(labels).toContain("/admin/territorios");
     expect(labels).toContain("/admin/fotografos");
     expect(labels).toContain("/admin/midias");

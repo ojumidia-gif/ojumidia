@@ -8,7 +8,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { AdminPage, EmptyAdmin, statusStyle } from "./_shared";
+import { AdminPage, AdminFlowGuide, EmptyAdmin, statusStyle } from "./_shared";
+import { siteDestinationByKind } from "@/lib/siteDestinations";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -138,6 +139,7 @@ export default function PublicationsAdmin() {
 
   return <AdminPage eyebrow="Conteúdos" title="Criar e publicar." action={<Button onClick={() => setOpen(true)} className="rounded-full bg-[#f6b71b] text-[#242017] hover:bg-[#eeb12a]"><FilePlus2 className="mr-2 h-4 w-4" />Novo</Button>}>
     <p className="-mt-4 mb-4 text-sm text-[#655e52]">Tipo + título. Depois texto, território e capa. Admin publica no site; a Home é outra tela.</p>
+    <AdminFlowGuide destinationId={siteDestinationByKind(tipoFilter || kind)?.id || "historias"} />
     <div className="mb-4 flex flex-wrap gap-2 text-sm font-semibold">
       <Link href={hrefWith({ tipo: null })} className={`rounded-full px-3 py-1.5 ${!tipoFilter ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>Tudo</Link>
       {kinds.map(item => (

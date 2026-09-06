@@ -295,6 +295,13 @@
       "when": 1788640000000,
       "tag": "0041_authorized_instagram_presence",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "5",
+      "when": 1788650000000,
+      "tag": "0042_admin_desk_channel",
+      "breakpoints": true
     }
   ]
 }

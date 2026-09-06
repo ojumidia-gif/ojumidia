@@ -63,6 +63,8 @@ import EditorialTrashAdmin from "./pages/admin/EditorialTrashAdmin";
 import MediaTrashAdmin from "./pages/admin/MediaTrashAdmin";
 import RetentionAdmin from "./pages/admin/RetentionAdmin";
 import OperationsCenterAdmin from "./pages/admin/OperationsCenterAdmin";
+import AdminGuides from "./pages/admin/AdminGuides";
+import CanalOjuAdmin from "./pages/admin/CanalOjuAdmin";
 import AuditAdmin from "./pages/admin/AuditAdmin";
 import DocumentaryMemories from "./pages/DocumentaryMemories";
 import Services from "./pages/Services";
@@ -105,6 +107,8 @@ function Router() {
       <Route path={"/conheca-a-oju"} component={AboutOju} />
       <Route path={"/admin/acesso-local"} component={LocalDevLogin} />
       <Route path={"/admin"} component={AdminDashboard} />
+      <Route path={"/admin/guia"} component={AdminGuides} />
+      <Route path={"/admin/canal"} component={CanalOjuAdmin} />
       <Route path={"/admin/publicacoes"} component={PublicationsAdmin} />
       <Route path={"/admin/frentes"} component={EditorialFrontsAdmin} />
       <Route path={"/admin/taxonomias"} component={TaxonomiesAdmin} />
