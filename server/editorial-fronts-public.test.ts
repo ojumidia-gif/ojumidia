@@ -27,4 +27,11 @@ describe("frentes públicas editoriais", () => {
     expect(archive).toContain('import Search from "./Search"');
     expect(router).toContain("publicTerritories: publicProcedure");
   });
+
+  it("não recarrega o portal público quando o SSE editorial recusa visitante", () => {
+    const live = readFileSync(resolve(process.cwd(), "client/src/hooks/useEditorialLive.ts"), "utf8");
+    expect(live).not.toContain("window.location.reload(");
+    expect(live).toContain("EDITORIAL_LIVE_ROLES");
+    expect(live).toContain("canSubscribe");
+  });
 });
