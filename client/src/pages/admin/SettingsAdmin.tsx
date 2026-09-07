@@ -7,7 +7,7 @@ import { AdminPage } from "./_shared";
 const cards = [
   { href: "/admin/conteudo-portal", icon: Palette, title: "Conteúdo do portal", text: "Textos, serviços, Método Ojú e ordem das páginas públicas.", action: "Editar portal", principalOnly: true },
   { href: "/admin/equipes", icon: Users, title: "Equipes e créditos", text: "Créditos reutilizáveis nas coberturas.", action: "Gerenciar equipes" },
-  { href: "/admin/taxonomias", icon: MapPinned, title: "Territórios e taxonomias", text: "Local, evento, tema e relações documentais.", action: "Organizar territórios" },
+  { href: "/admin/taxonomias", icon: MapPinned, title: "Cidades e taxonomias", text: "Cidade de atuação, evento, tema e relações documentais.", action: "Organizar cidades" },
   { href: "/admin/frentes", icon: BookOpenText, title: "Frentes editoriais", text: "Atalho por tipo: história, cobertura, documentário, projeto e fotografia.", action: "Abrir frentes", principalOnly: true },
   { href: "/admin/candidaturas", icon: UserRoundCheck, title: "Candidaturas públicas", text: "Pedidos de Ser parceiro. Aprovar não cria login.", action: "Ver pedidos", principalOnly: true },
   { href: "/admin/colaboradores", icon: UserCog, title: "Colaboradores", text: "Convites, pulso de produção e termo via gov.br.", action: "Gerir acessos", principalOnly: true },

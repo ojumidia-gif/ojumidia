@@ -14,7 +14,7 @@ describe("feedback visual do Centro Administrativo", () => {
 
   it("notifica criação, transições, retirada e falhas em conteúdos", () => {
     const publications = source("client/src/pages/admin/PublicationsAdmin.tsx");
-    expect(publications).toContain("Aberto. Complete texto, território e capa.");
+    expect(publications).toContain("Aberto. Complete texto, cidade e capa.");
     expect(publications).toContain("No portal.");
     expect(publications).toContain("Arquivado.");
     expect(publications).toContain("Fora do ar.");

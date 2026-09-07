@@ -8,7 +8,7 @@ describe("navegação Olhar, Chão e Chamar a Ojú", () => {
     expect(OJU_INSTAGRAM_URL).toBe("https://instagram.com/oju.fotografia");
     const { grouped, rest } = groupPublicNav([
       { label: "Histórias", href: "/historias" },
-      { label: "Territórios", href: "/territorios" },
+      { label: "Cidades", href: "/territorios" },
       { label: "Chamar a Ojú", href: "/planejar-um-registro" },
       { label: "Ser parceiro", href: "/ser-parceiro" },
       { label: "Sobre", href: "/sobre" },

@@ -13,7 +13,7 @@ describe("descoberta comunitária com privacidade", () => {
     expect(router).toContain("eq(oralMemories.accessLevel, \"Público\")");
     expect(router).toContain("row.theme");
     expect(memories).toContain('placeholder="Ex.: ancestralidade"');
-    expect(memories).toContain("Território");
+    expect(memories).toContain("Cidade");
   });
 
   it("retorna no acompanhamento somente status e atualização associados ao protocolo", () => {

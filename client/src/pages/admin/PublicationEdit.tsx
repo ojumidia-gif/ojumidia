@@ -98,7 +98,7 @@ export default function PublicationEdit() {
   };
   const goNext = () => {
     if (stepBlocked(wizardStep)) {
-      toast.error(wizardStep === 1 ? "Escreva o título e o texto." : wizardStep === 2 ? "Ligue um território." : "Falta a capa.");
+      toast.error(wizardStep === 1 ? "Escreva o título e o texto." : wizardStep === 2 ? "Ligue uma cidade de atuação." : "Falta a capa.");
       return;
     }
     update.mutate(payload, { onSuccess: () => setWizardStep(current => (current === 3 ? 3 : current + 1) as 1 | 2 | 3) });
@@ -129,7 +129,7 @@ export default function PublicationEdit() {
     ) : (
       <nav className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
         <a href="#texto" className="rounded-full bg-oju-papel px-3 py-1.5">Texto</a>
-        <a href="#territorio" className="rounded-full bg-oju-papel px-3 py-1.5">Território</a>
+        <a href="#territorio" className="rounded-full bg-oju-papel px-3 py-1.5">Cidade</a>
         <a href="#midia" className="rounded-full bg-oju-papel px-3 py-1.5">Capa</a>
         <a href="#home" className="rounded-full bg-oju-papel px-3 py-1.5">Home</a>
       </nav>
@@ -176,8 +176,8 @@ export default function PublicationEdit() {
 
     {(isPublished || wizardStep === 2) ? (
     <section id="territorio" className="mt-10">
-      <h2 className="font-serif text-3xl">Território</h2>
-      <p className="mt-1 text-sm text-oju-terra-suave">Obrigatório para ir ao site.</p>
+      <h2 className="font-serif text-3xl">Cidade de atuação</h2>
+      <p className="mt-1 text-sm text-oju-terra-suave">Obrigatório: estado e município, ou Outro.</p>
       <CoverageTaxonomiesPanel publicationId={id} version={data.version} initialIds={data.taxonomies.map(item => item.id)} contentKind={data.contentKind} />
       {data.contentKind === "Cobertura" && <InstitutionalCoveragePanel publication={data} />}
     </section>

@@ -59,7 +59,7 @@ export default function PublicationsAdmin() {
 
   const create = trpc.editorial.create.useMutation({
     onSuccess: result => {
-      toast.success("Aberto. Complete texto, território e capa.");
+      toast.success("Aberto. Complete texto, cidade e capa.");
       setOpen(false); setTitle("");
       utils.editorial.adminList.invalidate();
       setLocation(`/admin/editar/${result.id}`);
@@ -139,7 +139,7 @@ export default function PublicationsAdmin() {
   };
 
   return <AdminPage eyebrow="Conteúdos" title="Criar e publicar." action={<Button onClick={() => setOpen(true)} className="rounded-full bg-oju-dourado text-oju-terra hover:bg-[#eeb12a]"><FilePlus2 className="mr-2 h-4 w-4" />Novo</Button>}>
-    <p className="-mt-4 mb-4 text-sm text-oju-terra-suave">{isPrincipal ? "Você vê o site inteiro. Tipo e título, três passos, publicar. Home é outra tela." : "Só o que você criou. Tipo e título. Depois texto, território e capa. Publicar no site. Home é outra tela."}</p>
+    <p className="-mt-4 mb-4 text-sm text-oju-terra-suave">{isPrincipal ? "Você vê o site inteiro. Tipo e título, três passos, publicar. Home é outra tela." : "Só o que você criou. Tipo e título. Depois texto, cidade e capa. Publicar no site. Home é outra tela."}</p>
     <AdminFlowGuide destinationId={siteDestinationByKind(tipoFilter || kind)?.id || "historias"} />
     <div className="mb-4 flex flex-wrap gap-2 text-sm font-semibold">
       <Link href={hrefWith({ tipo: null })} className={`rounded-full px-3 py-1.5 ${!tipoFilter ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>Tudo</Link>

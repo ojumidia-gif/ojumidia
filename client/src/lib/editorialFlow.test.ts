@@ -15,7 +15,7 @@ describe("próximo passo editorial", () => {
     expect(publicationSiteGaps({ body: "", summary: "", media: [], taxonomies: [] }).length).toBe(3);
     expect(publicationSiteGaps({ body: "texto", summary: null, media: [{ isCover: true }], taxonomies: [{ dimension: "Território" }] })).toEqual([]);
     expect(publishWizardStep(["Falta o texto que o site vai ler."])).toBe(1);
-    expect(publishWizardStep(["Ligue a um território."])).toBe(2);
+    expect(publishWizardStep(["Ligue a uma cidade de atuação."])).toBe(2);
     expect(publishWizardStep([])).toBe(3);
   });
 

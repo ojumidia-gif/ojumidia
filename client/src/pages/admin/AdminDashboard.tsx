@@ -10,11 +10,11 @@ import { AdminPage, EmptyAdmin, FirstUserWelcome, statusStyle } from "./_shared"
 import { useDaypartGreeting } from "@/hooks/useDaypartGreeting";
 
 const workDoors = [
-  { href: "/admin/publicacoes", title: "Escrever", text: "Três passos: texto, território e capa. Depois Publicar no site. Home é outra tela." },
+  { href: "/admin/publicacoes", title: "Escrever", text: "Três passos: texto, cidade e capa. Depois Publicar no site. Home é outra tela." },
   { href: "/admin/fotografos", title: "Fotógrafos", text: "Ficha pública em /fotografos. Crédito na foto vale mesmo sem ficha." },
   { href: "/admin/midias", title: "Fotos e vídeos", text: "Envie com crédito e autorização. Marque a capa no conteúdo." },
   { href: "/admin/miniclipes", title: "Miniclipes", text: "Vídeo curto da contratação. Não vai sozinho para a Home." },
-  { href: "/admin/territorios", title: "Lugares", text: "Território, endereço, casa, evento. Só o que a casa autorizar." },
+  { href: "/admin/territorios", title: "Lugares", text: "Cidade, endereço, casa, evento. Só o que a casa autorizar." },
   { href: "/admin/comunidade", title: "Casas e memórias", text: "Instituição, agenda e memória oral com consentimento." },
   { href: "/admin/equipes", title: "Créditos", text: "Equipes reutilizáveis no crédito da publicação." },
 ] as const;
@@ -23,7 +23,7 @@ const siteControls = [
   { href: "/admin/destaques", title: "Home e destaques", text: "Quem entra em Histórias recentes." },
   { href: "/admin/conteudo-portal", title: "Textos do portal", text: "Menus, home, páginas. Isto muda o site." },
   { href: "/admin/miniclipes", title: "Fundo vivo", text: "Abertura nacional da Home. Só Equipe Ojú." },
-  { href: "/admin/parceiros", title: "Parceiros", text: "Parceiros Ojú, territórios e escopos." },
+  { href: "/admin/parceiros", title: "Parceiros", text: "Parceiros Ojú, cidades de atuação e escopos." },
   { href: "/admin/candidaturas", title: "Candidaturas", text: "Pedidos públicos para ser parceiro. Só você aprova ou recusa." },
 ] as const;
 
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminPage
-      eyebrow={partner ? "Painel do território" : principal ? "Painel nacional" : "Ojú Mídia"}
+      eyebrow={partner ? "Painel da cidade" : principal ? "Painel nacional" : "Ojú Mídia"}
       title={partner ? `${hello} ${partner.partnerName}` : hello}
       action={(
         <div className="flex flex-wrap gap-2">
@@ -65,11 +65,11 @@ export default function AdminDashboard() {
       {partner ? (
         <>
           <p className="-mt-2 mb-4 max-w-3xl text-sm leading-6 text-oju-terra-suave">
-            Você trabalha só {partner.territories.map(item => item.name).join(", ") || "o território autorizado"}. Escrever, fotos, lugares e casas. A Equipe Ojú é quem muda o site, a Home e os textos do portal.
+            Você trabalha só {partner.territories.map(item => item.name).join(", ") || "a cidade autorizada"}. Escrever, fotos, lugares e casas. A Equipe Ojú é quem muda o site, a Home e os textos do portal.
           </p>
           <section className="admin-card mb-6 p-5">
             <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Seu trabalho</p>
-            <h2 className="mt-2 font-serif text-2xl">Alimente o território. Não redesenhe o site.</h2>
+            <h2 className="mt-2 font-serif text-2xl">Alimente a cidade. Não redesenhe o site.</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {workDoors.map(door => (
                 <Link key={door.href} href={door.href} className="rounded-2xl bg-oju-papel px-4 py-4">

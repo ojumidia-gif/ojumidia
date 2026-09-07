@@ -6,13 +6,15 @@ import { MapPinned } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import { CityOfOperationSelect, emptyCitySelection } from "@/components/CityOfOperationSelect";
+import { resolveCityOfOperation, taxonomyDimensionLabel, type CitySelection } from "@shared/brazilPlaces";
 import { trpc } from "@/lib/trpc";
 
 const documentaryDimensions = ["Território", "Localização", "Pessoa/organização", "Evento", "Tema"] as const;
 type Dimension = typeof documentaryDimensions[number];
 
 const emptyHint: Record<Dimension, string> = {
-  Território: "Cadastre o território real aqui. Homolog A/B são só teste de sistema.",
+  Território: "Escolha estado e município. Homolog A/B, se existirem, são só teste de sistema.",
   Localização: "Digite o lugar, o bairro ou o endereço autorizado.",
   "Pessoa/organização": "Cadastre a casa, o coletivo ou a organização desta história.",
   Evento: "Cadastre o encontro, a festa ou o culto, se houver.",
@@ -41,7 +43,8 @@ export function CoverageTaxonomiesPanel({ publicationId, version, initialIds, co
   const { data } = trpc.editorial.taxonomies.useQuery();
   const [selected, setSelected] = useState<number[]>(initialIds);
   const [expectedVersion, setExpectedVersion] = useState(version);
-  const [drafts, setDrafts] = useState<Record<Dimension, string>>({ Território: "", Localização: "", "Pessoa/organização": "", Evento: "", Tema: "" });
+  const [drafts, setDrafts] = useState<Record<Exclude<Dimension, "Território">, string>>({ Localização: "", "Pessoa/organização": "", Evento: "", Tema: "" });
+  const [city, setCity] = useState<CitySelection>(emptyCitySelection());
   const [address, setAddress] = useState("");
   useEffect(() => setSelected(initialIds), [initialIds.join(",")]);
   useEffect(() => setExpectedVersion(version), [version]);
@@ -60,6 +63,24 @@ export function CoverageTaxonomiesPanel({ publicationId, version, initialIds, co
   const grouped = documentaryDimensions.map(dimension => [dimension, data?.filter(item => item.dimension === dimension) || []] as const);
   const toggle = (id: number) => setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   const addAndLink = async (dimension: Dimension) => {
+    if (dimension === "Território") {
+      try {
+        const resolved = resolveCityOfOperation(city);
+        const created = await create.mutateAsync({
+          dimension,
+          name: resolved.name,
+          place: { uf: city.uf, ibgeId: city.ibgeId === "" ? "outro" : city.ibgeId, customName: city.customName },
+        });
+        const next = selected.includes(created.id) ? selected : [...selected, created.id];
+        setSelected(next);
+        setCity(emptyCitySelection());
+        await save.mutateAsync({ id: publicationId, expectedVersion, taxonomyIds: next });
+        utils.editorial.taxonomies.invalidate();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Selecione a cidade de atuação.");
+      }
+      return;
+    }
     const name = drafts[dimension].trim();
     if (name.length < 2) { toast.error("Informe um nome com pelo menos 2 letras."); return; }
     const coords = dimension === "Localização" && address.trim() ? await geocodeAuthorizedAddress(address.trim()) : null;
@@ -84,14 +105,14 @@ export function CoverageTaxonomiesPanel({ publicationId, version, initialIds, co
         <div className="rounded-xl bg-[#f6d978] p-3"><MapPinned className="h-5 w-5" /></div>
         <div>
           <p className="font-serif text-2xl">Relações documentais</p>
-          <p className="mt-1 text-sm text-oju-terra-suave">{contentKind === "Fotografia documental" ? "Ligue o território. Sem isso a coleção não entra no mapa." : "Marque o território. Cadastre o lugar aqui se ainda não existir."}</p>
-          <p className="mt-2 text-xs leading-5 text-oju-terra-suave"><Link href="/admin/territorios" className="font-semibold underline">Abrir cadastro completo de territórios</Link> · coordenadas públicas só com autorização da casa.</p>
+          <p className="mt-1 text-sm text-oju-terra-suave">{contentKind === "Fotografia documental" ? "Ligue a cidade de atuação. Sem isso a coleção não entra no mapa." : "Marque a cidade. Cadastre o município aqui se ainda não existir."}</p>
+          <p className="mt-2 text-xs leading-5 text-oju-terra-suave"><Link href="/admin/territorios" className="font-semibold underline">Abrir cadastro completo de cidades</Link> · coordenadas públicas só com autorização da casa.</p>
         </div>
       </div>
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         {grouped.map(([dimension, entries]) => (
           <div key={dimension}>
-            <p className="text-xs font-semibold uppercase tracking-[.14em] text-[#806817]">{dimension}</p>
+            <p className="text-xs font-semibold uppercase tracking-[.14em] text-[#806817]">{taxonomyDimensionLabel(dimension)}</p>
             <div className="mt-3 space-y-2">
               {entries.length ? entries.map(item => (
                 <label key={item.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-oju-terra/10 bg-white p-3 text-sm">
@@ -103,7 +124,7 @@ export function CoverageTaxonomiesPanel({ publicationId, version, initialIds, co
                 </label>
               )) : <p className="text-sm text-[#756e60]">{emptyHint[dimension]}</p>}
               <div className="rounded-lg border border-dashed border-oju-terra/15 bg-[#f7f3e9] p-3">
-                <Input value={drafts[dimension]} onChange={event => setDrafts(current => ({ ...current, [dimension]: event.target.value }))} placeholder={dimension === "Localização" ? "Nome do lugar" : `Novo ${dimension.toLowerCase()}`} />
+                {dimension === "Território" ? <CityOfOperationSelect value={city} onChange={setCity} hint="" selectClassName="h-10 w-full rounded border bg-white px-2 text-sm" inputClassName="h-10 w-full rounded border bg-white px-2 text-sm" /> : <Input value={drafts[dimension]} onChange={event => setDrafts(current => ({ ...current, [dimension]: event.target.value }))} placeholder={dimension === "Localização" ? "Nome do lugar" : `Novo ${taxonomyDimensionLabel(dimension).toLowerCase()}`} />}
                 {dimension === "Localização" ? <Input className="mt-2" value={address} onChange={event => setAddress(event.target.value)} placeholder="Endereço, bairro ou referência autorizada" /> : null}
                 <Button type="button" size="sm" variant="outline" className="mt-2" disabled={create.isPending || save.isPending} onClick={() => addAndLink(dimension)}>Cadastrar e ligar</Button>
               </div>

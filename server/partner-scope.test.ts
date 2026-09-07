@@ -58,9 +58,9 @@ describe("Parceiro Ojú, território e operação isolada", () => {
     expect(mediaRouter).toContain("Somente o Super Admin pode alterar a transição do fundo vivo");
     expect(mediaRouter).toContain("requirePrincipal(ctx.user.role);");
     expect(commercialRouter).toContain("Solicitações públicas sem parceiro e território devem ser distribuídas pelo Super Admin");
-    expect(dashboard).toContain("Parceiros Ojú, territórios e escopos");
+    expect(dashboard).toContain("Parceiros Ojú, cidades de atuação e escopos");
     expect(partnerPanel).toContain("Identidade pública contextual");
-    expect(partnerPanel).toContain("A ativação só é aceita após haver ao menos um território autorizado");
+    expect(partnerPanel).toContain("A ativação só é aceita após haver ao menos uma cidade de atuação");
     expect(editorialRouter).toContain("pickReusableTeam");
     expect(editorialRouter).toContain("mergeDuplicateTeams");
     expect(editorialRouter).toContain("Esta equipe é de outro admin.");

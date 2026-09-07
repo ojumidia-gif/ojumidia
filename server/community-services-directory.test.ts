@@ -22,7 +22,7 @@ describe("Rede de Serviços e Saberes", () => {
   });
 
   it("oferece busca pública e edição administrativa sem afirmar curadoria editorial paga", () => {
-    expect(directory).toContain("Buscar no território");
+    expect(directory).toContain("Buscar na cidade");
     expect(directory).toContain("inhabitedTerritories");
     expect(directory).toContain("territoryName");
     expect(directory).not.toContain("publicTerritories.useQuery");

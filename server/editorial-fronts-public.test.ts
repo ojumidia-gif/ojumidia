@@ -13,7 +13,7 @@ describe("frentes públicas editoriais", () => {
   it("mantém a página de território por slug em apresentação documental própria", () => {
     const taxonomy = readFileSync(resolve(process.cwd(), "client/src/pages/Taxonomy.tsx"), "utf8");
     expect(taxonomy).toContain('useRoute("/territorios/:slug")');
-    expect(taxonomy).toContain("Território documental");
+    expect(taxonomy).toContain("Cidade de atuação");
     expect(taxonomy).toContain("trpc.editorial.search.useQuery");
   });
 

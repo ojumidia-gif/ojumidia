@@ -48,7 +48,7 @@ export function FirstUserWelcome() {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-oju-terra-suave">
             {principal
               ? "Cada destino público tem três passos. A Home nacional fica com a Equipe Ojú. Dúvidas da equipe chegam no Canal Ojú. Ojú Bot é só para criador parceiro."
-              : "Três passos até o site: texto, território e capa. Depois Publicar. Você só vê e altera o que criou. A Home nacional continua com a Equipe Ojú. Dúvida: Ojú Bot."}
+              : "Três passos até o site: texto, cidade e capa. Depois Publicar. Você só vê e altera o que criou. A Home nacional continua com a Equipe Ojú. Dúvida: Ojú Bot."}
           </p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={() => { hideFirstGuide(); setHidden(true); }}>Não exibir mais</Button>

@@ -78,7 +78,7 @@ export default function Story() {
               {data.subtitle ? <p className="mt-6 max-w-2xl font-serif text-2xl leading-snug text-oju-terra-suave">{data.subtitle}</p> : null}
               <p className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-oju-terra-suave">
                 <MapPin className="h-4 w-4 text-oju-dourado" />
-                {[territory?.name, house?.name].filter(Boolean).join(" · ") || "Território preservado"}
+                {[territory?.name, house?.name].filter(Boolean).join(" · ") || "Cidade preservada"}
                 <span>· {data.publishedAt ? new Date(data.publishedAt).toLocaleDateString("pt-BR") : "preparação editorial"}</span>
               </p>
               <button type="button" onClick={share} className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-oju-verde"><Share2 className="h-4 w-4" />Partilhar com crédito</button>

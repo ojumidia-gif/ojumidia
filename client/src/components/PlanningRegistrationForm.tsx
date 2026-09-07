@@ -2,6 +2,8 @@ import { CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { CityOfOperationSelect, emptyCitySelection } from "@/components/CityOfOperationSelect";
+import { citySelectionText } from "@shared/brazilPlaces";
 import { trpc } from "@/lib/trpc";
 
 const formats = ["Fotografia documental", "Vídeo documental", "Cobertura integrada", "Ainda preciso de orientação"] as const;
@@ -14,7 +16,7 @@ export function PlanningRegistrationForm({ compact = false }: { compact?: boolea
   const [whatsapp, setWhatsapp] = useState("");
   const [email, setEmail] = useState("");
   const [format, setFormat] = useState<Format>("Ainda preciso de orientação");
-  const [territory, setTerritory] = useState("");
+  const [city, setCity] = useState(emptyCitySelection);
   const [context, setContext] = useState("");
   const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
@@ -39,7 +41,7 @@ export function PlanningRegistrationForm({ compact = false }: { compact?: boolea
       whatsapp,
       email: email.trim() || undefined,
       eventType: format === "Ainda preciso de orientação" ? "Planejamento de registro" : `Planejamento de registro — ${format}`,
-      location: territory.trim() || undefined,
+      location: citySelectionText(city) || undefined,
       needsPhotography: format === "Fotografia documental" || format === "Cobertura integrada",
       needsVideo: format === "Vídeo documental" || format === "Cobertura integrada",
       needsMiniclip: false,
@@ -88,7 +90,7 @@ export function PlanningRegistrationForm({ compact = false }: { compact?: boolea
             ))}
           </div>
         </fieldset>
-        <label className="grid gap-2 text-sm font-medium sm:col-span-2">Cidade, território ou local de referência <span className="font-normal text-oju-terra-suave">(opcional)</span><input value={territory} onChange={event => setTerritory(event.target.value)} className={`h-11 rounded px-3 ${fieldClass}`} /></label>
+        <div className="sm:col-span-2"><CityOfOperationSelect value={city} onChange={setCity} selectClassName={`h-11 rounded px-3 ${fieldClass}`} inputClassName={`h-11 rounded px-3 ${fieldClass}`} /></div>
         <label className="grid gap-2 text-sm font-medium sm:col-span-2">O que é importante preservar?<textarea value={context} onChange={event => setContext(event.target.value)} rows={4} placeholder="Conte o contexto, as pessoas envolvidas e o que a Ojú precisa compreender antes de sugerir um formato." className={`resize-y rounded px-3 py-3 ${fieldClass}`} /></label>
         <label className="flex gap-3 text-xs leading-5 text-oju-terra-suave sm:col-span-2"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} className="mt-1 h-4 w-4 accent-oju-verde" /><span>Autorizo a Ojú a usar estes dados exclusivamente para responder a este pedido, nos termos da <Link href="/privacidade" className="text-oju-dende underline">Privacidade e LGPD</Link> e dos <Link href="/termos-de-uso" className="text-oju-dende underline">Termos de uso</Link>.</span></label>
       </div>

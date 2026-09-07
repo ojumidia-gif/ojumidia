@@ -12,14 +12,14 @@ export const ojuBotFaqs: OjuBotFaq[] = [
   {
     id: "publicar-historia",
     question: "Como publico uma história no site?",
-    answer: "Novo → tipo e título. Três passos: texto, território e capa. Publicar no site. Não entra sozinho na Home.",
+    answer: "Novo → tipo e título. Três passos: texto, cidade e capa. Publicar no site. Não entra sozinho na Home.",
     tags: ["história", "publicar", "criar", "site"],
     href: "/admin/publicacoes?tipo=História&novo=1",
   },
   {
     id: "cobertura",
     question: "Como publico uma cobertura?",
-    answer: "Novo → Cobertura. Ligue o território e as fotos. Marque a capa. Publicar no site. Aparece em /coberturas.",
+    answer: "Novo → Cobertura. Ligue a cidade e as fotos. Marque a capa. Publicar no site. Aparece em /coberturas.",
     tags: ["cobertura", "foto", "publicar"],
     href: "/admin/publicacoes?tipo=Cobertura&novo=1",
   },
@@ -33,20 +33,20 @@ export const ojuBotFaqs: OjuBotFaq[] = [
   {
     id: "o-que-falta",
     question: "O que falta para publicar?",
-    answer: "Em geral: texto, território e foto de capa. Crédito e subtítulo vêm depois, já no ar.",
+    answer: "Em geral: texto, cidade de atuação e foto de capa. Crédito e subtítulo vêm depois, já no ar.",
     tags: ["falta", "capa", "território", "texto", "publicar"],
   },
   {
     id: "territorio",
-    question: "Como cadastro um território?",
-    answer: "Territórios → nome. Depois ligue nas publicações. O mapa só com autorização da casa.",
-    tags: ["território", "mapa", "lugar"],
+    question: "Como cadastro uma cidade de atuação?",
+    answer: "Cidades → estado e município. Se não estiver na lista, Outro. Depois ligue nas publicações. O mapa só com autorização da casa.",
+    tags: ["cidade", "território", "mapa", "lugar"],
     href: "/admin/territorios",
   },
   {
     id: "carteira",
     question: "Posso editar o conteúdo de outro parceiro?",
-    answer: "Não. Cada criador parceiro só vê e altera o que criou. Território do catálogo nacional dá para ligar, não para mudar. A Home e o site inteiro ficam com a Equipe Ojú.",
+    answer: "Não. Cada criador parceiro só vê e altera o que criou. Cidade do catálogo nacional dá para ligar, não para mudar. A Home e o site inteiro ficam com a Equipe Ojú.",
     tags: ["admin", "parceiro", "editar", "outro", "meu", "carteira"],
   },
   {

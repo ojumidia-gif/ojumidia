@@ -58,7 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const Sidebar = () => (
     <aside className="flex h-full w-[272px] flex-col bg-oju-verde-profundo p-5 text-oju-paz">
       <div className="mb-6"><OjuMark compact cinematic /></div>
-      {partnerLabel ? <p className="mb-4 rounded-sm bg-white/5 px-3 py-2 text-xs leading-5 text-oju-papel">{partnerLabel.partnerName}<br /><span className="text-oju-dourado-claro">Parceiro Ojú · {partnerLabel.territories.map(item => item.name).join(", ") || "território autorizado"}</span></p> : <p className="mb-3 px-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-oju-dourado-claro">Operação {user.role === "administrador principal" ? "nacional" : "editorial"}</p>}
+      {partnerLabel ? <p className="mb-4 rounded-sm bg-white/5 px-3 py-2 text-xs leading-5 text-oju-papel">{partnerLabel.partnerName}<br /><span className="text-oju-dourado-claro">Parceiro Ojú · {partnerLabel.territories.map(item => item.name).join(", ") || "cidade autorizada"}</span></p> : <p className="mb-3 px-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-oju-dourado-claro">Operação {user.role === "administrador principal" ? "nacional" : "editorial"}</p>}
       <nav className="space-y-4 overflow-y-auto pr-1">
         {groups.map(group => (
           <div key={group.id}>
@@ -90,7 +90,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="hidden min-w-0 flex-1 text-xs leading-5 text-oju-terra-suave lg:block">
             {greeting}{" "}
             {principal
-              ? "Equipe Ojú · o site, a Home e os textos do portal. Parceiros trabalham o território."
+              ? "Equipe Ojú · o site, a Home e os textos do portal. Parceiros trabalham a cidade."
               : partnerLabel
                 ? `Criador parceiro · ${partnerLabel.territories.map(item => item.name).join(", ") || "escopo autorizado"}. Sem CMS, sem Home nacional.`
                 : "Operação editorial · rascunho, revisão, aprovação e só então o portal."}

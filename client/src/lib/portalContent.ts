@@ -18,7 +18,7 @@ export const portalContentDefaults = {
       { label: "Documentários", href: "/documentarios", order: 3, active: true, featured: false },
       { label: "Projetos", href: "/projetos", order: 4, active: true, featured: false },
       { label: "Fotografia documental", href: "/fotografia-documental", order: 5, active: true, featured: false },
-      { label: "Territórios", href: "/territorios", order: 6, active: true, featured: false },
+      { label: "Cidades", href: "/territorios", order: 6, active: true, featured: false },
       { label: "Fotógrafos", href: "/fotografos", order: 7, active: true, featured: false },
       { label: "Instituições", href: "/instituicoes", order: 8, active: true, featured: false },
       { label: "Agenda", href: "/agenda", order: 9, active: true, featured: false },

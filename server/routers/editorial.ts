@@ -13,6 +13,7 @@ import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { isHomeCurated, sortHomeCurated } from "../editorialScale";
 import { groupDuplicateTeamIds, pickReusableTeam } from "@shared/teamCredits";
 import { MAX_MINICLIPS, MAX_PHOTOS } from "@shared/const";
+import { resolveCityOfOperation, type CitySelection } from "@shared/brazilPlaces";
 
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -811,11 +812,39 @@ export const editorialRouter = router({
     return { success: true };
   }),
 
-  createTaxonomy: protectedProcedure.input(z.object({ dimension: z.enum(["Tipo de conteúdo", "Tema", "Localização", "Território", "Pessoa/organização", "Evento", "Data"]), name: z.string().min(2).max(180), description: z.string().max(1000).optional(), parentId: z.number().int().positive().optional(), latitude: z.string().regex(/^-?\d{1,2}(\.\d{1,7})?$/).optional(), longitude: z.string().regex(/^-?\d{1,3}(\.\d{1,7})?$/).optional(), mapVisibility: z.enum(["Não divulgar", "Aproximada", "Pública"]).optional() })).mutation(async ({ ctx, input }) => {
+  createTaxonomy: protectedProcedure.input(z.object({
+    dimension: z.enum(["Tipo de conteúdo", "Tema", "Localização", "Território", "Pessoa/organização", "Evento", "Data"]),
+    name: z.string().min(2).max(180),
+    description: z.string().max(1000).optional(),
+    parentId: z.number().int().positive().optional(),
+    latitude: z.string().regex(/^-?\d{1,2}(\.\d{1,7})?$/).optional(),
+    longitude: z.string().regex(/^-?\d{1,3}(\.\d{1,7})?$/).optional(),
+    mapVisibility: z.enum(["Não divulgar", "Aproximada", "Pública"]).optional(),
+    place: z.object({
+      uf: z.string().regex(/^[A-Z]{2}$/),
+      ibgeId: z.union([z.number().int().positive(), z.literal("outro")]),
+      customName: z.string().max(120).optional(),
+    }).optional(),
+  })).mutation(async ({ ctx, input }) => {
     assertAdmin(ctx.user.role as EditorialRole);
     const db = await requireDb();
-    const slug = `${slugify(input.name)}-${Date.now().toString(36)}`;
-    const result = await db.insert(taxonomies).values({ ...input, slug, createdBy: ctx.user.id });
+    const { place, ...values } = input;
+    let name = values.name;
+    let description = values.description;
+    let slug = `${slugify(name)}-${Date.now().toString(36)}`;
+    if (place) {
+      if (values.dimension !== "Território") throw new TRPCError({ code: "BAD_REQUEST", message: "A cidade de atuação só pode ser cadastrada na dimensão de lugar." });
+      const resolved = resolveCityOfOperation({ uf: place.uf.toUpperCase(), ibgeId: place.ibgeId, customName: place.customName || "" } satisfies CitySelection);
+      name = resolved.name;
+      description = values.description || resolved.description;
+      slug = resolved.slug;
+      const existing = (await db.select({ id: taxonomies.id, slug: taxonomies.slug, dimension: taxonomies.dimension }).from(taxonomies).where(eq(taxonomies.slug, slug)).limit(1))[0];
+      if (existing) {
+        if (existing.dimension !== "Território") throw new TRPCError({ code: "CONFLICT", message: "Este identificador de cidade já está em uso em outra dimensão." });
+        return { id: existing.id, slug: existing.slug };
+      }
+    }
+    const result = await db.insert(taxonomies).values({ ...values, name, description, slug, createdBy: ctx.user.id });
     publishEditorialEvent("taxonomy-updated");
     return { id: Number(result[0].insertId), slug };
   }),

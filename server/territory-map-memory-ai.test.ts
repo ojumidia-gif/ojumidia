@@ -11,7 +11,7 @@ describe("territórios, mapa e memória assistida", () => {
 
   it("mantém as coordenadas territoriais condicionadas à visibilidade escolhida", () => {
     expect(editorial).toContain("mapVisibility");
-    expect(taxonomyAdmin).toContain("Referência territorial para o mapa");
+    expect(taxonomyAdmin).toContain("Referência no mapa");
     expect(taxonomyAdmin).toContain("mapVisibility === \"Pública\"");
   });
 

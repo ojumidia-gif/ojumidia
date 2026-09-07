@@ -36,7 +36,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     partnerLabel: "Seu trabalho",
     items: [
       { label: "Conteúdos", partnerLabel: "Escrever", href: "/admin/publicacoes", icon: BookOpenText },
-      { label: "Territórios", partnerLabel: "Lugares", href: "/admin/territorios", icon: MapPinned },
+      { label: "Cidades", partnerLabel: "Lugares", href: "/admin/territorios", icon: MapPinned },
       { label: "Fotógrafos", href: "/admin/fotografos", icon: Camera },
       { label: "Acervo", partnerLabel: "Fotos", href: "/admin/midias", icon: Image },
       { label: "Miniclipes", href: "/admin/miniclipes", icon: Film },

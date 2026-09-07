@@ -26,7 +26,7 @@ export function publicationSiteGaps(data: {
 }) {
   const gaps: string[] = [];
   if (!(data.body || data.summary)?.trim()) gaps.push("Falta o texto que o site vai ler.");
-  if (!data.taxonomies.some(item => item.dimension === "Território")) gaps.push("Ligue a um território.");
+  if (!data.taxonomies.some(item => item.dimension === "Território")) gaps.push("Ligue a uma cidade de atuação.");
   if (!data.media.length) gaps.push("Falta foto ou vídeo autorizado.");
   else if (!data.media.some(item => item.isCover)) gaps.push("Marque a foto de capa.");
   return gaps;
@@ -34,7 +34,7 @@ export function publicationSiteGaps(data: {
 
 export function publishWizardStep(gaps: string[]): 1 | 2 | 3 {
   if (gaps.some(item => item.includes("texto"))) return 1;
-  if (gaps.some(item => item.includes("território"))) return 2;
+  if (gaps.some(item => item.includes("cidade"))) return 2;
   return 3;
 }
 
@@ -61,4 +61,4 @@ export function communityNextStep(consentStatus: string, status: string) {
 }
 
 export const editorialPipeline = ["Rascunho", "Em revisão", "Aprovada", "Publicada"] as const;
-export const publishWizardLabels = ["Texto", "Território", "Capa e publicar"] as const;
+export const publishWizardLabels = ["Texto", "Cidade", "Capa e publicar"] as const;
