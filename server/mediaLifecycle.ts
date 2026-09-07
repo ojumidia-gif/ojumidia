@@ -1,4 +1,4 @@
-import { eq, isNotNull, isNull } from "drizzle-orm";
+import { count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   commercialMiniclips,
   communityEvents,
@@ -330,11 +330,24 @@ export async function cleanupExpiredAbandonedUploads(db: Database, actorId = -1,
 }
 
 export async function mediaOccupancy(db: Database) {
-  const [active, trashed, sessions] = await Promise.all([
-    db.select().from(mediaAssets).where(isNull(mediaAssets.deletedAt)),
-    db.select().from(mediaAssets).where(isNotNull(mediaAssets.deletedAt)),
-    db.select().from(uploadSessions),
+  const [active, trashed, sessions, mediaBytes, sessionBytes, consumers] = await Promise.all([
+    db.select({ value: count() }).from(mediaAssets).where(isNull(mediaAssets.deletedAt)),
+    db.select({ value: count() }).from(mediaAssets).where(isNotNull(mediaAssets.deletedAt)),
+    db.select({ value: count() }).from(uploadSessions),
+    db.select({ value: sql<number>`coalesce(sum(${mediaAssets.fileSize}), 0)` }).from(mediaAssets),
+    db.select({ value: sql<number>`coalesce(sum(${uploadSessions.fileSize}), 0)` }).from(uploadSessions).leftJoin(mediaAssets, eq(mediaAssets.uploadId, uploadSessions.id)).where(isNull(mediaAssets.id)),
+    db.select({
+      userId: mediaAssets.createdBy,
+      files: count(),
+      bytes: sql<number>`coalesce(sum(${mediaAssets.fileSize}), 0)`,
+    }).from(mediaAssets).groupBy(mediaAssets.createdBy).orderBy(desc(sql`coalesce(sum(${mediaAssets.fileSize}), 0)`)).limit(20),
   ]);
-  const bytes = [...active, ...trashed].reduce((sum, row) => sum + (row.fileSize || 0), 0) + sessions.reduce((sum, row) => sum + (row.fileSize || 0), 0);
-  return { activeCount: active.length, trashCount: trashed.length, uploadSessionCount: sessions.length, recordedBytes: bytes };
+  const recordedBytes = Number(mediaBytes[0]?.value || 0) + Number(sessionBytes[0]?.value || 0);
+  return {
+    activeCount: Number(active[0]?.value || 0),
+    trashCount: Number(trashed[0]?.value || 0),
+    uploadSessionCount: Number(sessions[0]?.value || 0),
+    recordedBytes,
+    consumers: consumers.map(row => ({ userId: row.userId, files: Number(row.files || 0), bytes: Number(row.bytes || 0) })),
+  };
 }

@@ -7,9 +7,11 @@ function parseCsv(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function parseEmailAllowlist(value: string | undefined): Set<string> {
+export function parseEmailAllowlist(value: string | undefined): Set<string> {
   const configured = parseCsv(value).map(email => email.toLowerCase());
-  return new Set(configured.length > 0 ? configured : DEFAULT_SUPER_ADMIN_EMAILS);
+  if (configured.length > 0) return new Set(configured);
+  if (process.env.NODE_ENV === "production") return new Set();
+  return new Set(DEFAULT_SUPER_ADMIN_EMAILS);
 }
 
 function parseGoogleSubs(value: string | undefined): Set<string> {

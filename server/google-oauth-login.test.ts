@@ -25,6 +25,7 @@ describe("login Google OAuth do Super Admin", () => {
   it("promove Super Admin por e-mail e sub Google", () => {
     expect(env).toContain("ojumidia@gmail.com");
     expect(env).toContain("aquinopratesr@gmail.com");
+    expect(env).toContain('if (process.env.NODE_ENV === "production") return new Set()');
     expect(db).toContain("isAuthorizedSuperAdmin");
     expect(db).not.toContain("ownerOpenId");
     expect(db).not.toContain("OWNER_OPEN_ID");

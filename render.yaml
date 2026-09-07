@@ -40,3 +40,17 @@ services:
         sync: false
       - key: S3_FORCE_PATH_STYLE
         value: "true"
+
+  - type: cron
+    name: oju-midia-editorial-jobs
+    runtime: node
+    schedule: "*/15 * * * *"
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: node scripts/render-editorial-trash-cron.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OJU_PUBLIC_BASE_URL
+        sync: false
+      - key: EDITORIAL_TRASH_CRON_SECRET
+        sync: false

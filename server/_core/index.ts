@@ -12,6 +12,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { MAX_MINICLIP_DURATION_SECONDS } from "@shared/const";
 import { describeStorageConfiguration, hasStorageConfiguration, storagePut } from "../storage";
 import { sdk } from "./sdk";
 import { openEditorialEventStream } from "../editorialEvents";
@@ -20,10 +21,10 @@ import { registerPrivateCommercialFilesRoute } from "../privateCommercialFiles";
 import { getDb } from "../db";
 import { uploadSessions } from "../../drizzle/schema";
 import { recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
-import { purgeExpiredEditorialTrash } from "../editorialTrash";
-import { cleanupExpiredAbandonedUploads } from "../mediaLifecycle";
-import { runEditorialScheduleJobs } from "../editorialAutomation";
+import { runProductionMaintenanceJobs } from "../editorialJobs";
 import { getAuthRuntimeStatus } from "./authStatus";
+import { classifyUploadFile } from "../uploadGuards";
+import { enforceUploadBudget } from "../uploadBudget";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -102,19 +103,26 @@ async function startServer() {
         : false;
       const user = validSecret ? null : await sdk.authenticateRequest(req);
       if (!validSecret && !(user as typeof user & { isCron?: boolean } | null)?.isCron) return res.status(403).json({ error: "cron-only" });
-      const db = await getDb();
-      if (!db) return res.status(503).json({ error: "database-unavailable" });
-      const result = await purgeExpiredEditorialTrash(db);
-      const uploads = await cleanupExpiredAbandonedUploads(db, -1);
-      const schedule = await runEditorialScheduleJobs(db);
-      return res.json({ ok: true, ...result, ...uploads, ...schedule });
+      const result = await runProductionMaintenanceJobs();
+      if (!result.ok) return res.status(503).json({ error: result.error });
+      return res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Falha desconhecida ao expurgar a Lixeira Editorial.";
       console.error("[EditorialTrashPurge]", error);
       return res.status(500).json({ error: message, context: { path: "/api/scheduled/editorial-trash-purge" }, timestamp: new Date().toISOString() });
     }
   });
-  app.get("/api/editorial/events", (_req, res) => openEditorialEventStream(res));
+  app.get("/api/editorial/events", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!["editor", "aprovador", "administrador", "administrador principal"].includes(user.role)) {
+        return res.status(403).json({ error: "sse_forbidden" });
+      }
+    } catch {
+      return res.status(401).json({ error: "sse_auth" });
+    }
+    openEditorialEventStream(res, req);
+  });
   app.post("/api/media/upload", express.raw({ type: ["image/*", "video/*", "audio/*", "application/pdf", "application/octet-stream"], limit: "64mb" }), async (req, res) => {
     let uploadId: string | null = null;
     let db: NonNullable<Awaited<ReturnType<typeof getDb>>> | null = null;
@@ -130,10 +138,9 @@ async function startServer() {
       }
       const filename = String(req.header("x-file-name") || "arquivo").replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 180);
       const contentType = req.header("content-type") || "application/octet-stream";
-      if (!/^(image|video|audio)\/[a-z0-9.+-]+$|^application\/pdf$/i.test(contentType)) {
-        return res.status(415).json({ message: "Tipo de arquivo não permitido." });
-      }
       if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ message: "Selecione um arquivo válido." });
+      const classified = classifyUploadFile(contentType, req.body);
+      if ("error" in classified) return res.status(415).json({ message: classified.error });
       const requestedUploadId = String(req.header("x-upload-id") || "").trim();
       if (requestedUploadId && !/^[a-zA-Z0-9_-]{12,96}$/.test(requestedUploadId)) return res.status(400).json({ message: "O identificador de upload é inválido." });
       uploadId = requestedUploadId || randomUUID();
@@ -160,6 +167,8 @@ async function startServer() {
       } catch (error) {
         return res.status(403).json({ message: error instanceof Error ? error.message : "Você não possui escopo para este upload." });
       }
+      const budget = await enforceUploadBudget(db, user.id, req.body.length);
+      if (!budget.ok) return res.status(budget.status).json({ message: budget.message });
       const checksum = createHash("sha256").update(req.body).digest("hex");
       const existing = (await db.select().from(uploadSessions).where(eq(uploadSessions.id, uploadId)).limit(1))[0];
       if (existing) {
@@ -168,7 +177,7 @@ async function startServer() {
         if (["Enviando", "Enviado", "Processando"].includes(existing.status)) return res.status(409).json({ message: "Este upload já está em processamento. Aguarde a conclusão antes de tentar novamente.", uploadId });
         await db.update(uploadSessions).set({ status: "Enviando", partnerId, territoryId, filename, contentType, checksum, errorMessage: null, assetUrl: null, storageKey: null, fileSize: null, durationSeconds: null, completedAt: null, attemptCount: existing.attemptCount + 1, rejectedBy: null, rejectedAt: null, cancelledAt: null }).where(eq(uploadSessions.id, uploadId));
       } else {
-        const mediaType = contentType.startsWith("image/") ? "foto" : contentType.startsWith("video/") ? "vídeo" : contentType.startsWith("audio/") ? "áudio" : "documento";
+        const mediaType = classified.kind === "foto" ? "foto" : classified.kind === "vídeo" ? "vídeo" : "documento";
         await db.insert(uploadSessions).values({ id: uploadId, userId: user.id, partnerId, territoryId, mediaType, status: "Enviando", filename, contentType, checksum, attemptCount: 1 });
       }
       let durationSeconds: number | undefined;
@@ -179,7 +188,7 @@ async function startServer() {
           const duration = metadata.format.duration;
           if (!Number.isFinite(duration) || !duration || duration < 1) return res.status(400).json({ message: "Não foi possível confirmar a duração real do vídeo." });
           durationSeconds = Math.ceil(duration);
-          if (durationSeconds > 60) return res.status(400).json({ message: "O vídeo ultrapassa o máximo absoluto de 60 segundos." });
+          if (durationSeconds > MAX_MINICLIP_DURATION_SECONDS) return res.status(400).json({ message: "O vídeo ultrapassa o máximo absoluto de 60 segundos." });
         } catch {
           return res.status(400).json({ message: "Não foi possível inspecionar a duração real do vídeo. Envie um arquivo de vídeo válido." });
         }
@@ -187,8 +196,9 @@ async function startServer() {
       await db.update(uploadSessions).set({ status: "Processando" }).where(eq(uploadSessions.id, uploadId));
       const uploaded = await storagePut(`media/${user.id}/${uploadId}-${filename}`, req.body, contentType);
       await db.update(uploadSessions).set({ status: "Pronto", storageKey: uploaded.key, assetUrl: uploaded.url, fileSize: req.body.length, durationSeconds: durationSeconds ?? null, completedAt: new Date() }).where(eq(uploadSessions.id, uploadId));
-      await recordAuditEvent(db, { actorId: user.id, partnerId, territoryId, resourceType: "upload-session", resourceId: null, action: "upload-ready", nextState: { uploadId, status: "Pronto", filename, checksum }, detail: "Arquivo enviado ao storage e pronto para registro no Acervo; nenhuma publicação foi criada." });
-      return res.status(201).json({ ...uploaded, url: uploaded.url, key: uploaded.key, assetUrl: uploaded.url, storageKey: uploaded.key, uploadId, filename, size: req.body.length, durationSeconds, checksum, status: "Pronto" });
+      await recordAuditEvent(db, { actorId: user.id, partnerId, territoryId, resourceType: "upload-session", resourceId: null, action: "upload-ready", nextState: { uploadId, status: "Pronto", filename, checksum, size: req.body.length, quotaAlert: budget.alert }, detail: "Arquivo enviado ao storage e pronto para registro no Acervo; nenhuma publicação foi criada." });
+      console.info("[MediaUpload]", JSON.stringify({ event: "upload-ready", userId: user.id, size: req.body.length, kind: classified.kind, quotaAlert: budget.alert }));
+      return res.status(201).json({ ...uploaded, url: uploaded.url, key: uploaded.key, assetUrl: uploaded.url, storageKey: uploaded.key, uploadId, filename, size: req.body.length, durationSeconds, checksum, status: "Pronto", quotaAlert: budget.alert });
     } catch (error) {
       const detail = error instanceof Error ? error.message.slice(0, 400) : "Falha desconhecida no upload.";
       if (db && uploadId) await db.update(uploadSessions).set({ status: "Falhou", errorMessage: detail.slice(0, 4000) }).where(eq(uploadSessions.id, uploadId)).catch(() => undefined);
@@ -223,6 +233,12 @@ async function startServer() {
     if (!authStatus.googleOAuth) console.info(`[OAuth] ${authStatus.message}`);
     if (storageKind === "local-development") console.info("[Storage] Arquivos deste ambiente vão para .local-storage. Isso não é persistência de produção.");
     if (storageKind === "missing") console.warn("[Storage] Nenhum storage configurado. Em produção use Tigris (S3_*). Em desenvolvimento, .local-storage entra automaticamente.");
+    const maintenanceMs = 15 * 60 * 1000;
+    setInterval(() => {
+      runProductionMaintenanceJobs().then(result => {
+        console.info("[EditorialJobs]", JSON.stringify({ event: "maintenance", ok: result.ok, skipped: "skipped" in result ? result.skipped : false }));
+      }).catch(error => console.error("[EditorialJobs]", error instanceof Error ? error.message : "falha"));
+    }, maintenanceMs).unref();
   });
   const shutdown = () => {
     server.close(() => process.exit(0));

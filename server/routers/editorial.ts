@@ -12,6 +12,7 @@ import { editorialTrashDeadline, isEditorialTrashExpired, permanentlyPurgePublic
 import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { isHomeCurated, sortHomeCurated } from "../editorialScale";
 import { groupDuplicateTeamIds, pickReusableTeam } from "@shared/teamCredits";
+import { MAX_MINICLIPS, MAX_PHOTOS } from "@shared/const";
 
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -121,10 +122,21 @@ export function canExposeOnPublicPortal(publication: PortalPublication, authoriz
   return publication.status === "Publicada" && publication.isPublic && (!requiresCommercialEditorialAuthorization(publication) || authorized);
 }
 
+export function recordPhotoCap(contentKind: string, photoLimit: number | null) {
+  if (contentKind === "Fotografia documental") return MAX_PHOTOS;
+  const requested = photoLimit ?? MAX_PHOTOS;
+  return Math.min(Math.max(requested, 0), MAX_PHOTOS);
+}
+
+export function recordVideoCap(contentKind: string, videoLimit: number | null) {
+  if (contentKind === "Fotografia documental") return 0;
+  const requested = videoLimit ?? MAX_MINICLIPS;
+  return Math.min(Math.max(requested, 0), MAX_MINICLIPS);
+}
+
 export function canAttachWithinMediaLimit(input: { contentKind: string; mediaType: "foto" | "vídeo"; photoLimit: number | null; videoLimit: number | null; attachedPhotoCount: number; attachedVideoCount: number; hasEventRelation?: boolean }) {
-  if (input.contentKind === "Fotografia documental") return input.mediaType === "foto" && input.attachedPhotoCount < 5;
-  if (input.mediaType === "foto") return input.attachedPhotoCount < 5;
-  return input.attachedVideoCount < 2;
+  if (input.mediaType === "foto") return input.attachedPhotoCount < recordPhotoCap(input.contentKind, input.photoLimit);
+  return input.attachedVideoCount < recordVideoCap(input.contentKind, input.videoLimit);
 }
 
 export function balanceFeaturedPublications<T extends { contentKind: string }>(orderedPublications: T[], maximum = 6) {
@@ -467,7 +479,7 @@ export const editorialRouter = router({
     return { ...result[0], teamCredit: team[0]?.name || null, contributors, media: orderedMedia, taxonomies: publicationTaxonomy, commercialEditorial: result[0].commercialRequestId ? { requiresAuthorization: true as const, authorized: canUseOnPortal(commercialAuthorization), authorizedAt: commercialAuthorization?.authorizedAt ?? null, status: commercialAuthorization?.status ?? "Pendente", authorization: commercialAuthorization } : null };
   }),
 
-  create: protectedProcedure.input(z.object({ title: z.string().min(4).max(280), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]), subtitle: z.string().max(420).optional(), summary: z.string().max(2000).optional(), body: z.string().max(30000).optional(), teamId: z.number().int().positive().optional(), teamCredit: z.string().min(2).max(160).optional(), photoLimit: z.number().int().min(0).max(200).optional(), videoLimit: z.number().int().min(0).max(80).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
+  create: protectedProcedure.input(z.object({ title: z.string().min(4).max(280), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]), subtitle: z.string().max(420).optional(), summary: z.string().max(2000).optional(), body: z.string().max(30000).optional(), teamId: z.number().int().positive().optional(), teamCredit: z.string().min(2).max(160).optional(), photoLimit: z.number().int().min(0).max(MAX_PHOTOS).optional(), videoLimit: z.number().int().min(0).max(MAX_MINICLIPS).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
     const role = ctx.user.role as EditorialRole;
     if (!["criador", "editor", "administrador", "administrador principal"].includes(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode criar publicações." });
@@ -481,7 +493,7 @@ export const editorialRouter = router({
     const slug = `${base}-${Date.now().toString(36)}`;
     const teamId = await resolveTeamId(db, input.teamId, input.teamCredit, ctx.user.id);
     const { teamCredit: _teamCredit, partnerId: _partnerId, territoryId: _territoryId, ...publicationInput } = input;
-    const result = await db.insert(publications).values({ ...publicationInput, partnerId: scope.partnerId, photoLimit: input.contentKind === "Fotografia documental" ? 5 : (input.photoLimit ?? 5), videoLimit: input.contentKind === "Fotografia documental" ? 0 : (input.videoLimit ?? 2), teamId, slug, createdBy: ctx.user.id, status: "Rascunho", isPublic: false });
+    const result = await db.insert(publications).values({ ...publicationInput, partnerId: scope.partnerId, photoLimit: recordPhotoCap(input.contentKind, input.photoLimit ?? null), videoLimit: recordVideoCap(input.contentKind, input.videoLimit ?? null), teamId, slug, createdBy: ctx.user.id, status: "Rascunho", isPublic: false });
     const publicationId = Number(result[0].insertId);
     if (scope.territoryId) await db.insert(publicationTaxonomies).values({ publicationId, taxonomyId: scope.territoryId });
     await db.insert(editorialActivities).values({ publicationId, actorId: ctx.user.id, toStatus: "Rascunho", note: "Publicação criada." });
@@ -490,7 +502,7 @@ export const editorialRouter = router({
     return { id: publicationId, slug };
   }),
 
-  update: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), title: z.string().min(4).max(280).optional(), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]).optional(), subtitle: z.string().max(420).nullable().optional(), summary: z.string().max(2000).nullable().optional(), body: z.string().max(30000).nullable().optional(), teamId: z.number().int().positive().nullable().optional(), teamCredit: z.string().min(2).max(160).nullable().optional(), revisionNote: z.string().max(1000).optional(), sponsored: z.boolean().optional(), sponsorDisclosure: z.string().max(280).nullable().optional(), commercialRequestId: z.number().int().positive().nullable().optional(), photoLimit: z.number().int().min(0).max(200).nullable().optional(), videoLimit: z.number().int().min(0).max(80).nullable().optional(), externalAlbumUrl: z.string().url().nullable().optional(), externalVideoUrl: z.string().url().nullable().optional(), taxonomyIds: z.array(z.number().int().positive()).optional() })).mutation(async ({ ctx, input }) => {
+  update: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), title: z.string().min(4).max(280).optional(), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]).optional(), subtitle: z.string().max(420).nullable().optional(), summary: z.string().max(2000).nullable().optional(), body: z.string().max(30000).nullable().optional(), teamId: z.number().int().positive().nullable().optional(), teamCredit: z.string().min(2).max(160).nullable().optional(), revisionNote: z.string().max(1000).optional(), sponsored: z.boolean().optional(), sponsorDisclosure: z.string().max(280).nullable().optional(), commercialRequestId: z.number().int().positive().nullable().optional(), photoLimit: z.number().int().min(0).max(MAX_PHOTOS).nullable().optional(), videoLimit: z.number().int().min(0).max(MAX_MINICLIPS).nullable().optional(), externalAlbumUrl: z.string().url().nullable().optional(), externalVideoUrl: z.string().url().nullable().optional(), taxonomyIds: z.array(z.number().int().positive()).optional() })).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
     const current = await db.select().from(publications).where(eq(publications.id, input.id)).limit(1);
     if (!current[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });

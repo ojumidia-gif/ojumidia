@@ -6,6 +6,46 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { AdminPage, EmptyAdmin } from "./_shared";
 
+function gb(bytes: number) {
+  return Math.round((bytes / (1024 * 1024 * 1024)) * 10) / 10;
+}
+
+function QuotaForm({ policy }: { policy: { userAlertBytes: number; userBlockBytes: number; globalAlertBytes: number; globalBlockBytes: number; userUploadsPerWindow: number; globalUploadsPerWindow: number; windowMinutes: number } }) {
+  const utils = trpc.useUtils();
+  const save = trpc.media.setStorageQuota.useMutation({
+    onSuccess: () => {
+      toast.success("Quota operacional atualizada.");
+      utils.media.retentionOverview.invalidate();
+    },
+    onError: error => toast.error(error.message),
+  });
+  return (
+    <form className="mt-4 grid gap-3 md:grid-cols-3" onSubmit={event => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      const toBytes = (name: string) => Math.round(Number(data.get(name) || 0) * 1024 * 1024 * 1024);
+      save.mutate({
+        userAlertBytes: toBytes("userAlertGb"),
+        userBlockBytes: toBytes("userBlockGb"),
+        globalAlertBytes: toBytes("globalAlertGb"),
+        globalBlockBytes: toBytes("globalBlockGb"),
+        userUploadsPerWindow: Number(data.get("userUploadsPerWindow")),
+        globalUploadsPerWindow: Number(data.get("globalUploadsPerWindow")),
+        windowMinutes: Number(data.get("windowMinutes")),
+      });
+    }}>
+      <label className="text-sm">Alerta por operador (GB)<input name="userAlertGb" className="mt-1 w-full border border-[#242017]/20 bg-white px-3 py-2" defaultValue={gb(policy.userAlertBytes)} /></label>
+      <label className="text-sm">Bloqueio por operador (GB)<input name="userBlockGb" className="mt-1 w-full border border-[#242017]/20 bg-white px-3 py-2" defaultValue={gb(policy.userBlockBytes)} /></label>
+      <label className="text-sm">Alerta global (GB)<input name="globalAlertGb" className="mt-1 w-full border border-[#242017]/20 bg-white px-3 py-2" defaultValue={gb(policy.globalAlertBytes)} /></label>
+      <label className="text-sm">Bloqueio global (GB)<input name="globalBlockGb" className="mt-1 w-full border border-[#242017]/20 bg-white px-3 py-2" defaultValue={gb(policy.globalBlockBytes)} /></label>
+      <label className="text-sm">Envios por operador / janela<input name="userUploadsPerWindow" className="mt-1 w-full border border-[#242017]/20 bg-white px-3 py-2" defaultValue={policy.userUploadsPerWindow} /></label>
+      <label className="text-sm">Envios globais / janela<input name="globalUploadsPerWindow" className="mt-1 w-full border border-[#242017]/20 bg-white px-3 py-2" defaultValue={policy.globalUploadsPerWindow} /></label>
+      <label className="text-sm">Janela (minutos)<input name="windowMinutes" className="mt-1 w-full border border-[#242017]/20 bg-white px-3 py-2" defaultValue={policy.windowMinutes} /></label>
+      <div className="md:col-span-3"><Button type="submit" size="sm" disabled={save.isPending}>Guardar quota</Button></div>
+    </form>
+  );
+}
+
 export default function RetentionAdmin() {
   const { user } = useAuth();
   const principal = user?.role === "administrador principal";
@@ -43,6 +83,18 @@ export default function RetentionAdmin() {
             <article className="admin-card p-4"><p className="text-xs uppercase tracking-[.12em] text-[#655e52]">Lixeira de mídia</p><p className="mt-2 font-serif text-3xl">{data.occupancy.trashCount}</p></article>
             <article className="admin-card p-4"><p className="text-xs uppercase tracking-[.12em] text-[#655e52]">Upload sessions</p><p className="mt-2 font-serif text-3xl">{data.occupancy.uploadSessionCount}</p></article>
             <article className="admin-card p-4"><p className="text-xs uppercase tracking-[.12em] text-[#655e52]">Bytes registrados</p><p className="mt-2 font-serif text-3xl">{data.occupancy.recordedBytes}</p></article>
+          </section>
+          <section className="admin-card mb-6 p-5">
+            <h3 className="font-serif text-xl">Quota operacional (não é a franquia gratuita do Tigris)</h3>
+            <p className="mt-2 text-sm text-[#655e52]">Alerta e bloqueio são limites internos configuráveis. Ultrapassar 5 GB no Tigris não desliga o produto; apenas pode gerar custo. Situação global: {data.quota.globalDecision}.</p>
+            <QuotaForm policy={data.quota.policy} />
+            {data.occupancy.consumers?.length ? (
+              <ul className="mt-4 grid gap-2 text-sm">
+                {data.occupancy.consumers.map(row => (
+                  <li key={row.userId} className="border-t border-[#242017]/10 py-2">Operador #{row.userId} · {row.files} arquivo(s) · {row.bytes} bytes</li>
+                ))}
+              </ul>
+            ) : null}
           </section>
           <section className="admin-card mb-6 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">

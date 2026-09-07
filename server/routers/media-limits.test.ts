@@ -12,10 +12,12 @@ describe("limites documentais e fundo vivo", () => {
     expect(canAttachWithinMediaLimit({ contentKind: "Fotografia documental", mediaType: "vídeo", photoLimit: 5, videoLimit: 0, attachedPhotoCount: 0, attachedVideoCount: 0 })).toBe(false);
   });
 
-  it("aplica o limite uniforme de cinco fotos e dois vídeos às Coberturas e Histórias", () => {
-    expect(canAttachWithinMediaLimit({ contentKind: "Cobertura", mediaType: "foto", photoLimit: 2, videoLimit: 1, attachedPhotoCount: 4, attachedVideoCount: 0 })).toBe(true);
-    expect(canAttachWithinMediaLimit({ contentKind: "História", mediaType: "foto", photoLimit: 2, videoLimit: 1, attachedPhotoCount: 5, attachedVideoCount: 0 })).toBe(false);
-    expect(canAttachWithinMediaLimit({ contentKind: "História", mediaType: "vídeo", photoLimit: 2, videoLimit: 1, attachedPhotoCount: 0, attachedVideoCount: 1 })).toBe(true);
+  it("aplica no máximo cinco fotos e um miniclipe às Coberturas e Histórias", () => {
+    expect(canAttachWithinMediaLimit({ contentKind: "Cobertura", mediaType: "foto", photoLimit: 2, videoLimit: 1, attachedPhotoCount: 1, attachedVideoCount: 0 })).toBe(true);
+    expect(canAttachWithinMediaLimit({ contentKind: "Cobertura", mediaType: "foto", photoLimit: 2, videoLimit: 1, attachedPhotoCount: 2, attachedVideoCount: 0 })).toBe(false);
+    expect(canAttachWithinMediaLimit({ contentKind: "História", mediaType: "foto", photoLimit: 5, videoLimit: 1, attachedPhotoCount: 5, attachedVideoCount: 0 })).toBe(false);
+    expect(canAttachWithinMediaLimit({ contentKind: "História", mediaType: "vídeo", photoLimit: 2, videoLimit: 1, attachedPhotoCount: 0, attachedVideoCount: 0 })).toBe(true);
+    expect(canAttachWithinMediaLimit({ contentKind: "História", mediaType: "vídeo", photoLimit: 2, videoLimit: 1, attachedPhotoCount: 0, attachedVideoCount: 1 })).toBe(false);
     expect(canAttachWithinMediaLimit({ contentKind: "Cobertura", mediaType: "vídeo", photoLimit: 2, videoLimit: 1, attachedPhotoCount: 0, attachedVideoCount: 2 })).toBe(false);
   });
 

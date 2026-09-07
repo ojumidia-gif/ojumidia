@@ -29,8 +29,9 @@ describe("revisão, descoberta e regras documentais", () => {
   });
 
   it("aplica cinco fotos, dois vídeos curtos e uma sequência curta de miniclipes", () => {
-    expect(policy).toContain("attachedPhotoCount < 5");
-    expect(policy).toContain("attachedVideoCount < 2");
+    expect(policy).toContain("recordPhotoCap");
+    expect(policy).toContain("recordVideoCap");
+    expect(policy).toContain("MAX_MINICLIPS");
     expect(media).toContain("durationSeconds > HOME_MINICLIP_MAX_DURATION_SECONDS");
     expect(media).toContain("HOME_MINICLIP_SEQUENCE_LIMIT");
     expect(media).toContain("homeBackgroundConfig");

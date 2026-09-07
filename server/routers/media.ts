@@ -18,6 +18,7 @@ import {
   cleanupExpiredAbandonedUploads,
   collectMediaUsages,
   GENERATED_ARTIFACT_INVENTORY,
+  inspectMediaObject,
   listAbandonedUploadSessions,
   listUnlinkedUploadSessions,
   mediaOccupancy,
@@ -25,6 +26,8 @@ import {
   restoreMediaIfRecoverable,
 } from "../mediaLifecycle";
 import { assertPartnerScope, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
+import { DEFAULT_STORAGE_QUOTA, quotaDecision } from "../uploadGuards";
+import { loadStorageQuotaPolicy, saveStorageQuotaPolicy } from "../uploadBudget";
 
 async function requireDb() {
   const db = await getDb();
@@ -171,14 +174,20 @@ export const mediaRouter = router({
     requireSuperAdmin(ctx.user.role);
     const db = await requireDb();
     const now = new Date();
-    const [occupancy, abandoned, unlinked, trash] = await Promise.all([
+    const [occupancy, abandoned, unlinked, trash, policy] = await Promise.all([
       mediaOccupancy(db),
       listAbandonedUploadSessions(db, now),
       listUnlinkedUploadSessions(db),
-      db.select({ id: mediaAssets.id, filename: mediaAssets.filename, deletedAt: mediaAssets.deletedAt, storageKey: mediaAssets.storageKey, fileSize: mediaAssets.fileSize }).from(mediaAssets).where(isNotNull(mediaAssets.deletedAt)).orderBy(desc(mediaAssets.deletedAt)),
+      db.select({ id: mediaAssets.id, filename: mediaAssets.filename, deletedAt: mediaAssets.deletedAt, storageKey: mediaAssets.storageKey, fileSize: mediaAssets.fileSize }).from(mediaAssets).where(isNotNull(mediaAssets.deletedAt)).orderBy(desc(mediaAssets.deletedAt)).limit(80),
+      loadStorageQuotaPolicy(db),
     ]);
     return {
       occupancy,
+      quota: {
+        policy,
+        globalDecision: quotaDecision(occupancy.recordedBytes, policy.globalAlertBytes, policy.globalBlockBytes),
+        tigrisFreeTierIsNotProductLimit: true,
+      },
       trash,
       abandonedUploads: abandoned.map(item => ({
         id: item.session.id,
@@ -234,6 +243,24 @@ export const mediaRouter = router({
       return { cleanedUploadSessionIds: cleaned, failed };
     }
     return cleanupExpiredAbandonedUploads(db, ctx.user.id);
+  }),
+  setStorageQuota: protectedProcedure.input(z.object({
+    userAlertBytes: z.number().int().positive(),
+    userBlockBytes: z.number().int().positive(),
+    globalAlertBytes: z.number().int().positive(),
+    globalBlockBytes: z.number().int().positive(),
+    userUploadsPerWindow: z.number().int().min(1).max(200),
+    globalUploadsPerWindow: z.number().int().min(1).max(2000),
+    windowMinutes: z.number().int().min(1).max(1440),
+  })).mutation(async ({ ctx, input }) => {
+    requireSuperAdmin(ctx.user.role);
+    if (input.userBlockBytes <= input.userAlertBytes || input.globalBlockBytes <= input.globalAlertBytes) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "O bloqueio precisa ser maior que o alerta." });
+    }
+    const db = await requireDb();
+    await saveStorageQuotaPolicy(db, { ...DEFAULT_STORAGE_QUOTA, ...input }, ctx.user.id);
+    await recordAuditEvent(db, { actorId: ctx.user.id, resourceType: "settings", resourceId: null, action: "storage-quota-updated", nextState: { globalAlertBytes: input.globalAlertBytes, globalBlockBytes: input.globalBlockBytes }, detail: "Quota operacional atualizada. Franquia gratuita do Tigris não é limite de produto." });
+    return { success: true };
   }),
   create: protectedProcedure.input(z.object({
     mediaType: z.enum(["foto", "vídeo"]), assetUrl: z.string().trim().max(2048).refine(value => /^https?:\/\//i.test(value) || /^\/(media-storage|manus-storage)\/[A-Za-z0-9._\-/]+$/.test(value), { message: "A referência de mídia precisa ser uma URL válida ou um caminho interno do Acervo." }), storageKey: z.string().max(512).optional(), filename: z.string().max(280).optional(), origin: z.string().min(2).max(280), credit: z.string().min(2).max(280), authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]), purpose: z.string().min(2).max(280), publicationAllowed: z.boolean(), projectCoverage: z.string().max(280).optional(), terms: z.string().max(5000).optional(), usageExpiresAt: z.date().optional(), durationSeconds: z.number().int().min(1).max(60).optional(), backgroundEligible: z.boolean().optional(), backgroundPriority: z.number().int().min(0).max(99).optional(), uploadId: z.string().min(12).max(96).optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional(), photographerId: z.number().int().positive().nullable().optional(),
@@ -322,7 +349,16 @@ export const mediaRouter = router({
     const current = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.id)).limit(1))[0];
     if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
     if (current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "A mídia está na lixeira e deve ser restaurada pelo Super Admin." });
-    await db.update(mediaAssets).set({ state: "Ativo" }).where(eq(mediaAssets.id, input.id)); publishEditorialEvent("media-reactivated", input.id);
+    await assertMediaScope(db, ctx.user, current);
+    if (current.storageKey) {
+      const inspect = await inspectMediaObject(current);
+      if (inspect.status === "absent") throw new TRPCError({ code: "BAD_REQUEST", message: "O objeto físico não está no storage. Esta reativação foi recusada." });
+      if (inspect.status !== "present") throw new TRPCError({ code: "BAD_REQUEST", message: "Não foi possível confirmar o objeto no storage para reativar." });
+    }
+    const reactivated = await db.update(mediaAssets).set({ state: "Ativo", version: current.version + 1 }).where(and(eq(mediaAssets.id, input.id), eq(mediaAssets.version, current.version)));
+    if (!reactivated[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta mídia foi alterada por outra pessoa. Reabra o Acervo antes de reativar." });
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: input.id, action: "media-reactivated", previousState: { state: current.state }, nextState: { state: "Ativo" }, detail: "Mídia reativada no Acervo após confirmação de escopo e existência do objeto." });
+    publishEditorialEvent("media-reactivated", input.id);
     return { success: true };
   }),
   delete: protectedProcedure.input(z.object({ id: z.number().int().positive(), note: z.string().trim().min(3).max(5000) })).mutation(async ({ ctx, input }) => {

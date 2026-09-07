@@ -21,8 +21,8 @@ describe("camada oficial da Rede Ojú", () => {
     const base = { contentKind: "Cobertura", photoLimit: 99, videoLimit: 99, hasEventRelation: true };
     expect(canAttachWithinMediaLimit({ ...base, mediaType: "foto", attachedPhotoCount: 4, attachedVideoCount: 0 })).toBe(true);
     expect(canAttachWithinMediaLimit({ ...base, mediaType: "foto", attachedPhotoCount: 5, attachedVideoCount: 0 })).toBe(false);
-    expect(canAttachWithinMediaLimit({ ...base, mediaType: "vídeo", attachedPhotoCount: 0, attachedVideoCount: 1 })).toBe(true);
-    expect(canAttachWithinMediaLimit({ ...base, mediaType: "vídeo", attachedPhotoCount: 0, attachedVideoCount: 2 })).toBe(false);
+    expect(canAttachWithinMediaLimit({ ...base, mediaType: "vídeo", attachedPhotoCount: 0, attachedVideoCount: 0 })).toBe(true);
+    expect(canAttachWithinMediaLimit({ ...base, mediaType: "vídeo", attachedPhotoCount: 0, attachedVideoCount: 1 })).toBe(false);
   });
 
   it("protege o miniclip comercial por autorização e mantém histórico de substituição", () => {

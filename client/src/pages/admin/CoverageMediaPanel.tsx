@@ -12,9 +12,10 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { MediaAddButton, MediaStage, useMediaStage } from "@/components/MediaStage";
 
-const MAX_PHOTOS = 5;
-const MAX_VIDEOS = 2;
-const MAX_VIDEO_SECONDS = 60;
+import { MAX_MINICLIPS, MAX_MINICLIP_DURATION_SECONDS, MAX_PHOTOS } from "@shared/const";
+
+const MAX_VIDEOS = MAX_MINICLIPS;
+const MAX_VIDEO_SECONDS = MAX_MINICLIP_DURATION_SECONDS;
 
 type ExistingMedia = {
   id: number;
@@ -428,7 +429,7 @@ export function CoverageMediaPanel({
       >
         <div className="grid gap-3 md:col-span-2">
           <MediaAddButton
-            accept={documentaryPhotos ? "image/*" : "image/*,video/*"}
+              accept={documentaryPhotos ? "image/jpeg" : "image/jpeg,video/*"}
             multiple={!documentaryPhotos}
             label={documentaryPhotos ? "+ Adicionar fotografia" : "+ Adicionar fotos e vídeos"}
             counts={{
