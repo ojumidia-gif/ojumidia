@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  GOOGLE_OAUTH_CALLBACK_PATH,
   allowedOAuthRedirectUris,
   oauthStartBounceUrl,
-  requestOAuthCallbackUri,
   resolveOAuthRedirectUri,
 } from "./_core/oauthRedirect";
 
@@ -18,23 +16,20 @@ function fakeReq(host: string, proto = "https") {
   };
 }
 
-describe("OAuth redirect após domínio próprio", () => {
-  it("aceita o domínio Ojú e o www como callbacks autorizados", () => {
+describe("OAuth redirect cadastrado no Google", () => {
+  it("só autoriza o callback configurado, sem inventar o domínio próprio", () => {
     const uris = allowedOAuthRedirectUris({
       googleOAuthRedirectUri: "https://ojumidia.onrender.com/api/auth/google/callback",
-      publicBaseUrl: "https://ojumidia.com.br",
     });
-    expect(uris.has(`https://ojumidia.com.br${GOOGLE_OAUTH_CALLBACK_PATH}`)).toBe(true);
-    expect(uris.has(`https://www.ojumidia.com.br${GOOGLE_OAUTH_CALLBACK_PATH}`)).toBe(true);
-    expect(uris.has(`https://ojumidia.onrender.com${GOOGLE_OAUTH_CALLBACK_PATH}`)).toBe(true);
+    expect(uris.has("https://ojumidia.onrender.com/api/auth/google/callback")).toBe(true);
+    expect(uris.has("https://ojumidia.com.br/api/auth/google/callback")).toBe(false);
   });
 
-  it("quando o login começa no www, usa o callback canônico do apex se ele estiver no ENV", () => {
+  it("envia ao Google exatamente o URI do ENV e desloca o login para esse host", () => {
     const previous = process.env.GOOGLE_OAUTH_REDIRECT_URI;
     process.env.GOOGLE_OAUTH_REDIRECT_URI = "https://ojumidia.com.br/api/auth/google/callback";
     try {
       const req = fakeReq("www.ojumidia.com.br");
-      expect(requestOAuthCallbackUri(req)).toBe("https://www.ojumidia.com.br/api/auth/google/callback");
       expect(resolveOAuthRedirectUri(req)).toBe("https://ojumidia.com.br/api/auth/google/callback");
       expect(oauthStartBounceUrl(req, resolveOAuthRedirectUri(req))).toBe("https://ojumidia.com.br/api/auth/google/start");
     } finally {
