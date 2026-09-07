@@ -7,6 +7,7 @@ import * as db from "../db";
 import { applyLoginSideEffects } from "../loginSideEffects";
 import { getSessionCookieOptions } from "./cookies";
 import { ENV, isGoogleOAuthConfigured } from "./env";
+import { isAllowedOAuthRedirectUri, oauthStartBounceUrl, resolveOAuthRedirectUri } from "./oauthRedirect";
 import { sdk } from "./sdk";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -46,20 +47,27 @@ export function registerOAuthRoutes(app: Express) {
     const state = randomUUID();
     const nonce = randomUUID();
     const cookieOptions = getSessionCookieOptions(req);
+    const oauthCookieOptions = { ...cookieOptions, domain: undefined, sameSite: "lax" as const };
+    const redirectUri = resolveOAuthRedirectUri(req);
+    const bounce = oauthStartBounceUrl(req, redirectUri);
+    if (bounce) {
+      res.redirect(302, bounce);
+      return;
+    }
     const packedState = encodeOAuthState({
-      redirectUri: ENV.googleOAuthRedirectUri,
+      redirectUri,
       nonce: `${state}.${nonce}`,
     });
 
-    res.cookie(oauthStateCookieName(cookieOptions), packedState, {
-      ...cookieOptions,
+    res.cookie(oauthStateCookieName(oauthCookieOptions), packedState, {
+      ...oauthCookieOptions,
       httpOnly: true,
       maxAge: OAUTH_STATE_MAX_AGE_MS,
     });
 
     const url = new URL(GOOGLE_AUTH_URL);
     url.searchParams.set("client_id", ENV.googleClientId);
-    url.searchParams.set("redirect_uri", ENV.googleOAuthRedirectUri);
+    url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", "openid email profile");
     url.searchParams.set("state", state);
@@ -72,7 +80,7 @@ export function registerOAuthRoutes(app: Express) {
   app.get("/api/auth/google/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");
-    const cookieOptions = getSessionCookieOptions(req);
+    const cookieOptions = { ...getSessionCookieOptions(req), domain: undefined, sameSite: "lax" as const };
     const stateCookieName = oauthStateCookieName(cookieOptions);
 
     if (!code || !state) {
@@ -81,11 +89,17 @@ export function registerOAuthRoutes(app: Express) {
     }
 
     const packedCookie = readOAuthStateCookie(req, cookieOptions);
-    const { nonce: packedNonce } = decodeOAuthState(packedCookie ?? "");
+    const decoded = decodeOAuthState(packedCookie ?? "");
+    const { nonce: packedNonce } = decoded;
     const expected = splitPackedNonce(packedNonce);
+    const redirectUri = isAllowedOAuthRedirectUri(decoded.redirectUri) ? decoded.redirectUri : resolveOAuthRedirectUri(req);
 
     if (!expected.state || expected.state !== state || !expected.nonce) {
-      res.status(403).json({ error: "invalid oauth state" });
+      console.warn("[OAuth] invalid state", {
+        host: req.get("host") || req.hostname,
+        hasCookie: Boolean(packedCookie),
+      });
+      res.redirect(302, "/admin?erro=oauth");
       return;
     }
 
@@ -106,7 +120,7 @@ export function registerOAuthRoutes(app: Express) {
           code,
           client_id: ENV.googleClientId,
           client_secret: ENV.googleClientSecret,
-          redirect_uri: ENV.googleOAuthRedirectUri,
+          redirect_uri: redirectUri,
           grant_type: "authorization_code",
         }),
       });

@@ -12,7 +12,8 @@ describe("login Google OAuth do Super Admin", () => {
     expect(oauth).toContain('app.get("/api/auth/google/start"');
     expect(oauth).toContain('app.get("/api/auth/google/callback"');
     expect(oauth).not.toContain("/api/oauth/callback");
-    expect(oauth).not.toContain("exchangeCodeForToken");
+    expect(oauth).toContain("resolveOAuthRedirectUri");
+    expect(oauth).toContain("oauthStartBounceUrl");
   });
 
   it("não expõe o segredo Google nem monta a URL no navegador", () => {
