@@ -25,40 +25,40 @@ export function NetworkAssignment({ request }: { request: RequestForNetwork }) {
   const activeMiniclip = network?.miniclips.find(item => item.status === "Ativo");
 
   return (
-    <section className="mt-6 border-t border-[#242017]/10 pt-6">
+    <section className="mt-6 border-t border-oju-terra/10 pt-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Rede Ojú e produção</p>
           <h3 className="mt-2 font-serif text-2xl">Executor, fechamento e miniclip.</h3>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#655e52]">O administrador responsável organiza a produção. O profissional executor é independente do acesso administrativo. Esta área só prepara dados e política aplicada: não realiza pagamento, nota fiscal ou integração bancária.</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-oju-terra-suave">O administrador responsável organiza a produção. O profissional executor é independente do acesso administrativo. Esta área só prepara dados e política aplicada: não realiza pagamento, nota fiscal ou integração bancária.</p>
         </div>
         <UserRoundCheck className="h-7 w-7 text-[#806817]" />
       </div>
       <div className="mt-5 grid gap-5 xl:grid-cols-2">
-        <form className="grid gap-3 rounded-xl border border-[#242017]/10 bg-[#faf8f2] p-4" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); createExecutor.mutate({ displayName: String(form.get("executorName")), email: String(form.get("executorEmail") || "") || null, whatsapp: String(form.get("executorWhatsapp") || "") || null, specialty: String(form.get("executorSpecialty")) as "Fotografia" | "Vídeo" | "Documentário" | "Edição" | "Produção" | "Outro", profileNote: String(form.get("executorNote") || "") || null }); event.currentTarget.reset(); }}>
+        <form className="grid gap-3 rounded-xl border border-oju-terra/10 bg-oju-paz-claro p-4" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); createExecutor.mutate({ displayName: String(form.get("executorName")), email: String(form.get("executorEmail") || "") || null, whatsapp: String(form.get("executorWhatsapp") || "") || null, specialty: String(form.get("executorSpecialty")) as "Fotografia" | "Vídeo" | "Documentário" | "Edição" | "Produção" | "Outro", profileNote: String(form.get("executorNote") || "") || null }); event.currentTarget.reset(); }}>
           <p className="text-sm font-semibold">Adicionar profissional executor</p>
           <Input required name="executorName" placeholder="Nome profissional" />
           <div className="grid gap-2 sm:grid-cols-2"><Input name="executorEmail" type="email" placeholder="E-mail (opcional)" /><Input name="executorWhatsapp" placeholder="WhatsApp (opcional)" /></div>
           <select name="executorSpecialty" className="h-10 rounded border bg-white px-3"><option>Fotografia</option><option>Vídeo</option><option>Documentário</option><option>Edição</option><option>Produção</option><option>Outro</option></select>
           <Textarea name="executorNote" placeholder="Observação privada de disponibilidade ou especialidade" />
-          <Button type="submit" size="sm" disabled={createExecutor.isPending} className="w-fit bg-[#242017] text-white">Adicionar à rede</Button>
-          {executors?.length ? <div className="grid gap-2 border-t border-[#242017]/10 pt-3">{executors.map(executor => <div key={executor.id} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{executor.displayName} · {executor.specialty}{executor.publicVisible ? " · visível no portal" : ""}</span>{principal ? <Button type="button" size="sm" variant="outline" disabled={updateExecutor.isPending} onClick={() => updateExecutor.mutate({ id: executor.id, publicVisible: !executor.publicVisible })}>{executor.publicVisible ? "Ocultar do portal" : "Tornar público no Ojú"}</Button> : null}</div>)}</div> : null}
+          <Button type="submit" size="sm" disabled={createExecutor.isPending} className="w-fit bg-oju-verde text-oju-branco">Adicionar à rede</Button>
+          {executors?.length ? <div className="grid gap-2 border-t border-oju-terra/10 pt-3">{executors.map(executor => <div key={executor.id} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{executor.displayName} · {executor.specialty}{executor.publicVisible ? " · visível no portal" : ""}</span>{principal ? <Button type="button" size="sm" variant="outline" disabled={updateExecutor.isPending} onClick={() => updateExecutor.mutate({ id: executor.id, publicVisible: !executor.publicVisible })}>{executor.publicVisible ? "Ocultar do portal" : "Tornar público no Ojú"}</Button> : null}</div>)}</div> : null}
         </form>
-        <form className="grid gap-3 rounded-xl border border-[#242017]/10 bg-[#faf8f2] p-4" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); prepare.mutate({ requestId: request.id, executorId: form.get("executorId") ? Number(form.get("executorId")) : null, scope: String(form.get("scope")) as "Cobertura" | "Documentário" | "Fotografia" | "Outro", grossAmount: form.get("grossAmount") ? Number(form.get("grossAmount")) : null, notes: String(form.get("closingNote") || "") || null }); }}>
+        <form className="grid gap-3 rounded-xl border border-oju-terra/10 bg-oju-paz-claro p-4" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); prepare.mutate({ requestId: request.id, executorId: form.get("executorId") ? Number(form.get("executorId")) : null, scope: String(form.get("scope")) as "Cobertura" | "Documentário" | "Fotografia" | "Outro", grossAmount: form.get("grossAmount") ? Number(form.get("grossAmount")) : null, notes: String(form.get("closingNote") || "") || null }); }}>
           <p className="text-sm font-semibold">Fechamento conceitual</p>
           <select name="executorId" defaultValue={closing?.executorId || ""} className="h-10 rounded border bg-white px-3"><option value="">Executor ainda não definido</option>{executors?.map(executor => <option key={executor.id} value={executor.id}>{executor.displayName} · {executor.specialty}</option>)}</select>
           <div className="grid gap-2 sm:grid-cols-2"><select name="scope" defaultValue="Cobertura" className="h-10 rounded border bg-white px-3"><option>Cobertura</option><option>Documentário</option><option>Fotografia</option><option>Outro</option></select><Input name="grossAmount" type="number" min="0" step="0.01" defaultValue={closing?.grossAmount || request.proposalAmount || ""} placeholder="Valor bruto (opcional)" /></div>
           <Textarea name="closingNote" defaultValue={closing?.notes || ""} placeholder="Observação interna. Percentuais são copiados da política ativa somente quando ela existir." />
-          <div className="rounded-lg bg-white px-3 py-2 text-xs text-[#655e52]">{closing?.commercialPolicyVersion ? `Política v${closing.commercialPolicyVersion} registrada · ${closing.financialStatus}` : "Nenhuma política aplicada ainda. O fechamento permanece aguardando definição."}</div>
-          <Button type="submit" size="sm" disabled={prepare.isPending} className="w-fit bg-[#242017] text-white">Preparar fechamento</Button>
+          <div className="rounded-lg bg-white px-3 py-2 text-xs text-oju-terra-suave">{closing?.commercialPolicyVersion ? `Política v${closing.commercialPolicyVersion} registrada · ${closing.financialStatus}` : "Nenhuma política aplicada ainda. O fechamento permanece aguardando definição."}</div>
+          <Button type="submit" size="sm" disabled={prepare.isPending} className="w-fit bg-oju-verde text-oju-branco">Preparar fechamento</Button>
         </form>
       </div>
-      <section className="mt-5 rounded-xl border border-[#242017]/10 bg-[#f7f3e9] p-4">
+      <section className="mt-5 rounded-xl border border-oju-terra/10 bg-[#f7f3e9] p-4">
         <div className="flex gap-2">
           <Video className="h-5 w-5 text-[#806817]" />
           <div>
             <p className="text-sm font-semibold">Miniclip da contratação</p>
-            <p className="mt-1 text-xs leading-5 text-[#655e52]">Um vídeo de até 60s, autorizado, ligado a este pedido. Isso é produção/monetização. A Equipe Ojú coloca na Home nacional.</p>
+            <p className="mt-1 text-xs leading-5 text-oju-terra-suave">Um vídeo de até 60s, autorizado, ligado a este pedido. Isso é produção/monetização. A Equipe Ojú coloca na Home nacional.</p>
           </div>
         </div>
         <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); assignMiniclip.mutate({ requestId: request.id, mediaId: Number(form.get("mediaId")), featureOnHome: principal && form.get("home") === "on" }); }}>
@@ -68,8 +68,8 @@ export function NetworkAssignment({ request }: { request: RequestForNetwork }) {
               {clips?.map(clip => <option key={clip.id} value={clip.id}>{clip.filename || clip.credit} · {clip.durationSeconds}s</option>)}
             </select>
           </label>
-          {principal ? <label className="flex h-10 items-center gap-2 text-sm"><input name="home" type="checkbox" />Destacar na Home após autorização</label> : <p className="text-xs leading-5 text-[#655e52]">A Home nacional não aparece nesta carteira.</p>}
-          <Button type="submit" size="sm" disabled={assignMiniclip.isPending} className="bg-[#242017] text-white">{activeMiniclip ? "Substituir miniclip" : "Definir miniclip"}</Button>
+          {principal ? <label className="flex h-10 items-center gap-2 text-sm"><input name="home" type="checkbox" />Destacar na Home após autorização</label> : <p className="text-xs leading-5 text-oju-terra-suave">A Home nacional não aparece nesta carteira.</p>}
+          <Button type="submit" size="sm" disabled={assignMiniclip.isPending} className="bg-oju-verde text-oju-branco">{activeMiniclip ? "Substituir miniclip" : "Definir miniclip"}</Button>
         </form>
         {network?.miniclips.length ? (
           <div className="mt-4 grid gap-2">

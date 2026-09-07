@@ -2,15 +2,10 @@ import { Link } from "wouter";
 
 export type PublicCoverAccent = "dende" | "indigo" | "paz";
 
-const hover: Record<PublicCoverAccent, string> = {
-  dende: "hover:border-[#ef9e59]/80",
-  indigo: "hover:border-[#9aacd8]/80",
-  paz: "hover:border-[#8dda95]/70",
-};
 const kickerColor: Record<PublicCoverAccent, string> = {
-  dende: "text-[#ef9e59]",
-  indigo: "text-[#9aacd8]",
-  paz: "text-[#8dda95]",
+  dende: "text-oju-dourado-claro",
+  indigo: "text-oju-dourado-claro",
+  paz: "text-oju-dourado-claro",
 };
 
 export function PublicCoverCard({
@@ -37,7 +32,7 @@ export function PublicCoverCard({
   accent?: PublicCoverAccent;
 }) {
   return (
-    <Link href={href} className={`group relative block overflow-hidden border border-white/15 bg-[#100d0a] transition ${hover[accent]} ${featured ? "min-h-[24rem] sm:min-h-[28rem] md:col-span-2" : "min-h-72"}`}>
+    <Link href={href} className={`group relative block overflow-hidden border border-oju-terra/10 bg-oju-preto-filme text-oju-branco ${featured ? "min-h-[24rem] sm:min-h-[28rem] md:col-span-2" : "min-h-72"}`}>
       {coverUrl ? (
         coverType === "vídeo" ? (
           <video muted autoPlay loop playsInline className="absolute inset-0 h-full w-full object-cover" src={coverUrl} />
@@ -45,7 +40,7 @@ export function PublicCoverCard({
           <img src={coverUrl} alt={coverCredit || title} className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
         )
       ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_8%,rgba(201,125,61,.32),transparent_34%),linear-gradient(165deg,#1a1410,#070605)]" />
+        <div className="absolute inset-0 bg-oju-preto-suave" />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
       <div className="relative flex h-full flex-col justify-end p-5 sm:p-6">

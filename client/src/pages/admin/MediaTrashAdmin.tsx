@@ -28,7 +28,7 @@ export default function MediaTrashAdmin() {
     <AdminPage eyebrow="Governança de mídia" title="Lixeira de mídia">
       <section className="mb-7 grid gap-4 border border-[#8b4d24]/25 bg-[#fff5ee] p-5">
         <h2 className="font-serif text-2xl">Segunda chance, não arquivo permanente.</h2>
-        <p className="max-w-4xl text-sm leading-6 text-[#655e52]">Acervo → Excluir → Lixeira. Restaurar devolve ao Acervo. Excluir definitivamente destrói objeto no Tigris, metadado no Aiven e sessão de upload inútil. A Auditoria guarda só o evento.</p>
+        <p className="max-w-4xl text-sm leading-6 text-oju-terra-suave">Acervo → Excluir → Lixeira. Restaurar devolve ao Acervo. Excluir definitivamente destrói objeto no Tigris, metadado no Aiven e sessão de upload inútil. A Auditoria guarda só o evento.</p>
       </section>
       {trash.isLoading ? <p>Carregando Lixeira de mídia...</p> : items.length ? (
         <section className="grid gap-4">
@@ -37,8 +37,8 @@ export default function MediaTrashAdmin() {
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#8b4d24]">Na lixeira</p>
                 <h2 className="mt-2 font-serif text-2xl">{item.filename || `Mídia #${item.id}`}</h2>
-                <p className="mt-1 text-sm text-[#655e52]">Crédito: {item.credit} · {item.mediaType}</p>
-                {item.deletedAt ? <p className="mt-2 text-xs text-[#655e52]">Enviada em {new Date(item.deletedAt).toLocaleString("pt-BR")}</p> : null}
+                <p className="mt-1 text-sm text-oju-terra-suave">Crédito: {item.credit} · {item.mediaType}</p>
+                {item.deletedAt ? <p className="mt-2 text-xs text-oju-terra-suave">Enviada em {new Date(item.deletedAt).toLocaleString("pt-BR")}</p> : null}
                 {item.deletionNote ? <p className="mt-3 border-l-2 border-[#8b4d24]/45 pl-3 text-sm">{item.deletionNote}</p> : null}
               </div>
               {principal ? (
@@ -46,7 +46,7 @@ export default function MediaTrashAdmin() {
                   <Button size="sm" variant="outline" onClick={() => restore.mutate({ id: item.id })} disabled={restore.isPending}><RotateCcw className="mr-2 h-4 w-4" />Restaurar</Button>
                   <Button size="sm" variant="outline" className="border-[#8b4d24] text-[#8b4d24]" onClick={() => { setTarget(item); setConfirmation(""); }}><Trash2 className="mr-2 h-4 w-4" />Excluir definitivamente</Button>
                 </div>
-              ) : <p className="text-xs text-[#655e52]">Somente a Equipe Ojú restaura ou expurga.</p>}
+              ) : <p className="text-xs text-oju-terra-suave">Somente a Equipe Ojú restaura ou expurga.</p>}
             </article>
           ))}
         </section>
@@ -66,7 +66,7 @@ export default function MediaTrashAdmin() {
           </AlertDialogContent>
         </AlertDialog>
       ) : null}
-      {!principal ? <section className="mt-6 admin-card max-w-2xl p-6"><AlertTriangle className="h-6 w-6 text-[#8b4d24]" /><p className="mt-4 text-sm leading-6 text-[#655e52]">A consulta respeita o seu território. Expurgar é exclusivo da Equipe Ojú.</p></section> : null}
+      {!principal ? <section className="mt-6 admin-card max-w-2xl p-6"><AlertTriangle className="h-6 w-6 text-[#8b4d24]" /><p className="mt-4 text-sm leading-6 text-oju-terra-suave">A consulta respeita o seu território. Expurgar é exclusivo da Equipe Ojú.</p></section> : null}
     </AdminPage>
   );
 }

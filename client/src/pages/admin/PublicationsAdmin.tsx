@@ -116,7 +116,7 @@ export default function PublicationsAdmin() {
     return (
     <div className="flex flex-wrap gap-2">
       {!item.deletedAt && <>
-        <Button asChild size="sm" className="bg-[#242017] text-white hover:bg-[#3a3428]">
+        <Button asChild size="sm" className="bg-oju-verde text-oju-branco hover:bg-[#3a3428]">
           <Link href={`/admin/editar/${item.id}`}><Pencil className="mr-1 h-3.5 w-3.5" />{item.status === "Publicada" ? "Editar" : "Completar"}</Link>
         </Button>
         {!canDirect && next && (
@@ -138,37 +138,37 @@ export default function PublicationsAdmin() {
     );
   };
 
-  return <AdminPage eyebrow="Conteúdos" title="Criar e publicar." action={<Button onClick={() => setOpen(true)} className="rounded-full bg-[#f6b71b] text-[#242017] hover:bg-[#eeb12a]"><FilePlus2 className="mr-2 h-4 w-4" />Novo</Button>}>
-    <p className="-mt-4 mb-4 text-sm text-[#655e52]">{isPrincipal ? "Você vê o site inteiro. Tipo e título, três passos, publicar. Home é outra tela." : "Só o que você criou. Tipo e título. Depois texto, território e capa. Publicar no site. Home é outra tela."}</p>
+  return <AdminPage eyebrow="Conteúdos" title="Criar e publicar." action={<Button onClick={() => setOpen(true)} className="rounded-full bg-oju-dourado text-oju-terra hover:bg-[#eeb12a]"><FilePlus2 className="mr-2 h-4 w-4" />Novo</Button>}>
+    <p className="-mt-4 mb-4 text-sm text-oju-terra-suave">{isPrincipal ? "Você vê o site inteiro. Tipo e título, três passos, publicar. Home é outra tela." : "Só o que você criou. Tipo e título. Depois texto, território e capa. Publicar no site. Home é outra tela."}</p>
     <AdminFlowGuide destinationId={siteDestinationByKind(tipoFilter || kind)?.id || "historias"} />
     <div className="mb-4 flex flex-wrap gap-2 text-sm font-semibold">
-      <Link href={hrefWith({ tipo: null })} className={`rounded-full px-3 py-1.5 ${!tipoFilter ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>Tudo</Link>
+      <Link href={hrefWith({ tipo: null })} className={`rounded-full px-3 py-1.5 ${!tipoFilter ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>Tudo</Link>
       {kinds.map(item => (
-        <Link key={item} href={hrefWith({ tipo: item })} className={`rounded-full px-3 py-1.5 ${tipoFilter === item ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>{item}</Link>
+        <Link key={item} href={hrefWith({ tipo: item })} className={`rounded-full px-3 py-1.5 ${tipoFilter === item ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>{item}</Link>
       ))}
-      {isPrincipal ? <Link href={hrefWith({ carteira: mineOnly ? null : "meus" })} className={`rounded-full px-3 py-1.5 ${mineOnly ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>{mineOnly ? "Só os meus" : "Tudo no site"}</Link> : null}
+      {isPrincipal ? <Link href={hrefWith({ carteira: mineOnly ? null : "meus" })} className={`rounded-full px-3 py-1.5 ${mineOnly ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>{mineOnly ? "Só os meus" : "Tudo no site"}</Link> : null}
     </div>
     {open && <section className="admin-card mb-6 overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[#242017]/10 px-5 py-3"><p className="font-semibold">Novo no portal</p><button onClick={() => setOpen(false)} className="rounded-full p-2 hover:bg-[#eee9dc]" aria-label="Fechar"><X className="h-4 w-4" /></button></div>
+      <div className="flex items-center justify-between border-b border-oju-terra/10 px-5 py-3"><p className="font-semibold">Novo no portal</p><button onClick={() => setOpen(false)} className="rounded-full p-2 hover:bg-oju-papel" aria-label="Fechar"><X className="h-4 w-4" /></button></div>
       <form onSubmit={event => { event.preventDefault(); create.mutate({ title, contentKind: kind, teamCredit: "Equipe Ojú" }); }} className="grid gap-4 p-5">
         <div className="flex flex-wrap gap-2">
           {kinds.map(item => (
-            <button type="button" key={item} onClick={() => setKind(item)} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${kind === item ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>{item}</button>
+            <button type="button" key={item} onClick={() => setKind(item)} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${kind === item ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>{item}</button>
           ))}
         </div>
-        <p className="text-xs text-[#655e52]">Vai para {kindWhere[kind]}.</p>
+        <p className="text-xs text-oju-terra-suave">Vai para {kindWhere[kind]}.</p>
         <label className="grid gap-2 text-sm font-medium">Título<Input required minLength={4} autoFocus value={title} onChange={event => setTitle(event.target.value)} placeholder="Nome no portal" /></label>
-        <div className="flex justify-end"><Button disabled={create.isPending} className="bg-[#242017] text-white">{create.isPending ? "Abrindo..." : "Começar"}</Button></div>
+        <div className="flex justify-end"><Button disabled={create.isPending} className="bg-oju-verde text-oju-branco">{create.isPending ? "Abrindo..." : "Começar"}</Button></div>
       </form>
     </section>}
 
     <div className="admin-card overflow-hidden">
-      {etapaFilter ? <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#242017]/10 px-6 py-3 text-sm"><p>Etapa: <strong>{etapaFilter}</strong></p><Link href={hrefWith({ etapa: null })} className="font-semibold">Limpar</Link></div> : null}
-      {isLoading ? <div className="p-8 text-sm text-[#655e52]">Carregando...</div> : rows?.length ? <>
-        <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[940px] text-left"><thead className="bg-[#eee9dc] text-[11px] uppercase tracking-[.13em] text-[#655e52]"><tr><th className="px-6 py-3">Conteúdo</th><th className="px-4 py-3">Portal</th><th className="px-4 py-3">Quem</th><th className="px-4 py-3">Situação</th><th className="px-6 py-3 text-right">Ações</th></tr></thead><tbody>{rows.map(item => <tr key={item.id} className={`border-t border-[#242017]/8 ${item.deletedAt ? "bg-[#f5e5de]/60" : ""}`}><td className="px-6 py-4"><p className="font-medium">{item.title}</p><p className="mt-1 text-xs text-[#655e52]">{item.contentKind}{(item.manualFeatured || item.homePlacement !== "Nenhum") ? " · Home" : item.status === "Publicada" ? " · no site" : ""}</p></td><td className="px-4 py-4 text-sm text-[#655e52]">{kindWhere[item.contentKind as typeof kinds[number]] || item.contentKind}</td><td className="px-4 py-4 text-sm text-[#655e52]">{item.createdByName}</td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyle[item.status]}`}>{item.status}</span>{item.deletedAt ? <span className="ml-2 text-xs text-[#8b4d24]">lixeira</span> : item.status === "Publicada" && !item.isPublic ? <span className="ml-2 text-xs text-[#8b4d24]">fora do ar</span> : null}</td><td className="px-6 py-4"><div className="flex justify-end">{actionButtons(item)}</div></td></tr>)}</tbody></table></div>
-        <div className="grid gap-3 p-3 md:hidden">{rows.map(item => <article key={item.id} className={`rounded-xl border border-[#242017]/10 p-4 ${item.deletedAt ? "bg-[#f5e5de]/60" : "bg-white/35"}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium">{item.title}</p><p className="mt-1 text-xs text-[#655e52]">{item.contentKind} · {item.createdByName}</p></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyle[item.status]}`}>{item.status}</span></div><div className="mt-4 border-t border-[#242017]/10 pt-4">{actionButtons(item)}</div></article>)}</div>
+      {etapaFilter ? <div className="flex flex-wrap items-center justify-between gap-3 border-b border-oju-terra/10 px-6 py-3 text-sm"><p>Etapa: <strong>{etapaFilter}</strong></p><Link href={hrefWith({ etapa: null })} className="font-semibold">Limpar</Link></div> : null}
+      {isLoading ? <div className="p-8 text-sm text-oju-terra-suave">Carregando...</div> : rows?.length ? <>
+        <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[940px] text-left"><thead className="bg-oju-papel text-[11px] uppercase tracking-[.13em] text-oju-terra-suave"><tr><th className="px-6 py-3">Conteúdo</th><th className="px-4 py-3">Portal</th><th className="px-4 py-3">Quem</th><th className="px-4 py-3">Situação</th><th className="px-6 py-3 text-right">Ações</th></tr></thead><tbody>{rows.map(item => <tr key={item.id} className={`border-t border-oju-terra/10 ${item.deletedAt ? "bg-[#f5e5de]/60" : ""}`}><td className="px-6 py-4"><p className="font-medium">{item.title}</p><p className="mt-1 text-xs text-oju-terra-suave">{item.contentKind}{(item.manualFeatured || item.homePlacement !== "Nenhum") ? " · Home" : item.status === "Publicada" ? " · no site" : ""}</p></td><td className="px-4 py-4 text-sm text-oju-terra-suave">{kindWhere[item.contentKind as typeof kinds[number]] || item.contentKind}</td><td className="px-4 py-4 text-sm text-oju-terra-suave">{item.createdByName}</td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyle[item.status]}`}>{item.status}</span>{item.deletedAt ? <span className="ml-2 text-xs text-[#8b4d24]">lixeira</span> : item.status === "Publicada" && !item.isPublic ? <span className="ml-2 text-xs text-[#8b4d24]">fora do ar</span> : null}</td><td className="px-6 py-4"><div className="flex justify-end">{actionButtons(item)}</div></td></tr>)}</tbody></table></div>
+        <div className="grid gap-3 p-3 md:hidden">{rows.map(item => <article key={item.id} className={`rounded-xl border border-oju-terra/10 p-4 ${item.deletedAt ? "bg-[#f5e5de]/60" : "bg-white/35"}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium">{item.title}</p><p className="mt-1 text-xs text-oju-terra-suave">{item.contentKind} · {item.createdByName}</p></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyle[item.status]}`}>{item.status}</span></div><div className="mt-4 border-t border-oju-terra/10 pt-4">{actionButtons(item)}</div></article>)}</div>
       </> : <div className="p-6"><EmptyAdmin text="Nada aqui. Clique em Novo." /></div>}
-      {data && (data.hasMore || page > 0) ? <div className="flex justify-end gap-2 border-t border-[#242017]/10 px-6 py-3"><button className="text-sm font-semibold" disabled={page === 0} onClick={() => setPage(current => Math.max(0, current - 1))}>Anterior</button><button className="text-sm font-semibold" disabled={!data.hasMore} onClick={() => setPage(current => current + 1)}>Próxima</button></div> : null}
+      {data && (data.hasMore || page > 0) ? <div className="flex justify-end gap-2 border-t border-oju-terra/10 px-6 py-3"><button className="text-sm font-semibold" disabled={page === 0} onClick={() => setPage(current => Math.max(0, current - 1))}>Anterior</button><button className="text-sm font-semibold" disabled={!data.hasMore} onClick={() => setPage(current => current + 1)}>Próxima</button></div> : null}
     </div>
     <AlertDialog open={Boolean(deleteTarget)} onOpenChange={dialogOpen => { if (!dialogOpen) { setDeleteTarget(null); setDeleteNote(""); } }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Enviar para a lixeira?</AlertDialogTitle><AlertDialogDescription>“{deleteTarget?.title}” sai do portal.</AlertDialogDescription></AlertDialogHeader><label className="grid gap-2 text-sm font-medium">Motivo<Textarea value={deleteNote} onChange={event => setDeleteNote(event.target.value)} /></label><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction disabled={!deleteTarget || deleteNote.trim().length < 3 || remove.isPending} className="bg-[#8b4d24] text-white hover:bg-[#723b1a]" onClick={event => { event.preventDefault(); if (deleteTarget) remove.mutate({ id: deleteTarget.id, expectedVersion: deleteTarget.version, note: deleteNote.trim() }); }}>Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </AdminPage>;

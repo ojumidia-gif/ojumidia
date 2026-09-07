@@ -5,7 +5,7 @@ import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { AdminPage, EmptyAdmin } from "./_shared";
 
-const statusStyles: Record<string, string> = { Rascunho: "bg-[#eee9dc] text-[#655e52]", Enviado: "bg-[#e1eff3] text-[#1f5f72]", Assinado: "bg-[#e6f2e5] text-[#496b3b]", Arquivado: "bg-[#eee9dc] text-[#655e52]" };
+const statusStyles: Record<string, string> = { Rascunho: "bg-oju-papel text-oju-terra-suave", Enviado: "bg-[#e1eff3] text-[#1f5f72]", Assinado: "bg-[#e6f2e5] text-[#496b3b]", Arquivado: "bg-oju-papel text-oju-terra-suave" };
 
 export default function ContractsAdmin() {
   const utils = trpc.useUtils();
@@ -25,7 +25,7 @@ export default function ContractsAdmin() {
           <div className="rounded-xl bg-[#f6d978] p-3"><FileSignature className="h-5 w-5" /></div>
           <div>
             <p className="font-serif text-2xl">Contratos de divulgação</p>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-[#655e52]">Cada contrato permanece no Centro Administrativo, vinculado à sua Cobertura institucional. Nenhum documento é exibido no portal público. Rascunho ainda não enviado pode ser excluído de vez — sem lixeira.</p>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-oju-terra-suave">Cada contrato permanece no Centro Administrativo, vinculado à sua Cobertura institucional. Nenhum documento é exibido no portal público. Rascunho ainda não enviado pode ser excluído de vez — sem lixeira.</p>
           </div>
         </div>
         {isLoading ? <p className="mt-6 text-sm">Carregando contratos...</p> : data?.length ? (
@@ -34,7 +34,7 @@ export default function ContractsAdmin() {
               <article className="grid gap-4 py-5 sm:grid-cols-[1fr_auto] sm:items-center" key={contract.id}>
                 <div>
                   <p className="font-medium">{contract.contractor}</p>
-                  <p className="mt-1 text-xs text-[#655e52]">Cobertura #{contract.publicationId} · criado em {new Date(contract.createdAt).toLocaleDateString("pt-BR")}</p>
+                  <p className="mt-1 text-xs text-oju-terra-suave">Cobertura #{contract.publicationId} · criado em {new Date(contract.createdAt).toLocaleDateString("pt-BR")}</p>
                   <p className="mt-2 break-all text-xs text-[#806817]">{contract.documentUrl}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">

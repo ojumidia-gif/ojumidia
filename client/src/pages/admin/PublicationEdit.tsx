@@ -111,7 +111,7 @@ export default function PublicationEdit() {
         <p className="text-xs font-bold uppercase tracking-[.12em] text-[#806817]">{data.contentKind} · {destinations[data.contentKind] || "Portal"}</p>
         <h1 className="mt-1 font-serif text-4xl sm:text-5xl">{isPublished ? title : "Três passos até o site"}</h1>
       </div>
-      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isPublished ? "bg-[#d8eadc] text-[#2c683b]" : "bg-[#eee4c8] text-[#695411]"}`}>{isPublished ? "No site" : "Rascunho"}</span>
+      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isPublished ? "bg-oju-verde/15 text-oju-verde-profundo" : "bg-[#eee4c8] text-[#695411]"}`}>{isPublished ? "No site" : "Rascunho"}</span>
     </div>
 
     {!isPublished ? (
@@ -120,7 +120,7 @@ export default function PublicationEdit() {
           const step = (index + 1) as 1 | 2 | 3;
           const active = wizardStep === step;
           return (
-            <button key={label} type="button" onClick={() => setWizardStep(step)} className={`rounded-2xl px-4 py-3 text-left text-sm font-semibold ${active ? "bg-[#242017] text-white" : "bg-[#eee9dc] text-[#242017]"}`}>
+            <button key={label} type="button" onClick={() => setWizardStep(step)} className={`rounded-2xl px-4 py-3 text-left text-sm font-semibold ${active ? "bg-oju-verde text-oju-branco" : "bg-oju-papel text-oju-terra"}`}>
               {step}. {label}
             </button>
           );
@@ -128,16 +128,16 @@ export default function PublicationEdit() {
       </nav>
     ) : (
       <nav className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
-        <a href="#texto" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Texto</a>
-        <a href="#territorio" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Território</a>
-        <a href="#midia" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Capa</a>
-        <a href="#home" className="rounded-full bg-[#eee9dc] px-3 py-1.5">Home</a>
+        <a href="#texto" className="rounded-full bg-oju-papel px-3 py-1.5">Texto</a>
+        <a href="#territorio" className="rounded-full bg-oju-papel px-3 py-1.5">Território</a>
+        <a href="#midia" className="rounded-full bg-oju-papel px-3 py-1.5">Capa</a>
+        <a href="#home" className="rounded-full bg-oju-papel px-3 py-1.5">Home</a>
       </nav>
     )}
 
     {data.status !== "Publicada" ? <div className="mt-4"><SiteReadiness items={gaps} readyText="Pronto. Publique no site." /></div> : null}
     {conflict && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b95140]/30 bg-[#fff1ec] p-4 text-sm text-[#7a3126]"><span>Outra pessoa salvou primeiro.</span><Button size="sm" type="button" onClick={() => { setConflict(false); utils.editorial.preview.invalidate({ id }); }}>Recarregar</Button></div>}
-    {isPublished && <p className="mt-4 text-sm text-[#655e52]">No portal. Home com a Equipe Ojú. Aqui você aprimora o texto, crédito e links.</p>}
+    {isPublished && <p className="mt-4 text-sm text-oju-terra-suave">No portal. Home com a Equipe Ojú. Aqui você aprimora o texto, crédito e links.</p>}
 
     {(isPublished || wizardStep === 1) ? (
     <form id="texto" onSubmit={event => { event.preventDefault(); update.mutate(payload); }} className="admin-card mt-8 grid gap-5 p-6">
@@ -157,19 +157,19 @@ export default function PublicationEdit() {
             <Button type="button" size="sm" variant="outline" onClick={() => setBody(current => `${current.trim() ? `${current.trim()}\n\n` : ""}> Destaque autorizado.\n`)}>Destaque</Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setBody(current => `${current}**destaque**`)}>Negrito</Button>
           </div>
-        ) : <p className="text-xs text-[#655e52]">Um ou dois parágrafos bastam para publicar. Depois você amplia.</p>}
+        ) : <p className="text-xs text-oju-terra-suave">Um ou dois parágrafos bastam para publicar. Depois você amplia.</p>}
         <Textarea className="min-h-64" value={body} onChange={event => setBody(event.target.value)} />
         {(body || summary) ? <div className="rounded-xl bg-[#120f0c] p-5"><p className="mb-3 text-[10px] font-semibold uppercase tracking-[.14em] text-[#c9a27a]">Como o portal lê</p><EditorialBody text={body || summary} /></div> : null}
       </div>
       {isPublished ? (
         <>
-          <section className="rounded-xl border border-[#242017]/10 bg-[#f7f3e9] p-4"><p className="text-sm font-semibold">Links externos opcionais</p><p className="mt-1 text-xs leading-5 text-[#655e52]">O portal mantém até 5 fotos e 2 vídeos curtos. Capa atual: {cover ? cover.filename || `#${cover.id}` : "ainda sem capa — marque abaixo."}</p><div className="mt-3 grid gap-3 md:grid-cols-2"><Input type="url" value={externalAlbumUrl} onChange={event => setExternalAlbumUrl(event.target.value)} placeholder="Álbum completo"/><Input type="url" value={externalVideoUrl} onChange={event => setExternalVideoUrl(event.target.value)} placeholder="Vídeo completo"/></div></section>
+          <section className="rounded-xl border border-oju-terra/10 bg-[#f7f3e9] p-4"><p className="text-sm font-semibold">Links externos opcionais</p><p className="mt-1 text-xs leading-5 text-oju-terra-suave">O portal mantém até 5 fotos e 2 vídeos curtos. Capa atual: {cover ? cover.filename || `#${cover.id}` : "ainda sem capa — marque abaixo."}</p><div className="mt-3 grid gap-3 md:grid-cols-2"><Input type="url" value={externalAlbumUrl} onChange={event => setExternalAlbumUrl(event.target.value)} placeholder="Álbum completo"/><Input type="url" value={externalVideoUrl} onChange={event => setExternalVideoUrl(event.target.value)} placeholder="Vídeo completo"/></div></section>
           <label className="grid gap-2 text-sm font-medium">Motivo da revisão<Textarea value={revisionNote} onChange={event => setRevisionNote(event.target.value)} /></label>
         </>
       ) : null}
       <div className="flex flex-wrap justify-end gap-3">
         {isPublished ? <Button type="button" variant="outline" asChild><Link href={`/admin/preview/${id}`}>Prévia como no site</Link></Button> : null}
-        <Button disabled={update.isPending} className="bg-[#242017] text-white">{update.isPending ? "Salvando..." : isPublished ? "Publicar revisão" : "Salvar texto"}</Button>
+        <Button disabled={update.isPending} className="bg-oju-verde text-oju-branco">{update.isPending ? "Salvando..." : isPublished ? "Publicar revisão" : "Salvar texto"}</Button>
       </div>
     </form>
     ) : null}
@@ -177,7 +177,7 @@ export default function PublicationEdit() {
     {(isPublished || wizardStep === 2) ? (
     <section id="territorio" className="mt-10">
       <h2 className="font-serif text-3xl">Território</h2>
-      <p className="mt-1 text-sm text-[#655e52]">Obrigatório para ir ao site.</p>
+      <p className="mt-1 text-sm text-oju-terra-suave">Obrigatório para ir ao site.</p>
       <CoverageTaxonomiesPanel publicationId={id} version={data.version} initialIds={data.taxonomies.map(item => item.id)} contentKind={data.contentKind} />
       {data.contentKind === "Cobertura" && <InstitutionalCoveragePanel publication={data} />}
     </section>
@@ -186,20 +186,20 @@ export default function PublicationEdit() {
     {(isPublished || wizardStep === 3) ? (
     <section id="midia" className="mt-10">
       <h2 className="font-serif text-3xl">Capa</h2>
-      <p className="mt-1 text-sm text-[#655e52]">{data.contentKind === "Fotografia documental" ? "Até 5 fotos com data, local e biografia. Marque a capa." : "Marque a capa. Isso basta para publicar."}</p>
+      <p className="mt-1 text-sm text-oju-terra-suave">{data.contentKind === "Fotografia documental" ? "Até 5 fotos com data, local e biografia. Marque a capa." : "Marque a capa. Isso basta para publicar."}</p>
       <CoverageMediaPanel publicationId={id} coverageTitle={data.title} contentKind={data.contentKind} documentaryPhotos={data.contentKind === "Fotografia documental"} existingMedia={data.media.map(media => ({ id: media.id, mediaType: media.mediaType, filename: media.filename, isCover: media.isCover }))} eventNames={data.taxonomies.filter(taxonomy => taxonomy.dimension === "Evento").map(taxonomy => taxonomy.name)} />
     </section>
     ) : null}
 
     {isPublished ? <section id="home" className="admin-card mt-10 p-6">
       <h2 className="font-serif text-3xl">Home e Histórias recentes</h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655e52]">Publicar não coloca a foto na Home. A Equipe Ojú marca a vitrine nacional.</p>
-      {cover ? <p className="mt-3 text-xs text-[#655e52]">Capa atual: {cover.filename || `#${cover.id}`}</p> : <p className="mt-3 text-xs text-[#8b4d24]">Sem capa marcada — a Home ficaria sem foto.</p>}
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-oju-terra-suave">Publicar não coloca a foto na Home. A Equipe Ojú marca a vitrine nacional.</p>
+      {cover ? <p className="mt-3 text-xs text-oju-terra-suave">Capa atual: {cover.filename || `#${cover.id}`}</p> : <p className="mt-3 text-xs text-[#8b4d24]">Sem capa marcada — a Home ficaria sem foto.</p>}
       {user?.role === "administrador principal" ? (
         <div className="mt-5 grid gap-4">
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" className="mt-1" checked={homeOn} onChange={event => setHomeOn(event.currentTarget.checked)} />
-            <span><strong>Mostrar em Histórias recentes</strong><span className="mt-1 block text-xs text-[#655e52]">A capa deste conteúdo aparece na Home nacional.</span></span>
+            <span><strong>Mostrar em Histórias recentes</strong><span className="mt-1 block text-xs text-oju-terra-suave">A capa deste conteúdo aparece na Home nacional.</span></span>
           </label>
           {homeOn ? <label className="grid max-w-xs gap-1 text-xs font-semibold">Posição na Home
             <select value={homePlacement} onChange={event => setHomePlacement(event.target.value as typeof homePlacement)} className="h-10 rounded-md border bg-white px-2 text-sm font-normal">
@@ -208,29 +208,29 @@ export default function PublicationEdit() {
               <option>Recomendado</option>
             </select>
           </label> : null}
-          <div><Button type="button" disabled={setFeatured.isPending} className="bg-[#242017] text-white" onClick={() => setFeatured.mutate({ id, manualFeatured: homeOn, relevance: Math.max(data.relevance, homeOn ? 60 : 0), homePlacement: homeOn ? homePlacement : "Nenhum", homeOrder: data.homeOrder })}>{setFeatured.isPending ? "Salvando..." : "Salvar na Home"}</Button></div>
+          <div><Button type="button" disabled={setFeatured.isPending} className="bg-oju-verde text-oju-branco" onClick={() => setFeatured.mutate({ id, manualFeatured: homeOn, relevance: Math.max(data.relevance, homeOn ? 60 : 0), homePlacement: homeOn ? homePlacement : "Nenhum", homeOrder: data.homeOrder })}>{setFeatured.isPending ? "Salvando..." : "Salvar na Home"}</Button></div>
         </div>
       ) : (
         <div className="mt-5">
-          <p className="text-sm text-[#655e52]">A Equipe Ojú coloca na Home.</p>
+          <p className="text-sm text-oju-terra-suave">A Equipe Ojú coloca na Home.</p>
           <Button type="button" variant="outline" className="mt-3" disabled={suggestHighlight.isPending || data.homePlacement !== "Nenhum" || data.manualFeatured} onClick={() => suggestHighlight.mutate({ publicationId: id, note: "Pedido para aparecer em Histórias recentes com a foto de capa." })}>{data.homePlacement !== "Nenhum" || data.manualFeatured ? "Já está na Home" : "Pedir Histórias recentes"}</Button>
         </div>
       )}
     </section> : null}
 
     {!isPublished ? (
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#242017]/15 bg-[#f7f3e9]/95 px-4 py-3 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-oju-terra/15 bg-[#f7f3e9]/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-[#655e52]">{gaps.length ? gaps[0] : "Pronto para o site."}{gaps.length > 1 ? ` · +${gaps.length - 1}` : ""}</p>
+          <p className="text-sm text-oju-terra-suave">{gaps.length ? gaps[0] : "Pronto para o site."}{gaps.length > 1 ? ` · +${gaps.length - 1}` : ""}</p>
           <div className="flex flex-wrap gap-2">
             {wizardStep > 1 ? <Button type="button" variant="outline" disabled={busy} onClick={() => setWizardStep(current => (current - 1) as 1 | 2 | 3)}>Voltar</Button> : null}
             <Button type="button" variant="outline" disabled={busy} onClick={() => update.mutate(payload)}>Salvar</Button>
             {wizardStep < 3 ? (
-              <Button type="button" disabled={busy} className="bg-[#242017] text-white" onClick={goNext}>Continuar</Button>
+              <Button type="button" disabled={busy} className="bg-oju-verde text-oju-branco" onClick={goNext}>Continuar</Button>
             ) : canDirect ? (
-              <Button type="button" disabled={busy || gaps.length > 0} className="bg-[#242017] text-white" onClick={goLive}>{busy ? "Publicando..." : "Publicar no site"}</Button>
+              <Button type="button" disabled={busy || gaps.length > 0} className="bg-oju-verde text-oju-branco" onClick={goLive}>{busy ? "Publicando..." : "Publicar no site"}</Button>
             ) : nextAction ? (
-              <Button type="button" disabled={busy || (data.status === "Rascunho" && gaps.length > 0)} className="bg-[#242017] text-white" onClick={() => data.status === "Rascunho" ? saveThenAdvance() : advance.mutate({ id, expectedVersion: data.version })}>
+              <Button type="button" disabled={busy || (data.status === "Rascunho" && gaps.length > 0)} className="bg-oju-verde text-oju-branco" onClick={() => data.status === "Rascunho" ? saveThenAdvance() : advance.mutate({ id, expectedVersion: data.version })}>
                 {data.status === "Rascunho" ? "Salvar e enviar para revisão" : nextAction.label}
               </Button>
             ) : null}

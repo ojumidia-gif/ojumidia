@@ -7,41 +7,41 @@ import { trpc } from "@/lib/trpc";
 export default function PhotographerProfile() {
   const [, params] = useRoute("/fotografos/:slug");
   const { data, isLoading } = trpc.editorial.photographerBySlug.useQuery({ slug: params?.slug || "", limit: 12, offset: 0 }, { enabled: Boolean(params?.slug), refetchInterval: 30000 });
-  if (isLoading) return <div className="min-h-screen bg-[#070605] text-white"><PublicHeader cinematic /><main className="container pt-32">Carregando ficha…</main></div>;
-  if (!data?.photographer) return <div className="min-h-screen bg-[#070605] text-white"><PublicHeader cinematic /><main className="container pt-32"><h1 className="font-serif text-4xl">Fotógrafo indisponível.</h1><Link href="/fotografos" className="mt-6 inline-flex gap-2 text-sm font-semibold text-[#ef9e59]"><ArrowLeft className="h-4 w-4" />Ver fotógrafos</Link></main></div>;
+  if (isLoading) return <div className="public-page"><PublicHeader /><main className="container pt-16">Carregando ficha…</main></div>;
+  if (!data?.photographer) return <div className="public-page"><PublicHeader /><main className="container pt-16"><h1 className="font-serif text-4xl">Fotógrafo indisponível.</h1><Link href="/fotografos" className="mt-6 inline-flex gap-2 text-sm font-semibold text-oju-dende"><ArrowLeft className="h-4 w-4" />Ver fotógrafos</Link></main></div>;
   const photographer = data.photographer;
   return (
-    <div className="min-h-screen bg-[#070605] text-white">
-      <PublicHeader cinematic />
-      <main className="container pb-20 pt-32">
-        <Link href="/fotografos" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-[#ef9e59]"><ArrowLeft className="h-4 w-4" />Fotógrafos no Ojú</Link>
-        <div className="mt-10 grid gap-10 border-t border-white/10 pt-10 lg:grid-cols-[.9fr_1.1fr] lg:items-end">
+    <div className="public-page">
+      <PublicHeader />
+      <main className="container pb-20 pt-16">
+        <Link href="/fotografos" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-oju-dende"><ArrowLeft className="h-4 w-4" />Fotógrafos no Ojú</Link>
+        <div className="mt-10 grid gap-10 border-t border-oju-terra/10 pt-10 lg:grid-cols-[.9fr_1.1fr] lg:items-end">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#9aacd8]">Autoria visual</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-oju-verde">Autoria visual</p>
             <h1 className="mt-4 font-serif text-5xl sm:text-7xl">{photographer.displayName}</h1>
-            <p className="mt-4 text-sm text-white/50">{photographer.specialty}</p>
+            <p className="mt-4 text-sm text-oju-terra-suave">{photographer.specialty}</p>
           </div>
           <div>
-            {photographer.profileNote ? <p className="max-w-2xl text-base leading-7 text-white/70">{photographer.profileNote}</p> : null}
-            {photographer.instagramHandle ? <p className="mt-4"><AuthorizedInstagram handle={photographer.instagramHandle} className="text-sm font-semibold text-[#9aacd8]" /></p> : null}
-            <p className="mt-6 max-w-2xl text-sm leading-6 text-white/50">Esta página reúne conteúdos do Ojú em que a fotografia foi creditada a esta pessoa. Não é um portfólio independente.</p>
+            {photographer.profileNote ? <p className="max-w-2xl text-base leading-7 text-oju-terra-suave">{photographer.profileNote}</p> : null}
+            {photographer.instagramHandle ? <p className="mt-4"><AuthorizedInstagram handle={photographer.instagramHandle} className="text-sm font-semibold text-oju-verde" /></p> : null}
+            <p className="mt-6 max-w-2xl text-sm leading-6 text-oju-terra-suave">Esta página reúne conteúdos do Ojú em que a fotografia foi creditada a esta pessoa. Não é um portfólio independente.</p>
           </div>
         </div>
         <section className="mt-14">
-          <div className="mb-6 flex items-center gap-3"><Camera className="h-5 w-5 text-[#ef9e59]" /><h2 className="font-serif text-3xl">No acervo editorial</h2></div>
+          <div className="mb-6 flex items-center gap-3"><Camera className="h-5 w-5 text-oju-dende" /><h2 className="font-serif text-3xl">No acervo editorial</h2></div>
           {data.items.length ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {data.items.map(item => (
-                <Link key={item.id} href={`/historias/${item.slug}`} className="border border-white/15 bg-[#100d0a] p-5 transition hover:border-[#ef9e59]/75">
-                  <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ef9e59]">{item.contentKind}</p>
+                <Link key={item.id} href={`/historias/${item.slug}`} className="border border-oju-terra/12 bg-oju-paz-claro p-5 transition hover:border-oju-dourado/50">
+                  <p className="text-[10px] font-bold uppercase tracking-[.14em] text-oju-dende">{item.contentKind}</p>
                   <h3 className="mt-3 font-serif text-2xl">{item.title}</h3>
-                  {item.summary ? <p className="mt-3 line-clamp-3 text-sm leading-6 text-white/65">{item.summary}</p> : null}
-                  <span className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-[#ef9e59]">Ler no Ojú <ArrowRight className="h-4 w-4" /></span>
+                  {item.summary ? <p className="mt-3 line-clamp-3 text-sm leading-6 text-oju-terra-suave">{item.summary}</p> : null}
+                  <span className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-oju-dende">Ler no Ojú <ArrowRight className="h-4 w-4" /></span>
                 </Link>
               ))}
             </div>
           ) : (
-            <p className="border border-dashed border-white/20 p-8 text-sm text-white/60">Ainda não há publicações visíveis com crédito deste fotógrafo.</p>
+            <p className="border border-dashed border-oju-terra/20 p-8 text-sm text-oju-terra-suave">Ainda não há publicações visíveis com crédito deste fotógrafo.</p>
           )}
         </section>
       </main>

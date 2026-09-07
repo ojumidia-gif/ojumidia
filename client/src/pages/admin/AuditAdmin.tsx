@@ -17,21 +17,21 @@ export default function AuditAdmin() {
             <div className="rounded-xl bg-[#f6d978] p-3"><ScrollText className="h-5 w-5" /></div>
             <div>
               <p className="font-serif text-2xl">Quem fez o quê, e quando.</p>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-[#655e52]">
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-oju-terra-suave">
                 A trilha não se apaga. A visão Operação esconde login, upload técnico e tentativas de expurgo. Completa mostra o registro inteiro. Senhas e tokens nunca entram aqui.
               </p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button type="button" size="sm" variant={view === "operacao" ? "default" : "outline"} className={view === "operacao" ? "bg-[#242017] text-white" : ""} onClick={() => { setView("operacao"); setOffset(0); }}>Operação</Button>
-            <Button type="button" size="sm" variant={view === "completa" ? "default" : "outline"} className={view === "completa" ? "bg-[#242017] text-white" : ""} onClick={() => { setView("completa"); setOffset(0); }}>Trilha completa</Button>
+            <Button type="button" size="sm" variant={view === "operacao" ? "default" : "outline"} className={view === "operacao" ? "bg-oju-verde text-oju-branco" : ""} onClick={() => { setView("operacao"); setOffset(0); }}>Operação</Button>
+            <Button type="button" size="sm" variant={view === "completa" ? "default" : "outline"} className={view === "completa" ? "bg-oju-verde text-oju-branco" : ""} onClick={() => { setView("completa"); setOffset(0); }}>Trilha completa</Button>
           </div>
         </div>
       </section>
-      {log.isLoading ? <p className="mt-6 text-sm text-[#655e52]">Carregando eventos...</p> : log.data?.length ? (
+      {log.isLoading ? <p className="mt-6 text-sm text-oju-terra-suave">Carregando eventos...</p> : log.data?.length ? (
         <div className="mt-6 overflow-x-auto admin-card">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-[#eee9dc] text-[11px] uppercase tracking-[.12em] text-[#655e52]">
+            <thead className="bg-oju-papel text-[11px] uppercase tracking-[.12em] text-oju-terra-suave">
               <tr>
                 <th className="px-5 py-3">Quando</th>
                 <th className="px-5 py-3">Ação</th>
@@ -41,11 +41,11 @@ export default function AuditAdmin() {
             </thead>
             <tbody>
               {log.data.map(event => (
-                <tr key={event.id} className="border-t border-[#242017]/8">
+                <tr key={event.id} className="border-t border-oju-terra/10">
                   <td className="px-5 py-3 whitespace-nowrap">{new Date(event.createdAt).toLocaleString("pt-BR")}</td>
                   <td className="px-5 py-3 font-medium">{labelAuditAction(event.action)}</td>
-                  <td className="px-5 py-3 text-[#655e52]">{event.resourceType}{event.resourceId ? ` #${event.resourceId}` : ""}</td>
-                  <td className="px-5 py-3 text-[#655e52]">{event.detail}</td>
+                  <td className="px-5 py-3 text-oju-terra-suave">{event.resourceType}{event.resourceId ? ` #${event.resourceId}` : ""}</td>
+                  <td className="px-5 py-3 text-oju-terra-suave">{event.detail}</td>
                 </tr>
               ))}
             </tbody>

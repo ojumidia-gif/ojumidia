@@ -397,24 +397,24 @@ export function CoverageMediaPanel({
               : `Fotos e vídeos de ${contentKind}`}
           </p>
 
-          <p className="mt-1 text-sm text-[#655e52]">
+          <p className="mt-1 text-sm text-oju-terra-suave">
             {documentaryPhotos
               ? "Envie no máximo cinco fotografias. Título, data, local e biografia viva são obrigatórios em cada imagem."
               : `Até ${MAX_PHOTOS} fotos e ${MAX_VIDEOS} vídeos curtos. A estrela “Usar como capa” define a imagem que abre este ${contentKind.toLowerCase()} no portal.`}
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <p className="inline-flex rounded-full bg-[#eee9dc] px-3 py-1 text-xs font-bold text-[#655e52]">
+            <p className="inline-flex rounded-full bg-oju-papel px-3 py-1 text-xs font-bold text-oju-terra-suave">
               Fotos {photoCount} / {MAX_PHOTOS}
             </p>
 
-            <p className="inline-flex rounded-full bg-[#eee9dc] px-3 py-1 text-xs font-bold text-[#655e52]">
+            <p className="inline-flex rounded-full bg-oju-papel px-3 py-1 text-xs font-bold text-oju-terra-suave">
               Vídeos {videoCount} / {documentaryPhotos ? 0 : MAX_VIDEOS}
             </p>
           </div>
 
           {eventNames.length > 0 && (
-            <p className="mt-3 rounded-xl border border-[#806817]/20 bg-[#fff7dc] px-3 py-2 text-xs leading-5 text-[#655e52]">
+            <p className="mt-3 rounded-xl border border-[#806817]/20 bg-[#fff7dc] px-3 py-2 text-xs leading-5 text-oju-terra-suave">
               Relacionado ao Evento:{" "}
               <strong>{eventNames.join(", ")}</strong>.
               Os limites acima permanecem obrigatórios.
@@ -506,7 +506,7 @@ export function CoverageMediaPanel({
         <div className="flex justify-end md:col-span-2">
           <Button
             disabled={isBusy}
-            className="bg-[#242017] text-white"
+            className="bg-oju-verde text-oju-branco"
           >
             <UploadCloud className="mr-2 h-4 w-4" />
 
@@ -519,7 +519,7 @@ export function CoverageMediaPanel({
         </div>
       </form>
 
-      <section className="mt-8 border-t border-[#242017]/10 pt-6">
+      <section className="mt-8 border-t border-oju-terra/10 pt-6">
         <p className="text-sm font-semibold">
           Materiais vinculados
         </p>
@@ -529,7 +529,7 @@ export function CoverageMediaPanel({
             existingMedia.map((media) => (
               <div
                 key={media.id}
-                className="flex items-center justify-between rounded-xl border border-[#242017]/10 bg-[#faf8f2] px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-xl border border-oju-terra/10 bg-oju-paz-claro px-3 py-2 text-sm"
               >
                 <span className="flex items-center gap-2">
                   {media.mediaType === "foto" ? (
@@ -540,7 +540,7 @@ export function CoverageMediaPanel({
 
                   {media.filename ||
                     `${media.mediaType} #${media.id}`}
-                  {media.isCover ? <span className="rounded-full bg-[#f6b71b] px-2 py-0.5 text-[10px] font-bold text-[#242017]">Capa</span> : null}
+                  {media.isCover ? <span className="rounded-full bg-oju-dourado px-2 py-0.5 text-[10px] font-bold text-oju-terra">Capa</span> : null}
                 </span>
 
                 <div className="flex gap-2">
@@ -576,20 +576,20 @@ export function CoverageMediaPanel({
               </div>
             ))
           ) : (
-            <p className="text-sm text-[#655e52]">
+            <p className="text-sm text-oju-terra-suave">
               Nenhum material vinculado.
             </p>
           )}
         </div>
       </section>
 
-      <div className="mt-8 border-t border-[#242017]/10 pt-6">
+      <div className="mt-8 border-t border-oju-terra/10 pt-6">
         <p className="text-sm font-semibold">
           Acervo disponível
         </p>
 
         {documentaryPhotos && (
-          <p className="mt-1 text-xs text-[#655e52]">
+          <p className="mt-1 text-xs text-oju-terra-suave">
             Preencha os campos de contexto antes de
             reutilizar uma foto.
           </p>
@@ -599,10 +599,10 @@ export function CoverageMediaPanel({
           {available.map((media) => (
             <div
               key={media.id}
-              className="flex items-center justify-between rounded-xl border border-[#242017]/10 bg-white p-3"
+              className="flex items-center justify-between rounded-xl border border-oju-terra/10 bg-white p-3"
             >
               <span className="flex items-center gap-2 text-sm">
-                <span className="rounded bg-[#eee9dc] p-1">
+                <span className="rounded bg-oju-papel p-1">
                   {media.mediaType === "foto" ? (
                     <ImagePlus className="h-4 w-4" />
                   ) : (

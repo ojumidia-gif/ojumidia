@@ -39,7 +39,7 @@ export default function TeamsAdmin() {
 
   return (
     <AdminPage eyebrow="Equipes e créditos" title="Pessoas, papéis e cobertura.">
-      <p className="mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">
+      <p className="mb-6 max-w-3xl text-sm leading-6 text-oju-terra-suave">
         Crédito de matéria reaproveita o mesmo nome. Arquivar tira a equipe da lista sem apagar o histórico. Excluir só vale se nenhuma matéria usa o crédito.
         {principal ? " Unificar duplicatas junta o mesmo nome na equipe mais antiga." : " Você vê as equipes que criou ou que já usa nas suas matérias."}
       </p>
@@ -55,14 +55,14 @@ export default function TeamsAdmin() {
           </div>
           <form className="mt-5 flex gap-2" onSubmit={event => { event.preventDefault(); create.mutate({ name }); }}>
             <Input required minLength={2} value={name} onChange={event => setName(event.target.value)} placeholder="Nome da equipe" />
-            <Button disabled={create.isPending} className="bg-[#242017] text-white">Criar</Button>
+            <Button disabled={create.isPending} className="bg-oju-verde text-oju-branco">Criar</Button>
           </form>
           <div className="mt-6 grid gap-2">
             {active.length ? active.map(team => (
-              <div key={team.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#eee9dc] px-4 py-3">
+              <div key={team.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-oju-papel px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">{team.name}</p>
-                  <p className="mt-1 text-[11px] text-[#655e52]">{team.usageCount ? `${team.usageCount} matéria(s)` : "Sem matérias ainda"}</p>
+                  <p className="mt-1 text-[11px] text-oju-terra-suave">{team.usageCount ? `${team.usageCount} matéria(s)` : "Sem matérias ainda"}</p>
                 </div>
                 <div className="flex gap-2">
                   {principal || team.createdBy === user?.id ? (
@@ -75,18 +75,18 @@ export default function TeamsAdmin() {
                   ) : <p className="text-[11px] text-[#806817]">Crédito em uso nas suas matérias</p>}
                 </div>
               </div>
-            )) : <p className="text-sm text-[#655e52]">Nenhuma equipe ativa.</p>}
+            )) : <p className="text-sm text-oju-terra-suave">Nenhuma equipe ativa.</p>}
           </div>
           {principal && archived.length ? (
-            <div className="mt-6 border-t border-[#242017]/10 pt-4">
+            <div className="mt-6 border-t border-oju-terra/10 pt-4">
               <button type="button" className="text-sm font-semibold text-[#806817]" onClick={() => setShowArchived(value => !value)}>
                 {showArchived ? "Ocultar arquivo" : `Ver arquivo (${archived.length})`}
               </button>
               {showArchived ? (
                 <div className="mt-3 grid gap-2">
                   {archived.map(team => (
-                    <div key={team.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-[#242017]/20 px-4 py-3">
-                      <p className="text-sm text-[#655e52]">{team.name}</p>
+                    <div key={team.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-oju-terra/20 px-4 py-3">
+                      <p className="text-sm text-oju-terra-suave">{team.name}</p>
                       <div className="flex gap-2">
                         <Button type="button" size="sm" variant="outline" onClick={() => restore.mutate({ id: team.id })}>Restaurar</Button>
                         {team.usageCount === 0 ? (
@@ -102,12 +102,12 @@ export default function TeamsAdmin() {
         </section>
         {principal ? (
           <section className="admin-card overflow-hidden">
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#242017]/10 px-6 py-5">
+            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-oju-terra/10 px-6 py-5">
               <div>
                 <p className="font-serif text-2xl">Quem entra no painel</p>
-                <p className="mt-1 text-sm text-[#655e52]">Papel administrativo só muda em Colaboradores, com termo via gov.br.</p>
+                <p className="mt-1 text-sm text-oju-terra-suave">Papel administrativo só muda em Colaboradores, com termo via gov.br.</p>
               </div>
-              <Link href="/admin/colaboradores" className="inline-flex h-9 items-center rounded-md bg-[#242017] px-3 text-sm font-medium text-white">Gerenciar colaboradores</Link>
+              <Link href="/admin/colaboradores" className="inline-flex h-9 items-center rounded-md bg-oju-verde-profundo px-3 text-sm font-medium text-white">Gerenciar colaboradores</Link>
             </div>
             {users?.length ? (
               <div>
@@ -115,9 +115,9 @@ export default function TeamsAdmin() {
                   <div key={person.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[#242017]/7 px-6 py-4">
                     <div>
                       <p className="font-medium">{person.name || person.email || "Membro da equipe"}</p>
-                      <p className="mt-1 text-xs text-[#655e52]">{person.email}</p>
+                      <p className="mt-1 text-xs text-oju-terra-suave">{person.email}</p>
                     </div>
-                    <span className="rounded-full bg-[#eee9dc] px-3 py-1 text-sm capitalize">{person.role}</span>
+                    <span className="rounded-full bg-oju-papel px-3 py-1 text-sm capitalize">{person.role}</span>
                   </div>
                 ))}
               </div>

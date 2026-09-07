@@ -16,9 +16,14 @@ import { firebasePreviewAssets, isStaticFirebasePreview } from "@/lib/runtimeMod
 
 const FALLBACK_HERO_VIDEO = "/oju-assets/orixas-transicao-ritual-cinematografica.mp4";
 
-function FrontCard({ label, title, action, href, accent }: { label: string; title: string; action: string; href: string; accent: "dende" | "indigo" | "paz" }) {
-  const tone = accent === "indigo" ? { hover: "hover:border-[#9aacd8]/80", kicker: "text-[#9aacd8]", wash: "rgba(44,58,107,.55)" } : accent === "paz" ? { hover: "hover:border-[#8dda95]/70", kicker: "text-[#8dda95]", wash: "rgba(111,189,119,.28)" } : { hover: "hover:border-[#ef9e59]/80", kicker: "text-[#ef9e59]", wash: "rgba(180,111,56,.45)" };
-  return <Link href={href} className={`group relative min-h-36 overflow-hidden border border-white/15 bg-[#17130f] p-5 text-white transition ${tone.hover}`}><div className="absolute inset-0" style={{ background: `radial-gradient(circle at 90% 20%, ${tone.wash}, transparent 30%), linear-gradient(110deg, rgba(17,14,11,.25), rgba(17,14,11,.85))` }} /><div className="relative"><p className={`text-[11px] font-semibold uppercase tracking-[.14em] ${tone.kicker}`}>{label}</p><h3 className="mt-3 max-w-none font-serif text-2xl leading-[1.05] sm:max-w-[15rem]">{title}</h3><span className={`mt-5 inline-flex items-center gap-2 text-sm font-semibold ${tone.kicker}`}>{action} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></div></Link>;
+function FrontCard({ label, title, action, href }: { label: string; title: string; action: string; href: string }) {
+  return (
+    <Link href={href} className="group relative min-h-36 overflow-hidden border border-oju-terra/12 bg-oju-paz-claro p-5 text-oju-terra transition hover:border-oju-dourado/50">
+      <p className="editorial-kicker">{label}</p>
+      <h3 className="mt-3 max-w-none font-serif text-2xl leading-[1.05] sm:max-w-[15rem]">{title}</h3>
+      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-oju-verde">{action} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+    </Link>
+  );
 }
 type FeaturedContent = { eyebrow: string; title: string; emptyMessage: string; allLabel: string; allHref: string };
 type EditorialFrontsContent = { items: Array<{ label: string; title: string; action: string; href: string }> };
@@ -79,11 +84,140 @@ export default function Home() {
     if (next >= 5) { setAdminTapCount(0); setLocation("/admin"); }
   };
 
-  return <div className="min-h-screen bg-[#070605] text-white"><PageMeta title="Ojú Mídia — memória negra, casa e chão" description="Documentação afro-brasileira e de religiosidades de matriz africana, com crédito, território e autorização." /><main><section className="relative min-h-[min(92svh,680px)] overflow-hidden border-b border-white/10 bg-[#100d0a] sm:min-h-[680px]"><PublicHeader cinematic includeSiteFooter={false} />{heroVideos.map((video, index) => <video key={video.id ?? video.assetUrl} ref={element => { heroVideoRefs.current[index] = element; }} muted={isMuted || index !== heroIndex} playsInline preload={index === heroIndex || (preloadNext && index === nextIndex) ? "auto" : "metadata"} className="absolute inset-0 h-full w-full object-cover transition-opacity ease-out" style={{ opacity: index === heroIndex ? 1 : 0, transitionDuration: `${transitionMilliseconds}ms` }} src={video.assetUrl} />)}<div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,.94)_0%,rgba(0,0,0,.72)_39%,rgba(0,0,0,.18)_72%,rgba(0,0,0,.5)_100%)]" /><div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(0,0,0,.7),transparent_38%)]" /><div className="relative container flex min-h-[min(92svh,680px)] items-end pb-24 pt-28 sm:min-h-[680px] sm:pb-20 sm:pt-32">{hero && <div className="max-w-xl"><p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#ef9e59]">{hero.eyebrow}</p><h1 className="mt-5 break-words font-serif text-4xl leading-[.95] tracking-tight sm:text-7xl">{hero.title}</h1><p className="mt-6 max-w-md text-base leading-7 text-white/80">{hero.description}</p><div className="mt-8 flex flex-wrap items-center gap-5">{hero.ctaLabel && hero.ctaHref && <Link href={hero.ctaHref} className="inline-flex items-center gap-4 bg-[#ed9c58] px-6 py-4 text-xs font-bold uppercase tracking-[.08em] text-[#24140b] transition hover:bg-[#f4b273]">{hero.ctaLabel} <ArrowRight className="h-5 w-5" /></Link>}{hero.secondaryLabel && hero.secondaryHref && <Link href={hero.secondaryHref} className="inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[.08em] text-white"><span className="grid h-9 w-9 place-items-center rounded-full border border-white/80"><Play className="ml-0.5 h-4 w-4" /></span>{hero.secondaryLabel}</Link>}{heroVideo?.assetUrl ? <button type="button" onClick={playHero} className="text-xs font-bold uppercase tracking-[.08em] text-white/70">Assistir miniclipe</button> : null}</div></div>}</div><div className="absolute inset-x-4 bottom-4 z-10 flex items-end justify-between gap-3 sm:inset-x-7 sm:bottom-7">{heroVideo?.credit ? <p className="min-w-0 max-w-[58%] text-[10px] font-bold uppercase tracking-[.08em] text-white/55 sm:max-w-xs sm:tracking-[.12em]" aria-live="polite">Vídeo · {heroVideo.credit}</p> : <span /> }{heroVideo?.assetUrl ? <div className="flex shrink-0 items-center gap-2 text-white/80 sm:gap-3">{heroVideos.map((video, index) => <button type="button" key={video.id ?? video.assetUrl} onClick={() => selectIndex(index)} className={`h-2 w-2 rounded-full ${index === heroIndex ? "bg-[#ef9e59]" : "bg-white/60"}`} aria-label={`Exibir miniclipe ${index + 1}`} />)}<button type="button" onClick={toggleMute} className="ml-3 grid h-9 w-9 place-items-center rounded-full border border-white/60 sm:ml-6" aria-pressed={!isMuted} aria-label={isMuted ? "Ativar som do miniclipe" : "Silenciar miniclipe"}>{isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}</button></div> : <p className="hero-admin-hint max-w-[42%] text-right text-[10px] font-bold uppercase tracking-[.12em] text-white/55">Ative um miniclipe autorizado no Centro Administrativo.</p>}</div></section>
-    {featured && <section className="container py-10 sm:py-12"><div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#c9a27a]">{featured.eyebrow}</p><h2 className="mt-2 font-serif text-3xl sm:text-4xl">{featured.title}</h2></div><Link href={featured.allHref} className="inline-flex items-center gap-2 text-sm font-semibold text-[#ef9e59]">{featured.allLabel} <ArrowRight className="h-4 w-4" /></Link></div>{cards.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{cards.map(item => <PublicCoverCard key={item.id} href={`/historias/${item.slug}`} kicker={item.contentKind} title={item.title} meta={[item.territoryName, item.photographerName].filter(Boolean).join(" · ") || "Ver conteúdo"} coverUrl={item.coverUrl} coverType={item.coverType} coverCredit={item.coverCredit} />)}</div> : <div className="border border-dashed border-white/20 px-6 py-12 text-center text-sm text-white/60">{featured.emptyMessage}</div>}</section>}
-    {editorialFronts && <section className="container grid gap-3 pb-10 sm:grid-cols-2 lg:grid-cols-4">{editorialFronts.items.map((entry, index) => <FrontCard key={entry.href} {...entry} accent={index === 1 ? "indigo" : index === 2 ? "paz" : index === 3 ? "indigo" : "dende"} />)}</section>}
-    <OjuMethod compact />
-    {activeAds?.length ? <section className="border-y border-white/10 bg-[#0c0907]"><div className="container py-10"><div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ef9e59]">Divulgação contratada</p><h2 className="mt-2 font-serif text-3xl">Serviços e parceiros</h2></div><p className="max-w-sm text-xs leading-5 text-white/55">Este espaço comercial é identificado e não integra a curadoria editorial.</p></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{activeAds.map(ad => <article key={ad.id} className="overflow-hidden rounded border border-white/15 bg-[#17130f]">{ad.mediaUrl && (ad.mediaType === "vídeo" ? <video muted autoPlay loop playsInline className="aspect-[16/9] w-full object-cover" src={ad.mediaUrl} /> : <img className="aspect-[16/9] w-full object-cover" src={ad.mediaUrl} alt={ad.title} />)}<div className="p-4"><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#ef9e59]">Divulgação contratada · {ad.format}</p><h3 className="mt-3 font-serif text-2xl">{ad.title}</h3>{ad.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/65">{ad.description}</p>}<a href={ad.contact.startsWith("http") ? ad.contact : `https://wa.me/${ad.contact.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.08em] text-[#ef9e59]">Entrar em contato <ArrowRight className="h-4 w-4" /></a></div></article>)}</div></div></section> : null}
-    {planning && <section className="container pb-10 pt-10"><div className="grid gap-6 border border-[#4b2d19] bg-[linear-gradient(100deg,#26180f,#51301d,#1b120d)] p-6 sm:grid-cols-[auto_1fr_auto] sm:items-center"><Camera className="h-12 w-12 text-[#ef9e59]" /><div><h2 className="font-serif text-3xl">{planning.title}</h2><p className="mt-2 max-w-xl text-sm leading-6 text-white/75">{planning.description}</p></div>{planning.ctaLabel && planning.ctaHref && <Link href={planning.ctaHref} className="inline-flex w-full items-center justify-center gap-3 bg-[#ed9c58] px-6 py-4 text-xs font-bold uppercase tracking-[.08em] text-[#24140b] sm:w-auto">{planning.ctaLabel} <ArrowRight className="h-5 w-5" /></Link>}</div></section>}
-  </main><PublicFooter cinematic onBrandClick={signalAdminEntry} /></div>;
+  return (
+    <div className="public-page">
+      <PageMeta title="Ojú Mídia — memória negra, casa e chão" description="Documentação afro-brasileira e de religiosidades de matriz africana, com crédito, território e autorização." />
+      <main>
+        <section className="relative min-h-[min(92svh,680px)] overflow-hidden border-b border-white/10 bg-oju-preto-filme text-oju-branco sm:min-h-[680px]">
+          <PublicHeader cinematic includeSiteFooter={false} />
+          {heroVideos.map((video, index) => (
+            <video
+              key={video.id ?? video.assetUrl}
+              ref={element => { heroVideoRefs.current[index] = element; }}
+              muted={isMuted || index !== heroIndex}
+              playsInline
+              preload={index === heroIndex || (preloadNext && index === nextIndex) ? "auto" : "metadata"}
+              className="absolute inset-0 h-full w-full object-cover transition-opacity ease-out"
+              style={{ opacity: index === heroIndex ? 1 : 0, transitionDuration: `${transitionMilliseconds}ms` }}
+              src={video.assetUrl}
+            />
+          ))}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,6,5,.94)_0%,rgba(7,6,5,.72)_39%,rgba(7,6,5,.18)_72%,rgba(7,6,5,.5)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(7,6,5,.7),transparent_38%)]" />
+          <div className="relative container flex min-h-[min(92svh,680px)] items-end pb-24 pt-28 sm:min-h-[680px] sm:pb-20 sm:pt-32">
+            {hero && (
+              <div className="max-w-xl">
+                <p className="text-[11px] font-bold uppercase tracking-[.14em] text-oju-dourado-claro">{hero.eyebrow}</p>
+                <h1 className="mt-5 break-words font-serif text-4xl leading-[.95] tracking-tight sm:text-7xl">{hero.title}</h1>
+                <p className="mt-6 max-w-md text-base leading-7 text-white/80">{hero.description}</p>
+                <div className="mt-8 flex flex-wrap items-center gap-5">
+                  {hero.ctaLabel && hero.ctaHref && (
+                    <Link href={hero.ctaHref} className="public-cta">{hero.ctaLabel} <ArrowRight className="h-5 w-5" /></Link>
+                  )}
+                  {hero.secondaryLabel && hero.secondaryHref && (
+                    <Link href={hero.secondaryHref} className="inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[.08em] text-white">
+                      <span className="grid h-9 w-9 place-items-center rounded-full border border-white/80"><Play className="ml-0.5 h-4 w-4" /></span>
+                      {hero.secondaryLabel}
+                    </Link>
+                  )}
+                  {heroVideo?.assetUrl ? <button type="button" onClick={playHero} className="text-xs font-bold uppercase tracking-[.08em] text-white/70">Assistir miniclipe</button> : null}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="absolute inset-x-4 bottom-4 z-10 flex items-end justify-between gap-3 sm:inset-x-7 sm:bottom-7">
+            {heroVideo?.credit ? (
+              <p className="min-w-0 max-w-[58%] text-[10px] font-bold uppercase tracking-[.08em] text-white/55 sm:max-w-xs sm:tracking-[.12em]" aria-live="polite">Vídeo · {heroVideo.credit}</p>
+            ) : <span />}
+            {heroVideo?.assetUrl ? (
+              <div className="flex shrink-0 items-center gap-2 text-white/80 sm:gap-3">
+                {heroVideos.map((video, index) => (
+                  <button type="button" key={video.id ?? video.assetUrl} onClick={() => selectIndex(index)} className={`h-2 w-2 rounded-full ${index === heroIndex ? "bg-oju-dourado" : "bg-white/60"}`} aria-label={`Exibir miniclipe ${index + 1}`} />
+                ))}
+                <button type="button" onClick={toggleMute} className="ml-3 grid h-9 w-9 place-items-center rounded-full border border-white/60 sm:ml-6" aria-pressed={!isMuted} aria-label={isMuted ? "Ativar som do miniclipe" : "Silenciar miniclipe"}>
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </button>
+              </div>
+            ) : (
+              <p className="hero-admin-hint max-w-[42%] text-right text-[10px] font-bold uppercase tracking-[.12em] text-white/55">Ative um miniclipe autorizado no Centro Administrativo.</p>
+            )}
+          </div>
+        </section>
+
+        {featured && (
+          <section className="container py-16 sm:py-20">
+            <div className="mb-10 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="editorial-kicker">{featured.eyebrow}</p>
+                <h2 className="mt-2 font-serif text-3xl sm:text-4xl">{featured.title}</h2>
+              </div>
+              <Link href={featured.allHref} className="inline-flex items-center gap-2 text-sm font-semibold text-oju-verde">{featured.allLabel} <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            {cards.length ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {cards.map(item => (
+                  <PublicCoverCard key={item.id} href={`/historias/${item.slug}`} kicker={item.contentKind} title={item.title} meta={[item.territoryName, item.photographerName].filter(Boolean).join(" · ") || "Ver conteúdo"} coverUrl={item.coverUrl} coverType={item.coverType} coverCredit={item.coverCredit} />
+                ))}
+              </div>
+            ) : (
+              <div className="border border-dashed border-oju-terra/20 px-6 py-12 text-center text-sm text-oju-terra-suave">{featured.emptyMessage}</div>
+            )}
+          </section>
+        )}
+
+        {editorialFronts && (
+          <section className="container grid gap-4 pb-16 sm:grid-cols-2 lg:grid-cols-4">
+            {editorialFronts.items.map(entry => <FrontCard key={entry.href} {...entry} />)}
+          </section>
+        )}
+
+        <OjuMethod compact />
+
+        {activeAds?.length ? (
+          <section className="border-y border-oju-terra/10 bg-oju-papel">
+            <div className="container py-16">
+              <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p className="editorial-kicker">Divulgação contratada</p>
+                  <h2 className="mt-2 font-serif text-3xl">Serviços e parceiros</h2>
+                </div>
+                <p className="max-w-sm text-xs leading-5 text-oju-terra-suave">Este espaço comercial é identificado e não integra a curadoria editorial.</p>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {activeAds.map(ad => (
+                  <article key={ad.id} className="overflow-hidden border border-oju-terra/12 bg-oju-paz-claro">
+                    {ad.mediaUrl && (ad.mediaType === "vídeo"
+                      ? <video muted autoPlay loop playsInline className="aspect-[16/9] w-full object-cover" src={ad.mediaUrl} />
+                      : <img className="aspect-[16/9] w-full object-cover" src={ad.mediaUrl} alt={ad.title} />)}
+                    <div className="p-5">
+                      <p className="editorial-kicker">Divulgação contratada · {ad.format}</p>
+                      <h3 className="mt-3 font-serif text-2xl">{ad.title}</h3>
+                      {ad.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-oju-terra-suave">{ad.description}</p>}
+                      <a href={ad.contact.startsWith("http") ? ad.contact : `https://wa.me/${ad.contact.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.08em] text-oju-verde">Entrar em contato <ArrowRight className="h-4 w-4" /></a>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {planning && (
+          <section className="container pb-20 pt-16">
+            <div className="grid gap-6 border border-oju-verde/20 bg-oju-verde-profundo p-8 text-oju-branco sm:grid-cols-[auto_1fr_auto] sm:items-center">
+              <Camera className="h-12 w-12 text-oju-dourado-claro" />
+              <div>
+                <h2 className="font-serif text-3xl">{planning.title}</h2>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-white/80">{planning.description}</p>
+              </div>
+              {planning.ctaLabel && planning.ctaHref && (
+                <Link href={planning.ctaHref} className="inline-flex w-full items-center justify-center gap-3 bg-oju-paz px-6 py-4 text-xs font-bold uppercase tracking-[.08em] text-oju-verde-profundo sm:w-auto">{planning.ctaLabel} <ArrowRight className="h-5 w-5" /></Link>
+              )}
+            </div>
+          </section>
+        )}
+      </main>
+      <PublicFooter cinematic={false} onBrandClick={signalAdminEntry} />
+    </div>
+  );
 }

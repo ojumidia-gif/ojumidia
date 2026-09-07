@@ -20,9 +20,9 @@ type StoryMedia = {
 
 function MediaCredit({ media }: { media: StoryMedia }) {
   return (
-    <figcaption className="px-4 py-3 text-sm leading-6 text-white/60">
-      {media.photographer?.slug ? <Link href={`/fotografos/${media.photographer.slug}`} className="text-[#ef9e59]">{media.photographer.displayName}</Link> : media.credit}
-      {media.photographer?.instagramHandle ? <> · <AuthorizedInstagram handle={media.photographer.instagramHandle} className="text-[#9aacd8]" /></> : null}
+    <figcaption className="px-4 py-3 text-sm leading-6 text-white/70">
+      {media.photographer?.slug ? <Link href={`/fotografos/${media.photographer.slug}`} className="text-oju-dourado-claro">{media.photographer.displayName}</Link> : media.credit}
+      {media.photographer?.instagramHandle ? <> · <AuthorizedInstagram handle={media.photographer.instagramHandle} className="text-oju-dourado-claro" /></> : null}
       {media.origin ? ` · ${media.origin}` : ""}
     </figcaption>
   );
@@ -33,7 +33,7 @@ function StoryFigure({ media, alt }: { media: StoryMedia; alt: string }) {
     <figure className="overflow-hidden border border-white/12 bg-black">
       {media.mediaType === "vídeo" ? <video controls className="aspect-video w-full" src={media.assetUrl} /> : <img src={media.assetUrl} alt={alt} className="w-full object-cover" />}
       <MediaCredit media={media} />
-      <Link href={`/licenciar-midia?mid=${media.id}`} className="block border-t border-white/10 px-4 py-3 text-[11px] font-semibold tracking-[.08em] text-[#9aacd8]">Solicitar uso desta mídia</Link>
+      <Link href={`/licenciar-midia?mid=${media.id}`} className="block border-t border-white/10 px-4 py-3 text-[11px] font-semibold tracking-[.08em] text-oju-dourado-claro">Solicitar uso desta mídia</Link>
     </figure>
   );
 }
@@ -43,8 +43,8 @@ export default function Story() {
   const { data, isLoading } = trpc.editorial.bySlug.useQuery({ slug: params?.slug || "" }, { enabled: Boolean(params?.slug), refetchInterval: 30000 });
   const utils = trpc.useUtils();
   useEditorialLive(() => { utils.editorial.bySlug.invalidate(); });
-  if (isLoading) return <div className="min-h-screen bg-[#070605] text-white"><PublicHeader cinematic /><main className="container pt-32">Carregando conteúdo...</main></div>;
-  if (!data) return <div className="min-h-screen bg-[#070605] text-white"><PublicHeader cinematic /><main className="container pt-32"><h1 className="font-serif text-4xl">Conteúdo indisponível.</h1><Link href="/" className="mt-6 inline-flex gap-2 text-sm font-semibold text-[#ef9e59]"><ArrowLeft className="h-4 w-4" />Voltar ao portal</Link></main></div>;
+  if (isLoading) return <div className="public-page"><PublicHeader /><main className="container pt-16">Carregando conteúdo...</main></div>;
+  if (!data) return <div className="public-page"><PublicHeader /><main className="container pt-16"><h1 className="font-serif text-4xl">Conteúdo indisponível.</h1><Link href="/" className="mt-6 inline-flex gap-2 text-sm font-semibold text-oju-verde"><ArrowLeft className="h-4 w-4" />Voltar ao portal</Link></main></div>;
   const cover = (data.media.find(item => item.isCover) || data.media[0]) as StoryMedia | undefined;
   const remainingMedia = data.media.filter(item => item.id !== cover?.id) as StoryMedia[];
   const territory = data.taxonomies.find(item => item.dimension === "Território");
@@ -66,43 +66,43 @@ export default function Story() {
     return { block, photo: takePhoto ? leftoverMedia.shift() : undefined };
   });
   return (
-    <div className="min-h-screen bg-[#0a0807] text-white">
+    <div className="public-page">
       <PageMeta title={`${data.title} — Ojú Mídia`} description={data.summary || data.subtitle || "Registro documental da Ojú Mídia, com crédito e autorização."} image={cover?.assetUrl} url={typeof window !== "undefined" ? window.location.href : undefined} />
-      <PublicHeader cinematic />
+      <PublicHeader />
       <article>
-        <section className="relative overflow-hidden border-b border-white/10 bg-[#100d0a] pt-32">
+        <section className="relative overflow-hidden border-b border-oju-terra/10 pt-4">
           <div className="container grid gap-10 py-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,.92fr)]">
             <div className="self-end">
-              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#c9a27a]">{data.contentKind}</p>
+              <p className="editorial-kicker">{data.contentKind}</p>
               <h1 className="mt-5 max-w-3xl font-serif text-5xl leading-[.95] sm:text-7xl">{data.title}</h1>
-              {data.subtitle ? <p className="mt-6 max-w-2xl font-serif text-2xl leading-snug text-white/72">{data.subtitle}</p> : null}
-              <p className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/60">
-                <MapPin className="h-4 w-4 text-[#9aacd8]" />
+              {data.subtitle ? <p className="mt-6 max-w-2xl font-serif text-2xl leading-snug text-oju-terra-suave">{data.subtitle}</p> : null}
+              <p className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-oju-terra-suave">
+                <MapPin className="h-4 w-4 text-oju-dourado" />
                 {[territory?.name, house?.name].filter(Boolean).join(" · ") || "Território preservado"}
                 <span>· {data.publishedAt ? new Date(data.publishedAt).toLocaleDateString("pt-BR") : "preparação editorial"}</span>
               </p>
-              <button type="button" onClick={share} className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#ef9e59]"><Share2 className="h-4 w-4" />Partilhar com crédito</button>
+              <button type="button" onClick={share} className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-oju-verde"><Share2 className="h-4 w-4" />Partilhar com crédito</button>
             </div>
             {cover ? <StoryFigure media={cover} alt={coverAlt} /> : null}
           </div>
         </section>
-        <section className="border-b border-white/8 bg-[#120f0c]">
+        <section className="border-b border-oju-terra/10 bg-oju-papel">
           <div className="container max-w-4xl space-y-4 py-10">
             {data.editorialAuthorization?.authorized ? (
-              <aside className="border-l-2 border-[#6fbd77] bg-[#152518] px-5 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#8dda95]">Cobertura autorizada editorialmente</p>
-                <p className="mt-2 text-sm leading-6 text-white/65">A contratação permanece privada; somente o conteúdo autorizado integra o acervo.</p>
+              <aside className="border-l-2 border-oju-verde bg-oju-paz-claro px-5 py-4">
+                <p className="editorial-kicker">Cobertura autorizada editorialmente</p>
+                <p className="mt-2 text-sm leading-6 text-oju-terra-suave">A contratação permanece privada; somente o conteúdo autorizado integra o acervo.</p>
               </aside>
             ) : null}
             {data.sponsored ? (
-              <aside className="border-l-2 border-[#ef9e59] bg-[#2a1a10] px-5 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#ef9e59]">Divulgação contratada</p>
-                <p className="mt-2 text-sm leading-6 text-white/65">{data.sponsorDisclosure || "Conteúdo identificado com transparência pela Ojú Mídia."}</p>
+              <aside className="border-l-2 border-oju-dourado bg-oju-paz-claro px-5 py-4">
+                <p className="editorial-kicker">Divulgação contratada</p>
+                <p className="mt-2 text-sm leading-6 text-oju-terra-suave">{data.sponsorDisclosure || "Conteúdo identificado com transparência pela Ojú Mídia."}</p>
               </aside>
             ) : null}
-            <aside className="border-l-2 border-[#2c3a6b] bg-[#10141f] px-5 py-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[.14em] text-[#9aacd8]">O que este registro não mostra</p>
-              <p className="mt-2 text-sm leading-6 text-white/65">Nomes, pontos, cantos e o que a casa não autorizou permanecem fora da imagem. A Ojú publica só o que pode circular.</p>
+            <aside className="border-l-2 border-oju-dende bg-oju-paz-claro px-5 py-4">
+              <p className="editorial-kicker">O que este registro não mostra</p>
+              <p className="mt-2 text-sm leading-6 text-oju-terra-suave">Nomes, pontos, cantos e o que a casa não autorizou permanecem fora da imagem. A Ojú publica só o que pode circular.</p>
             </aside>
           </div>
         </section>
@@ -110,17 +110,17 @@ export default function Story() {
           {data.taxonomies?.length ? (
             <div className="mb-10 flex flex-wrap gap-2">
               {data.taxonomies.map(item => item.dimension === "Território" && item.slug ? (
-                <Link key={item.id} href={`/territorios/${item.slug}`} className="rounded-full border border-white/15 px-3 py-1 text-xs text-[#9aacd8]">{item.dimension} · {item.name}</Link>
+                <Link key={item.id} href={`/territorios/${item.slug}`} className="rounded-sm border border-oju-terra/15 px-3 py-1 text-xs text-oju-verde">{item.dimension} · {item.name}</Link>
               ) : (
-                <span key={item.id} className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/70">{item.dimension} · {item.name}</span>
+                <span key={item.id} className="rounded-sm border border-oju-terra/15 px-3 py-1 text-xs text-oju-terra-suave">{item.dimension} · {item.name}</span>
               ))}
             </div>
           ) : null}
           {reading.length ? reading.map((entry, index) => (
               <div key={index}>
-                {entry.block.type === "h2" ? <h2 className="mb-4 mt-12 font-serif text-3xl text-white" dangerouslySetInnerHTML={{ __html: entry.block.html }} /> : null}
-                {entry.block.type === "quote" ? <blockquote className="my-8 border-l-2 border-[#9aacd8] pl-5 font-serif text-[1.35rem] leading-snug text-[#d5deef]" dangerouslySetInnerHTML={{ __html: entry.block.html }} /> : null}
-                {entry.block.type === "p" ? <p className="mb-6 max-w-[42rem] font-serif text-[1.15rem] leading-[1.85] text-[#ece6dc]" dangerouslySetInnerHTML={{ __html: entry.block.html }} /> : null}
+                {entry.block.type === "h2" ? <h2 className="mb-4 mt-12 font-serif text-3xl" dangerouslySetInnerHTML={{ __html: entry.block.html }} /> : null}
+                {entry.block.type === "quote" ? <blockquote className="my-8 border-l-2 border-oju-dourado pl-5 font-serif text-[1.35rem] leading-snug text-oju-terra" dangerouslySetInnerHTML={{ __html: entry.block.html }} /> : null}
+                {entry.block.type === "p" ? <p className="mb-6 max-w-[42rem] font-serif text-[1.15rem] leading-[1.85] text-oju-terra" dangerouslySetInnerHTML={{ __html: entry.block.html }} /> : null}
                 {entry.photo ? <div className="my-10"><StoryFigure media={entry.photo} alt={entry.photo.credit || data.title} /></div> : null}
               </div>
             )) : <EditorialBody text={bodyText} />}

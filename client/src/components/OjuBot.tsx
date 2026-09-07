@@ -50,8 +50,8 @@ export function OjuBot() {
   return (
     <div className="fixed bottom-5 right-5 z-40">
       {open ? (
-        <section className="mb-3 flex h-[min(32rem,70vh)] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-[#242017]/15 bg-[#f7f5ef] shadow-2xl">
-          <header className="flex items-center justify-between bg-[#242017] px-4 py-3 text-white">
+        <section className="mb-3 flex h-[min(32rem,70vh)] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-oju-terra/15 bg-oju-paz-claro shadow-2xl">
+          <header className="flex items-center justify-between bg-oju-verde-profundo px-4 py-3 text-white">
             <div>
               <p className="text-sm font-semibold">Ojú Bot</p>
               <p className="text-[11px] text-[#d9d1c3]">Respostas prontas. Se não achar, manda à Equipe Ojú.</p>
@@ -73,7 +73,7 @@ export function OjuBot() {
                 <p className="text-xs font-bold uppercase tracking-[.12em] text-[#806817]">Enviar ao Canal Ojú</p>
                 <div className="flex flex-wrap gap-1">
                   {categories.map(item => (
-                    <button type="button" key={item} onClick={() => setCategory(item)} className={`rounded-full px-2 py-1 text-xs font-semibold ${category === item ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>{item}</button>
+                    <button type="button" key={item} onClick={() => setCategory(item)} className={`rounded-full px-2 py-1 text-xs font-semibold ${category === item ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>{item}</button>
                   ))}
                 </div>
                 <label className="grid gap-1 text-xs font-medium">Assunto<Input required minLength={4} value={subject} onChange={event => setSubject(event.target.value)} /></label>
@@ -81,13 +81,13 @@ export function OjuBot() {
                 <label className="grid gap-1 text-xs font-medium">O que aconteceu / sugestão<Textarea required minLength={12} value={body} onChange={event => setBody(event.target.value)} placeholder="Tela, o que tentou, o que apareceu, sugestão." /></label>
                 <div className="flex justify-between gap-2">
                   <Button type="button" size="sm" variant="outline" onClick={() => setTicket(false)}>Voltar</Button>
-                  <Button size="sm" disabled={send.isPending} className="bg-[#242017] text-white"><Send className="mr-1 h-3.5 w-3.5" />{send.isPending ? "Enviando..." : "Enviar"}</Button>
+                  <Button size="sm" disabled={send.isPending} className="bg-oju-verde text-oju-branco"><Send className="mr-1 h-3.5 w-3.5" />{send.isPending ? "Enviando..." : "Enviar"}</Button>
                 </div>
               </form>
             ) : picked ? (
               <div className="grid gap-3">
                 <p className="font-medium">{picked.question}</p>
-                <p className="text-sm leading-6 text-[#655e52]">{picked.answer}</p>
+                <p className="text-sm leading-6 text-oju-terra-suave">{picked.answer}</p>
                 {picked.href ? <Link href={picked.href} className="text-sm font-semibold underline" onClick={() => setOpen(false)}>Abrir esta tela</Link> : null}
                 <Button size="sm" variant="outline" onClick={() => setPicked(null)}>Outra pergunta</Button>
               </div>
@@ -100,7 +100,7 @@ export function OjuBot() {
                   <ul className="grid gap-2">
                     {faqs.map(faq => (
                       <li key={faq.id}>
-                        <button type="button" className="w-full rounded-xl bg-white px-3 py-2 text-left text-sm hover:bg-[#eee9dc]" onClick={() => setPicked(faq)}>{faq.question}</button>
+                        <button type="button" className="w-full rounded-xl bg-white px-3 py-2 text-left text-sm hover:bg-oju-papel" onClick={() => setPicked(faq)}>{faq.question}</button>
                       </li>
                     ))}
                   </ul>
@@ -114,7 +114,7 @@ export function OjuBot() {
       <button
         type="button"
         onClick={() => { setOpen(current => !current); setTicket(false); setPicked(null); }}
-        className="inline-flex items-center gap-2 rounded-full bg-[#242017] px-4 py-3 text-sm font-semibold text-white shadow-lg hover:bg-[#3a3428]"
+        className="inline-flex items-center gap-2 rounded-full bg-oju-verde-profundo px-4 py-3 text-sm font-semibold text-white shadow-lg hover:bg-[#3a3428]"
       >
         <MessageCircle className="h-4 w-4" />Ojú Bot
       </button>

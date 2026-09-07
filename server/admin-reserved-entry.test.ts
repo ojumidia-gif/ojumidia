@@ -9,7 +9,7 @@ describe("ingresso administrativo reservado", () => {
     expect(home).toContain("if (next >= 5)");
     expect(home).toContain('setLocation("/admin")');
     expect(home).toContain("onBrandClick={signalAdminEntry}");
-    expect(footer).toContain("FooterMark onClick={onBrandClick}");
+    expect(footer).toContain("FooterMark cinematic={cinematic} onClick={onBrandClick}");
     expect(footer).toContain("public-footer-nav");
     expect(footer).toContain("flex-col items-center");
     expect(home).not.toContain("Área administrativa");

@@ -27,12 +27,12 @@ export default function MiniclipWatch() {
 
   if (!enabled) {
     return (
-      <div className="min-h-screen bg-[#070605] text-white">
+      <div className="cinema-page">
         <PublicHeader cinematic />
         <main className="container pt-32">
           <h1 className="font-serif text-4xl">Miniclipe indisponível.</h1>
           <p className="mt-4 max-w-lg text-sm leading-6 text-white/65">Só os miniclipes autorizados para o fundo vivo da Home podem ser assistidos por completo nesta página.</p>
-          <Link href="/" className="mt-6 inline-flex gap-2 text-sm font-semibold text-[#ed9c58]"><ArrowLeft className="h-4 w-4" />Voltar ao portal</Link>
+          <Link href="/" className="mt-6 inline-flex gap-2 text-sm font-semibold text-oju-dourado-claro"><ArrowLeft className="h-4 w-4" />Voltar ao portal</Link>
         </main>
       </div>
     );
@@ -40,7 +40,7 @@ export default function MiniclipWatch() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#070605] text-white">
+      <div className="cinema-page">
         <PublicHeader cinematic />
         <main className="container pt-32">Carregando miniclipe...</main>
       </div>
@@ -49,23 +49,23 @@ export default function MiniclipWatch() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#070605] text-white">
+      <div className="cinema-page">
         <PublicHeader cinematic />
         <main className="container pt-32">
           <h1 className="font-serif text-4xl">Miniclipe indisponível.</h1>
           <p className="mt-4 max-w-lg text-sm leading-6 text-white/65">Só os miniclipes autorizados para o fundo vivo da Home podem ser assistidos por completo nesta página.</p>
-          <Link href="/" className="mt-6 inline-flex gap-2 text-sm font-semibold text-[#ed9c58]"><ArrowLeft className="h-4 w-4" />Voltar ao portal</Link>
+          <Link href="/" className="mt-6 inline-flex gap-2 text-sm font-semibold text-oju-dourado-claro"><ArrowLeft className="h-4 w-4" />Voltar ao portal</Link>
         </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#070605] text-white">
+    <div className="cinema-page">
       <PageMeta title={`${data.credit ? `${data.credit} — ` : ""}Miniclipe — Ojú Mídia`} description="Miniclipe documental completo, com crédito e autorização para circulação no portal." url={typeof window !== "undefined" ? window.location.href : undefined} />
       <PublicHeader cinematic />
       <main className="container max-w-5xl pb-16 pt-28">
-        <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-[#ed9c58]"><ArrowLeft className="h-4 w-4" />Voltar à Home</Link>
+        <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.1em] text-oju-dourado-claro"><ArrowLeft className="h-4 w-4" />Voltar à Home</Link>
         <h1 className="mt-8 font-serif text-4xl sm:text-5xl">Assistir miniclipe</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">Na Home o fundo vivo mostra até 15 segundos de cada clipe. Aqui o arquivo completo permanece disponível, com controles nativos, crédito visível e legenda somente se a casa autorizou o texto.</p>
         <figure className="mt-8 overflow-hidden rounded border border-white/15 bg-black">

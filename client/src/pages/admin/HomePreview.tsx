@@ -11,7 +11,7 @@ export default function HomePreview() {
     <DashboardLayout>
       <div className="mx-auto max-w-6xl">
         <Link href="/admin/destaques" className="inline-flex items-center gap-2 text-sm font-semibold"><ArrowLeft className="h-4 w-4" />Voltar à curadoria nacional</Link>
-        <p className="mt-4 max-w-2xl text-sm leading-6 text-[#655e52]">Prévia no mesmo olhar do portal. Isto mostra como o conteúdo pode entrar na Home nacional — não substitui a capa da história nem publica sozinho.</p>
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-oju-terra-suave">Prévia no mesmo olhar do portal. Isto mostra como o conteúdo pode entrar na Home nacional — não substitui a capa da história nem publica sozinho.</p>
         {isLoading ? <p className="mt-12">Montando a prévia da Home...</p> : data ? (
           <section className="mt-8 overflow-hidden rounded-2xl bg-[#070605] text-white">
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">

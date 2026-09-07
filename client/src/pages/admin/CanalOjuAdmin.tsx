@@ -106,7 +106,7 @@ export default function CanalOjuAdmin() {
 
   return (
     <AdminPage eyebrow="Canal Ojú" title={principal ? "Caixa da operação." : "Fale com a Equipe Ojú."}>
-      <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-[#655e52]">
+      <p className="-mt-4 mb-6 max-w-3xl text-sm leading-6 text-oju-terra-suave">
         {principal
           ? "Ojú Bot é só para criador parceiro. Aqui a Equipe Ojú lê, responde, arquiva ou exclui. Arquivar guarda a conversa. Excluir some para os dois lados, com confirmação do assunto."
           : "Ojú Bot, no canto da tela, responde primeiro com textos prontos. Se não achar, envie para a Equipe Ojú neste canal."}
@@ -122,13 +122,13 @@ export default function CanalOjuAdmin() {
         <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Nova mensagem</p>
         <div className="flex flex-wrap gap-2">
           {categories.map(item => (
-            <button type="button" key={item} onClick={() => setCategory(item)} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${category === item ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>{item}</button>
+            <button type="button" key={item} onClick={() => setCategory(item)} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${category === item ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>{item}</button>
           ))}
         </div>
         <label className="grid gap-2 text-sm font-medium">Assunto<Input required minLength={4} value={subject} onChange={event => setSubject(event.target.value)} placeholder="Ex.: não consigo publicar a história" /></label>
         <label className="grid gap-2 text-sm font-medium">O que aconteceu<Textarea required minLength={12} value={body} onChange={event => setBody(event.target.value)} placeholder="Descreva a tela, o que tentou e o que apareceu." /></label>
-        {pagePath ? <p className="text-xs text-[#655e52]">Tela de origem: {pagePath}</p> : null}
-        <div className="flex justify-end"><Button disabled={send.isPending} className="bg-[#242017] text-white">{send.isPending ? "Enviando..." : "Enviar à Equipe Ojú"}</Button></div>
+        {pagePath ? <p className="text-xs text-oju-terra-suave">Tela de origem: {pagePath}</p> : null}
+        <div className="flex justify-end"><Button disabled={send.isPending} className="bg-oju-verde text-oju-branco">{send.isPending ? "Enviando..." : "Enviar à Equipe Ojú"}</Button></div>
       </form>
       )}
 
@@ -137,8 +137,8 @@ export default function CanalOjuAdmin() {
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Caixa da Equipe Ojú</p>
           <h2 className="mt-2 font-serif text-3xl">O que a equipe mandou</h2>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={() => setBucket("ativas")} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${bucket === "ativas" ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>Ativas ({activeCount})</button>
-            <button type="button" onClick={() => setBucket("arquivadas")} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${bucket === "arquivadas" ? "bg-[#242017] text-white" : "bg-[#eee9dc]"}`}>Arquivadas ({archivedCount})</button>
+            <button type="button" onClick={() => setBucket("ativas")} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${bucket === "ativas" ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>Ativas ({activeCount})</button>
+            <button type="button" onClick={() => setBucket("arquivadas")} className={`rounded-full px-3 py-1.5 text-sm font-semibold ${bucket === "arquivadas" ? "bg-oju-verde text-oju-branco" : "bg-oju-papel"}`}>Arquivadas ({archivedCount})</button>
           </div>
           {inbox.isLoading ? <p className="mt-4 text-sm">Carregando canal...</p> : visibleInbox.length ? (
             <div className="mt-4 grid gap-4">
@@ -149,10 +149,10 @@ export default function CanalOjuAdmin() {
                   <article key={item.id} className="admin-card grid gap-3 p-5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="font-medium">{item.subject}</p>
-                      <span className="rounded-full bg-[#eee9dc] px-2 py-1 text-[10px] font-bold uppercase">{item.status} · {item.category}</span>
+                      <span className="rounded-full bg-oju-papel px-2 py-1 text-[10px] font-bold uppercase">{item.status} · {item.category}</span>
                     </div>
-                    <p className="text-xs text-[#655e52]">{item.authorName}{item.authorEmail ? ` · ${item.authorEmail}` : ""} · {formatWhen(item.createdAt)}{item.pagePath ? ` · ${item.pagePath}` : ""}</p>
-                    <p className="whitespace-pre-wrap text-sm leading-6 text-[#655e52]">{item.body}</p>
+                    <p className="text-xs text-oju-terra-suave">{item.authorName}{item.authorEmail ? ` · ${item.authorEmail}` : ""} · {formatWhen(item.createdAt)}{item.pagePath ? ` · ${item.pagePath}` : ""}</p>
+                    <p className="whitespace-pre-wrap text-sm leading-6 text-oju-terra-suave">{item.body}</p>
                     {item.reply ? <p className="whitespace-pre-wrap rounded-xl bg-[#e8f0e4] p-3 text-sm text-[#2c683b]">Resposta{item.repliedAt ? ` · ${formatWhen(item.repliedAt)}` : ""}: {item.reply}</p> : null}
                     {archived ? (
                       <div className="flex flex-wrap gap-2">
@@ -164,7 +164,7 @@ export default function CanalOjuAdmin() {
                         <Textarea value={reply[item.id] ?? item.reply ?? ""} onChange={event => setReply(current => ({ ...current, [item.id]: event.target.value }))} placeholder="Resposta para o admin" />
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="outline" disabled={busy} onClick={() => sendReply(item, "Em atendimento")}>Responder</Button>
-                          <Button size="sm" className="bg-[#242017] text-white" disabled={busy} onClick={() => sendReply(item, "Resolvida")}>Marcar resolvida</Button>
+                          <Button size="sm" className="bg-oju-verde text-oju-branco" disabled={busy} onClick={() => sendReply(item, "Resolvida")}>Marcar resolvida</Button>
                           <Button size="sm" variant="outline" disabled={busy} onClick={() => archive.mutate({ id: item.id })}><Archive className="mr-1 h-3.5 w-3.5" />Arquivar</Button>
                           <Button size="sm" variant="outline" className="border-[#8b4d24] text-[#8b4d24]" disabled={busy} onClick={() => { setDeleteTarget(item); setConfirmation(""); }}><Trash2 className="mr-1 h-3.5 w-3.5" />Excluir</Button>
                         </div>
@@ -184,15 +184,15 @@ export default function CanalOjuAdmin() {
         {mine.data?.length ? (
           <div className="mt-4 grid gap-3">
             {mine.data.map(item => (
-              <article key={item.id} className="rounded-2xl border border-[#242017]/10 bg-white p-4">
+              <article key={item.id} className="rounded-2xl border border-oju-terra/10 bg-white p-4">
                 <p className="font-medium">{item.subject}</p>
-                <p className="mt-1 text-xs text-[#655e52]">{item.category} · {item.status} · {formatWhen(item.createdAt)}</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#655e52]">{item.body}</p>
-                {item.reply ? <p className="mt-3 whitespace-pre-wrap rounded-xl bg-[#e8f0e4] p-3 text-sm text-[#2c683b]">Equipe Ojú: {item.reply}</p> : <p className="mt-2 text-sm text-[#655e52]">{item.status === "Arquivada" ? "Arquivada pela Equipe Ojú." : "Aguardando resposta."}</p>}
+                <p className="mt-1 text-xs text-oju-terra-suave">{item.category} · {item.status} · {formatWhen(item.createdAt)}</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-oju-terra-suave">{item.body}</p>
+                {item.reply ? <p className="mt-3 whitespace-pre-wrap rounded-xl bg-[#e8f0e4] p-3 text-sm text-[#2c683b]">Equipe Ojú: {item.reply}</p> : <p className="mt-2 text-sm text-oju-terra-suave">{item.status === "Arquivada" ? "Arquivada pela Equipe Ojú." : "Aguardando resposta."}</p>}
               </article>
             ))}
           </div>
-        ) : <p className="mt-3 text-sm text-[#655e52]">Você ainda não enviou nada neste canal.</p>}
+        ) : <p className="mt-3 text-sm text-oju-terra-suave">Você ainda não enviou nada neste canal.</p>}
       </section>
       )}
 

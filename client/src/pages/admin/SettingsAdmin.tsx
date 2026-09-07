@@ -29,22 +29,22 @@ export default function SettingsAdmin() {
           <div className="rounded-xl bg-[#f6d978] p-3"><Settings2 className="h-5 w-5" /></div>
           <div>
             <p className="font-serif text-2xl">Configurações administrativas</p>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-[#655e52]">Acesse os parâmetros da operação sem misturá-los ao fluxo de publicação.</p>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-oju-terra-suave">Acesse os parâmetros da operação sem misturá-los ao fluxo de publicação.</p>
           </div>
         </div>
         <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {visibleCards.map(card => (
-            <article key={card.href} className="rounded-xl border border-[#242017]/10 bg-white p-5">
+            <article key={card.href} className="rounded-xl border border-oju-terra/10 bg-white p-5">
               <card.icon className="h-5 w-5 text-[#806817]" />
               <p className="mt-4 font-medium">{card.title}</p>
-              <p className="mt-2 text-sm leading-6 text-[#655e52]">{card.text}</p>
+              <p className="mt-2 text-sm leading-6 text-oju-terra-suave">{card.text}</p>
               <Button asChild className="mt-5" size="sm" variant="outline"><Link href={card.href}>{card.action}</Link></Button>
             </article>
           ))}
-          <article className="rounded-xl border border-[#242017]/10 bg-white p-5">
+          <article className="rounded-xl border border-oju-terra/10 bg-white p-5">
             <UserRoundCheck className="h-5 w-5 text-[#806817]" />
             <p className="mt-4 font-medium">Identidade e contato</p>
-            <p className="mt-2 text-sm leading-6 text-[#655e52]">Acesso administrativo usa contas Google autorizadas individualmente. O e-mail comercial não concede privilégio.</p>
+            <p className="mt-2 text-sm leading-6 text-oju-terra-suave">Acesso administrativo usa contas Google autorizadas individualmente. O e-mail comercial não concede privilégio.</p>
           </article>
         </div>
       </section>

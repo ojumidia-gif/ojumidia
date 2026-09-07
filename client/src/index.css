@@ -1,16 +1,89 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme inline { --font-sans: "Source Sans 3", "Segoe UI", sans-serif; --font-serif: "Fraunces", "Times New Roman", serif; --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-border: var(--border); --color-ring: var(--ring); --radius-lg: var(--radius); }
-:root { --radius: 0.85rem; --oju-dende: #c45c26; --oju-indigo: #2c3a6b; --oju-paz: #f4efe6; --oju-terra: #3c2a1d; --background: oklch(0.962 0.008 85); --foreground: oklch(0.22 0.016 83); --card: oklch(0.985 0.005 88); --card-foreground: oklch(0.22 0.016 83); --primary: oklch(0.62 0.14 48); --primary-foreground: oklch(0.98 0.01 90); --muted: oklch(0.92 0.013 87); --muted-foreground: oklch(0.47 0.019 84); --border: oklch(0.83 0.018 84); --ring: oklch(0.55 0.12 48); }
+@theme inline {
+  --font-sans: "Source Sans 3", "Segoe UI", sans-serif;
+  --font-serif: "Fraunces", "Times New Roman", serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
+  --radius-lg: var(--radius);
+  --color-oju-paz: var(--oju-paz);
+  --color-oju-paz-claro: var(--oju-paz-claro);
+  --color-oju-papel: var(--oju-papel);
+  --color-oju-terra: var(--oju-terra);
+  --color-oju-terra-suave: var(--oju-terra-suave);
+  --color-oju-verde: var(--oju-verde);
+  --color-oju-verde-profundo: var(--oju-verde-profundo);
+  --color-oju-verde-suave: var(--oju-verde-suave);
+  --color-oju-dende: var(--oju-dende);
+  --color-oju-dourado: var(--oju-dourado);
+  --color-oju-dourado-suave: var(--oju-dourado-suave);
+  --color-oju-dourado-claro: var(--oju-dourado-claro);
+  --color-oju-preto-filme: var(--oju-preto-filme);
+  --color-oju-preto-suave: var(--oju-preto-suave);
+  --color-oju-branco: var(--oju-branco);
+}
+
+:root {
+  --radius: 0.35rem;
+  --oju-paz: #f4efe6;
+  --oju-paz-claro: #faf8f2;
+  --oju-papel: #efe8db;
+  --oju-terra: #3c2a1d;
+  --oju-terra-suave: #665344;
+  --oju-verde: #243d32;
+  --oju-verde-profundo: #183026;
+  --oju-verde-suave: #365444;
+  --oju-dende: #6b542d;
+  --oju-dourado: #b08a45;
+  --oju-dourado-suave: #c6a76a;
+  --oju-dourado-claro: #d8bf8a;
+  --oju-preto-filme: #070605;
+  --oju-preto-suave: #12100d;
+  --oju-branco: #ffffff;
+  --background: var(--oju-paz);
+  --foreground: var(--oju-terra);
+  --card: var(--oju-paz-claro);
+  --card-foreground: var(--oju-terra);
+  --primary: var(--oju-verde);
+  --primary-foreground: var(--oju-branco);
+  --secondary: var(--oju-papel);
+  --secondary-foreground: var(--oju-terra);
+  --muted: var(--oju-papel);
+  --muted-foreground: var(--oju-terra-suave);
+  --accent: var(--oju-papel);
+  --accent-foreground: var(--oju-terra);
+  --border: color-mix(in srgb, var(--oju-terra) 14%, transparent);
+  --input: color-mix(in srgb, var(--oju-terra) 18%, transparent);
+  --ring: var(--oju-verde);
+  --destructive: #8b2e2e;
+}
+
 @layer base {
   * { @apply border-border outline-ring/50; }
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   html, body, #root { overflow-x: clip; max-width: 100%; }
   body { @apply bg-background text-foreground font-sans; }
+  h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
   img { max-width: 100%; }
   button:not(:disabled), a[href], select:not(:disabled), input:not(:disabled), textarea:not(:disabled) { @apply cursor-pointer; }
+  :focus-visible { outline: 2px solid var(--oju-verde); outline-offset: 2px; }
 }
+
 @layer components {
   .container {
     width: 100%;
@@ -19,8 +92,54 @@
     padding-left: max(1.25rem, env(safe-area-inset-left));
     padding-right: max(1.25rem, env(safe-area-inset-right));
   }
-  .editorial-kicker { @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-[#806817]; }
-  .admin-card { @apply rounded-2xl border border-[#242017]/10 bg-[#f9f7f1] shadow-[0_1px_0_rgba(32,28,20,0.04)]; }
+  .editorial-kicker {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--oju-dende);
+  }
+  .public-page {
+    min-height: 100vh;
+    background: var(--oju-paz);
+    color: var(--oju-terra);
+  }
+  .cinema-page {
+    min-height: 100vh;
+    background: var(--oju-preto-filme);
+    color: var(--oju-branco);
+  }
+  .admin-card {
+    border-radius: 0.35rem;
+    border: 1px solid color-mix(in srgb, var(--oju-terra) 10%, transparent);
+    background: var(--oju-paz-claro);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--oju-terra) 4%, transparent);
+  }
+  .public-surface {
+    border: 1px solid color-mix(in srgb, var(--oju-terra) 12%, transparent);
+    background: var(--oju-paz-claro);
+  }
+  .public-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    background: var(--oju-verde);
+    color: var(--oju-branco);
+    padding: 1rem 1.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .public-cta:hover { background: var(--oju-verde-profundo); }
+  .type-display { font-family: var(--font-serif); font-weight: 600; letter-spacing: -0.03em; }
+  .type-caption, .type-metadata {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--oju-terra-suave);
+  }
   .public-footer {
     font-size: 0.8125rem;
     font-weight: 600;
@@ -49,9 +168,13 @@
     text-wrap: balance;
   }
   .public-footer-nav--legal a {
+    color: color-mix(in srgb, var(--oju-terra-suave) 80%, transparent);
+  }
+  .public-footer--cinema .public-footer-nav--legal a {
     color: rgb(255 255 255 / 0.5);
   }
 }
+
 @media (min-width: 640px) {
   .container { padding-left: max(2rem, env(safe-area-inset-left)); padding-right: max(2rem, env(safe-area-inset-right)); }
   .public-footer { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -62,6 +185,5 @@
   h2 { overflow-wrap: anywhere; }
 }
 
-/* O Centro Administrativo permanece acessível apenas por caminho conhecido e sessão autorizada; o portal não o promove visualmente. */
 a[href="/admin"] { display: none !important; }
 .hero-admin-hint { display: none; }

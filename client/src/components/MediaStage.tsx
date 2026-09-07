@@ -45,23 +45,23 @@ export function MediaStage({
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
       {items.map(item => (
-        <article key={item.localId} className="overflow-hidden rounded-xl border border-[#242017]/10 bg-white">
+        <article key={item.localId} className="overflow-hidden rounded-xl border border-oju-terra/10 bg-white">
           <div className="relative grid h-32 place-items-center bg-[#191611]">
             {item.kind === "foto" ? <img src={item.previewUrl} alt="" className="h-full w-full object-cover" /> : <video src={item.previewUrl} muted playsInline className="h-full w-full object-cover" />}
             {onCover && item.kind === "foto" ? (
-              <button type="button" onClick={() => onCover(item.localId)} className={`absolute left-2 top-2 rounded-full px-2 py-1 text-[10px] font-bold ${coverLocalId === item.localId ? "bg-[#f6b71b] text-[#242017]" : "bg-black/60 text-white"}`}>
+              <button type="button" onClick={() => onCover(item.localId)} className={`absolute left-2 top-2 rounded-full px-2 py-1 text-[10px] font-bold ${coverLocalId === item.localId ? "bg-oju-dourado text-oju-terra" : "bg-black/60 text-white"}`}>
                 <Star className="mr-1 inline h-3 w-3" />{coverLocalId === item.localId ? "Capa" : "Usar como capa"}
               </button>
             ) : null}
           </div>
           <div className="space-y-1 p-3">
             <p className="truncate text-xs font-semibold">{item.file.name}</p>
-            <p className="text-[11px] text-[#655e52]">{item.kind} · {formatSize(item.file.size)}{item.durationSeconds ? ` · ${item.durationSeconds}s` : ""}</p>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[#eee9dc]"><div className={`h-full ${item.status === "Falhou" ? "bg-[#8b3a16]" : "bg-[#806817]"}`} style={{ width: `${item.status === "Pronto" ? 100 : item.progress}%` }} /></div>
+            <p className="text-[11px] text-oju-terra-suave">{item.kind} · {formatSize(item.file.size)}{item.durationSeconds ? ` · ${item.durationSeconds}s` : ""}</p>
+            <div className="h-1.5 overflow-hidden rounded-full bg-oju-papel"><div className={`h-full ${item.status === "Falhou" ? "bg-[#8b3a16]" : "bg-[#806817]"}`} style={{ width: `${item.status === "Pronto" ? 100 : item.progress}%` }} /></div>
             <p className={`text-[11px] font-bold ${item.status === "Falhou" ? "text-[#8b3a16]" : "text-[#496b3b]"}`}>{item.status}{item.status === "Enviando" ? ` ${item.progress}%` : ""}</p>
             {item.error ? <p className="text-[11px] leading-4 text-[#8b3a16]">{item.error}</p> : null}
             <div className="flex gap-2 pt-1">
-              {item.status === "Selecionado" || item.status === "Falhou" ? <button type="button" onClick={() => onRemove(item.localId)} className="text-[11px] font-semibold text-[#655e52]"><Trash2 className="mr-1 inline h-3 w-3" />Remover</button> : null}
+              {item.status === "Selecionado" || item.status === "Falhou" ? <button type="button" onClick={() => onRemove(item.localId)} className="text-[11px] font-semibold text-oju-terra-suave"><Trash2 className="mr-1 inline h-3 w-3" />Remover</button> : null}
               {item.status === "Falhou" ? <button type="button" onClick={() => onRetry(item.localId)} className="text-[11px] font-semibold text-[#806817]"><RotateCcw className="mr-1 inline h-3 w-3" />Tentar novamente</button> : null}
             </div>
           </div>
@@ -140,8 +140,8 @@ export function MediaAddButton({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <Button type="button" onClick={() => input.current?.click()} className="bg-[#242017] text-white"><UploadCloud className="mr-2 h-4 w-4" />{label}</Button>
-        {summary ? <p className="mt-2 text-xs font-semibold text-[#655e52]">{summary}</p> : null}
+        <Button type="button" onClick={() => input.current?.click()} className="bg-oju-verde text-oju-branco"><UploadCloud className="mr-2 h-4 w-4" />{label}</Button>
+        {summary ? <p className="mt-2 text-xs font-semibold text-oju-terra-suave">{summary}</p> : null}
       </div>
       <input ref={input} type="file" accept={accept} multiple={multiple} className="hidden" onChange={event => { onFiles(Array.from(event.target.files || [])); event.target.value = ""; }} />
     </div>

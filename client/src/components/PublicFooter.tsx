@@ -3,8 +3,8 @@ import { portalContentDefaults, usePortalContent } from "@/lib/portalContent";
 import { mergeLegalFooterItems } from "@/lib/legalDocuments";
 import { ensurePublicPartnerLink } from "@/lib/publicNav";
 
-function FooterMark({ onClick }: { onClick?: () => void }) {
-  const image = <img src="/oju-assets/oju-midia-marca.png" alt="Ojú Mídia" className="h-9 w-28 object-contain object-center brightness-0 invert" />;
+function FooterMark({ onClick, cinematic }: { onClick?: () => void; cinematic?: boolean }) {
+  const image = <img src="/oju-assets/oju-midia-marca.png" alt="Ojú Mídia" className={`h-9 w-28 object-contain object-center ${cinematic ? "brightness-0 invert" : ""}`} />;
   if (onClick) {
     return <button type="button" onClick={onClick} className="inline-flex items-center justify-center" aria-label="Ojú Mídia">{image}</button>;
   }
@@ -41,16 +41,18 @@ export function PublicFooter({
   );
   const legalItems = mergeLegalFooterItems(footer?.legalItems || []).filter((item): item is { label: string; href: string } => Boolean(item.href));
   const footerItems = ensurePublicPartnerLink(footer?.items || []);
-  const tone = cinematic ? "border-white/10 bg-black text-white/70" : "border-[#1f1c16]/10 bg-[#1a1712] text-white/70";
+  const tone = cinematic
+    ? "public-footer--cinema border-white/10 bg-oju-preto-filme text-white/70"
+    : "border-oju-terra/10 bg-oju-paz text-oju-terra-suave";
 
   return (
     <footer className={`public-footer overflow-x-clip border-t ${tone}`}>
       <div className="container flex flex-col items-center gap-6 py-10 text-center">
-        <FooterMark onClick={onBrandClick} />
+        <FooterMark cinematic={cinematic} onClick={onBrandClick} />
         {footer ? (
           <>
             <FooterLinks items={footerItems} />
-            <div className="h-px w-12 bg-white/20" aria-hidden="true" />
+            <div className={`h-px w-12 ${cinematic ? "bg-white/20" : "bg-oju-dourado/50"}`} aria-hidden="true" />
             <FooterLinks items={legalItems} tone="legal" />
           </>
         ) : null}
