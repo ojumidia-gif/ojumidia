@@ -1,11 +1,15 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { administratorResponsibilityTerms, collaboratorAccessGrants, mediaAssets, partnerMembers, publications, users } from "../../drizzle/schema";
+import { adminJoinRequests, administratorResponsibilityTerms, collaboratorAccessGrants, mediaAssets, partnerMembers, partnerTerritories, partners, publications, taxonomies, users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { recordAuditEvent, syncPartnerMemberFromGrant } from "../partnerScope";
 import { classifyAdminPulse } from "@shared/adminPulse";
 import { formatAdminId, isAccountOperable, nextSessionEpoch } from "@shared/governance";
+import { resolveCityOfOperation, type CitySelection } from "@shared/brazilPlaces";
+import { partnerVocationLabels } from "@shared/partnerVocations";
+import { decodeSpecialties, encodeSpecialties, professionalSpecialtyIds, resolveNetworkBond, specialtyIdsOf } from "@shared/professionalSpecialties";
+import { professionalProfilesByEmails, linkExecutorToProfessionalProfile, upsertProfessionalProfile } from "../professionalNetwork";
 import { recordSecurityAlert } from "../governance";
 import { protectedProcedure, router } from "../_core/trpc";
 
@@ -30,10 +34,10 @@ function requirePrincipal(role: string) {
 
 function assertGrantScope(role: (typeof collaboratorRoles)[number], partnerId?: number | null, territoryId?: number | null) {
   if (role === "administrador" && (!partnerId || !territoryId)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Administrador territorial precisa de Parceiro Ojú e território definidos antes de operar conteúdo." });
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Criador parceiro precisa de Parceiro Ojú e cidade de atuação definidos antes de operar conteúdo." });
   }
   if ((partnerId && !territoryId) || (!partnerId && territoryId)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Parceiro e território devem ser informados juntos." });
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Parceiro e cidade de atuação devem ser informados juntos." });
   }
 }
 
@@ -96,6 +100,7 @@ export const collaboratorsRouter = router({
       if (!row.createdBy) continue;
       mediaCount.set(row.createdBy, (mediaCount.get(row.createdBy) || 0) + 1);
     }
+    const profilesByEmail = await professionalProfilesByEmails(db, grants.map(grant => grant.email));
     return {
       superAdmins: superAdmins.map(account => ({ ...account, adminId: formatAdminId(account.id) })),
       grants: grants.map(grant => {
@@ -110,7 +115,29 @@ export const collaboratorsRouter = router({
           publicationCount: pubs,
           mediaCount: media,
         });
-        return { ...grant, account: account ? { ...account, adminId: formatAdminId(account.id) } : null, responsibilityTerm: safeTerm, publicationCount: pubs, mediaCount: media, pulse, adminId: account ? formatAdminId(account.id) : null };
+        const professional = profilesByEmail.get(normalizeEmail(grant.email)) ?? null;
+        return {
+          ...grant,
+          account: account ? { ...account, adminId: formatAdminId(account.id) } : null,
+          responsibilityTerm: safeTerm,
+          publicationCount: pubs,
+          mediaCount: media,
+          pulse,
+          adminId: account ? formatAdminId(account.id) : null,
+          professional: professional
+            ? {
+              id: professional.id,
+              specialties: decodeSpecialties(professional.specialtyIds.join(" · ")),
+              networkBond: professional.networkBond,
+              hasOwnMedia: professional.hasOwnMedia,
+              mediaOutletName: professional.mediaOutletName,
+              mediaOutletUrl: professional.mediaOutletUrl,
+              partnerId: professional.partnerId,
+              territoryId: professional.territoryId,
+              status: professional.status,
+            }
+            : null,
+        };
       }),
     };
   }),
@@ -143,6 +170,97 @@ export const collaboratorsRouter = router({
     if (grant) await synchronizeGrantedAccountRole(db, grant);
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: input.partnerId ?? null, territoryId: input.territoryId ?? null, resourceType: "collaborator-grant", resourceId: grantId, action: "collaborator-authorized", previousState: existing ? { role: existing.role, status: existing.status } : null, nextState: { email, role: input.role, status: "Autorizado", partnerId: input.partnerId ?? null, territoryId: input.territoryId ?? null }, detail: "Super Admin autorizou colaborador com papel e escopo. Administrador principal não é delegável." });
     return { id: grantId, requiresResponsibilityTerm: input.role === "administrador" };
+  }),
+  authorizePartnerCandidate: protectedProcedure.input(z.object({
+    joinRequestId: z.number().int().positive(),
+    displayName: z.string().max(240).nullable().optional(),
+    note: z.string().max(3000).nullable().optional(),
+    place: z.object({
+      uf: z.string().regex(/^[A-Z]{2}$/),
+      ibgeId: z.union([z.number().int().positive(), z.literal("outro")]),
+      customName: z.string().max(120).optional(),
+    }),
+    vocations: z.array(z.enum(partnerVocationLabels)).min(1).max(3).optional(),
+    specialties: z.array(z.enum(professionalSpecialtyIds)).min(1).max(9).optional(),
+    hasOwnMedia: z.boolean().optional(),
+    networkBond: z.enum(["criador-parceiro", "parceiro-midia"]).optional(),
+    mediaOutletName: z.string().max(240).nullable().optional(),
+    mediaOutletUrl: z.string().max(320).nullable().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    requirePrincipal(ctx.user.role);
+    const db = await requireDb();
+    const request = (await db.select().from(adminJoinRequests).where(eq(adminJoinRequests.id, input.joinRequestId)).limit(1))[0];
+    if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Candidatura não encontrada." });
+    const email = normalizeEmail(request.email);
+    if (email === COMMERCIAL_CONTACT_EMAIL) throw new TRPCError({ code: "BAD_REQUEST", message: "O e-mail comercial da Ojú não pode receber autorização administrativa." });
+    if (normalizeEmail(ctx.user.email || "") === email) throw new TRPCError({ code: "FORBIDDEN", message: "Não é permitido alterar o próprio escopo ou permissões por esta via." });
+    const resolved = resolveCityOfOperation({ uf: input.place.uf, ibgeId: input.place.ibgeId, customName: input.place.customName || "" } satisfies CitySelection);
+    const existingCity = (await db.select({ id: taxonomies.id }).from(taxonomies).where(eq(taxonomies.slug, resolved.slug)).limit(1))[0];
+    let territoryId = existingCity?.id;
+    if (!territoryId) {
+      const createdCity = await db.insert(taxonomies).values({ dimension: "Território", name: resolved.name, slug: resolved.slug, description: resolved.description, createdBy: ctx.user.id });
+      territoryId = Number(createdCity[0].insertId);
+    }
+    const specialtySource = input.specialties?.length
+      ? input.specialties
+      : input.vocations?.length
+        ? input.vocations
+        : request.practice;
+    const specialtyIds = specialtyIdsOf(specialtySource);
+    const specialtyText = encodeSpecialties(specialtyIds);
+    if (!specialtyIds.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Defina ao menos uma especialidade profissional. Especialidade não é papel de acesso." });
+    const hasOwnMedia = input.hasOwnMedia ?? Boolean(request.hasOwnMedia);
+    const networkBond = resolveNetworkBond({ hasOwnMedia, bond: input.networkBond || request.networkBond });
+    const displayName = (input.displayName?.trim() || request.name).slice(0, 240);
+    const baseSlug = displayName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "parceiro";
+    let slug = `${baseSlug}-${resolved.slug}`.replace(/[^a-z0-9-]+/g, "-").slice(0, 260);
+    const slugTaken = (await db.select({ id: partners.id }).from(partners).where(eq(partners.slug, slug)).limit(1))[0];
+    if (slugTaken) slug = `${baseSlug}-${territoryId}-${Date.now().toString(36)}`.slice(0, 260);
+    const createdPartner = await db.insert(partners).values({
+      displayName,
+      slug,
+      description: `Parceiro Ojú em ${resolved.name}. Especialidades: ${specialtyText}.`,
+      status: "Rascunho",
+      publicVisibility: false,
+      createdBy: ctx.user.id,
+    });
+    const partnerId = Number(createdPartner[0].insertId);
+    await db.insert(partnerTerritories).values({ partnerId, territoryId, status: "Ativa", activeKey: `${partnerId}:${territoryId}`, createdBy: ctx.user.id });
+    await db.update(partners).set({ status: "Ativo", approvedBy: ctx.user.id, approvedAt: new Date(), version: 2 }).where(eq(partners.id, partnerId));
+    const existing = (await db.select().from(collaboratorAccessGrants).where(eq(collaboratorAccessGrants.email, email)).limit(1))[0];
+    const note = [input.note?.trim(), `Cidade: ${resolved.name}. Especialidades: ${specialtyText}. Vínculo: ${networkBond}.`].filter(Boolean).join(" ");
+    const values = { email, displayName, role: "administrador" as const, note, status: "Autorizado" as const, createdBy: ctx.user.id, partnerId, territoryId };
+    let grantId: number;
+    if (existing) {
+      await db.update(collaboratorAccessGrants).set({ displayName: values.displayName, role: values.role, note: values.note, status: values.status, partnerId, territoryId }).where(eq(collaboratorAccessGrants.id, existing.id));
+      grantId = existing.id;
+    } else {
+      const result = await db.insert(collaboratorAccessGrants).values(values);
+      grantId = Number(result[0].insertId);
+    }
+    const account = (await db.select().from(users).where(eq(users.email, email)).limit(1))[0];
+    if (account) await db.update(collaboratorAccessGrants).set({ userId: account.id }).where(eq(collaboratorAccessGrants.id, grantId));
+    const grant = (await db.select().from(collaboratorAccessGrants).where(eq(collaboratorAccessGrants.id, grantId)).limit(1))[0];
+    if (grant) await synchronizeGrantedAccountRole(db, grant);
+    const profile = await upsertProfessionalProfile(db, {
+      email,
+      displayName,
+      specialties: specialtyIds,
+      hasOwnMedia,
+      mediaOutletName: input.mediaOutletName ?? request.mediaOutletName,
+      mediaOutletUrl: input.mediaOutletUrl ?? request.mediaOutletUrl,
+      bond: networkBond,
+      userId: account?.id ?? null,
+      joinRequestId: request.id,
+      partnerId,
+      territoryId,
+      createdBy: ctx.user.id,
+      activate: true,
+    });
+    await linkExecutorToProfessionalProfile(db, { email, profileId: profile.profileId, userId: account?.id ?? null });
+    await db.update(adminJoinRequests).set({ status: "Aprovada", reviewedBy: ctx.user.id, reviewedAt: new Date() }).where(eq(adminJoinRequests.id, request.id));
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId, territoryId, resourceType: "collaborator-grant", resourceId: grantId, action: "collaborator-authorized", previousState: existing ? { role: existing.role, status: existing.status } : null, nextState: { email, role: "administrador", status: "Autorizado", partnerId, territoryId, joinRequestId: request.id, professionalProfileId: profile.profileId, specialties: specialtyIds, networkBond }, detail: "Super Admin habilitou candidatura. Especialidade gravada no perfil profissional; o papel de segurança continua no grant, não na profissão." });
+    return { id: grantId, partnerId, territoryId, city: resolved.name, requiresResponsibilityTerm: true, professionalProfileId: profile.profileId };
   }),
   update: protectedProcedure.input(z.object({
     id: z.number().int().positive(),

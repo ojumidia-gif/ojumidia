@@ -18,6 +18,7 @@ import { sdk } from "./sdk";
 import { openEditorialEventStream } from "../editorialEvents";
 import { registerLocalDevAuthRoutes } from "./localDevAuth";
 import { registerPrivateCommercialFilesRoute } from "../privateCommercialFiles";
+import { registerPaymentWebhookRoute } from "../paymentWebhook";
 import { getDb } from "../db";
 import { uploadSessions } from "../../drizzle/schema";
 import { recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
@@ -55,8 +56,12 @@ async function startServer() {
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
+    if (_req.path.startsWith("/admin") || _req.path.startsWith("/api")) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    }
     next();
   });
+  registerPaymentWebhookRoute(app);
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ limit: "1mb", extended: true }));
   app.use("/oju-assets", express.static(resolve(process.cwd(), "firebase-assets"), { maxAge: "1d", immutable: false }));
@@ -74,7 +79,8 @@ async function startServer() {
   app.use("/api", (req, res, next) => {
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
     const isCronWithBearer = req.path === "/scheduled/editorial-trash-purge" && /^Bearer\s+\S+$/i.test(req.header("authorization") || "");
-    if (isCronWithBearer) return next();
+    const isPaymentWebhook = req.path === "/payments/webhook";
+    if (isCronWithBearer || isPaymentWebhook) return next();
     const origin = req.header("origin");
     const host = req.header("host");
     try {

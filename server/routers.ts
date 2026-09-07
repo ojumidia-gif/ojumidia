@@ -15,6 +15,10 @@ import { partnersRouter } from "./routers/partners";
 import { operationsRouter } from "./routers/operations";
 import { deskRouter } from "./routers/desk";
 import { joinRequestsRouter } from "./routers/joinRequests";
+import { opportunitiesRouter } from "./routers/opportunities";
+import { productionsRouter } from "./routers/productions";
+import { networkNotificationsRouter } from "./routers/networkNotifications";
+import { networkDirectoryRouter } from "./routers/networkDirectory";
 import { governanceRouter } from "./routers/governance";
 
 export const appRouter = router({
@@ -43,6 +47,10 @@ export const appRouter = router({
   operations: operationsRouter,
   desk: deskRouter,
   joinRequests: joinRequestsRouter,
+  opportunities: opportunitiesRouter,
+  productions: productionsRouter,
+  networkNotifications: networkNotificationsRouter,
+  networkDirectory: networkDirectoryRouter,
   governance: governanceRouter,
 });
 

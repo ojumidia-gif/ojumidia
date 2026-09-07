@@ -7,6 +7,8 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { canUseOnPortal } from "../commercialEditorialAuthorization";
 import { activeCommercialPolicy } from "../financialGovernance";
 import { assertPartnerScope, recordAuditEvent } from "../partnerScope";
+import { attachExecutorRecordToProfile, professionalProfilesByEmails } from "../professionalNetwork";
+import { decodeSpecialties } from "@shared/professionalSpecialties";
 import { slugifyEditorial } from "../editorialScale";
 import { normalizeInstagramHandle } from "@shared/instagramHandle";
 
@@ -33,9 +35,35 @@ async function uniqueExecutorSlug(db: NonNullable<Awaited<ReturnType<typeof getD
 }
 async function secureRequest(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, actor: { id: number; role: string }, requestId: number) { const request = (await db.select().from(commercialRequests).where(eq(commercialRequests.id, requestId)).limit(1))[0]; if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Contratação não encontrada." }); if (!canAccessRequest(actor.role, actor.id, request.managedByUserId)) throw new TRPCError({ code: "FORBIDDEN", message: "Você só pode organizar produções da sua carteira." }); if (request.partnerId) { try { await assertPartnerScope({ db, actor, partnerId: request.partnerId, territoryIds: request.territoryId ? [request.territoryId] : [], resourceLabel: "esta contratação", requirePartner: true }); } catch (error) { throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo territorial para esta contratação." }); } } return request; }
 
+async function withProfessionalDirectory(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, rows: typeof networkExecutors.$inferSelect[]) {
+  const byEmail = await professionalProfilesByEmails(db, rows.map(item => item.email || ""));
+  return rows.map(item => {
+    const professional = (item.email && byEmail.get(item.email.trim().toLowerCase())) || null;
+    return {
+      ...item,
+      professional: professional
+        ? {
+          id: professional.id,
+          specialties: decodeSpecialties(professional.specialtyIds.join(" · ")),
+          networkBond: professional.networkBond,
+          hasOwnMedia: professional.hasOwnMedia,
+          mediaOutletName: professional.mediaOutletName,
+        }
+        : null,
+    };
+  });
+}
+
 export const networkRouter = router({
-  executors: protectedProcedure.query(async ({ ctx }) => { requireNetworkAccess(ctx.user.role); const db = await requireDb(); if (ctx.user.role === "administrador principal") return db.select().from(networkExecutors).where(eq(networkExecutors.status, "Ativo")).orderBy(networkExecutors.displayName); return db.select().from(networkExecutors).where(and(eq(networkExecutors.status, "Ativo"), eq(networkExecutors.createdByUserId, ctx.user.id))).orderBy(networkExecutors.displayName); }),
-  createExecutor: protectedProcedure.input(z.object({ displayName: z.string().min(2).max(240), email: z.string().email().max(320).nullable().optional(), whatsapp: z.string().max(40).nullable().optional(), instagramHandle: z.string().max(80).nullable().optional(), specialty: z.enum(specialties), profileNote: z.string().max(3000).nullable().optional(), linkedUserId: z.number().int().positive().nullable().optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => { requireNetworkAccess(ctx.user.role); const db = await requireDb(); if (input.partnerId || input.territoryId) { try { await assertPartnerScope({ db, actor: ctx.user, partnerId: input.partnerId ?? null, territoryIds: input.territoryId ? [input.territoryId] : [], resourceLabel: "este profissional executor", requirePartner: Boolean(input.partnerId) }); } catch (error) { throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo para cadastrar este executor." }); } } const result = await db.insert(networkExecutors).values({ ...input, displayName: input.displayName.trim(), email: input.email?.trim() || null, whatsapp: input.whatsapp?.trim() || null, instagramHandle: parseAuthorizedInstagramHandle(input.instagramHandle), profileNote: input.profileNote?.trim() || null, linkedUserId: input.linkedUserId ?? null, partnerId: input.partnerId ?? null, territoryId: input.territoryId ?? null, publicSlug: await uniqueExecutorSlug(db, input.displayName.trim()), publicVisible: false, createdByUserId: ctx.user.id }); const id = Number(result[0].insertId);     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: input.partnerId ?? null, territoryId: input.territoryId ?? null, resourceType: "network-executor", resourceId: id, action: "executor-created", detail: "Profissional executor cadastrado no escopo informado." }); return { id }; }),
+  executors: protectedProcedure.query(async ({ ctx }) => {
+    requireNetworkAccess(ctx.user.role);
+    const db = await requireDb();
+    const rows = ctx.user.role === "administrador principal"
+      ? await db.select().from(networkExecutors).where(eq(networkExecutors.status, "Ativo")).orderBy(networkExecutors.displayName)
+      : await db.select().from(networkExecutors).where(and(eq(networkExecutors.status, "Ativo"), eq(networkExecutors.createdByUserId, ctx.user.id))).orderBy(networkExecutors.displayName);
+    return withProfessionalDirectory(db, rows);
+  }),
+  createExecutor: protectedProcedure.input(z.object({ displayName: z.string().min(2).max(240), email: z.string().email().max(320).nullable().optional(), whatsapp: z.string().max(40).nullable().optional(), instagramHandle: z.string().max(80).nullable().optional(), specialty: z.enum(specialties), profileNote: z.string().max(3000).nullable().optional(), linkedUserId: z.number().int().positive().nullable().optional(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => { requireNetworkAccess(ctx.user.role); const db = await requireDb(); if (input.partnerId || input.territoryId) { try { await assertPartnerScope({ db, actor: ctx.user, partnerId: input.partnerId ?? null, territoryIds: input.territoryId ? [input.territoryId] : [], resourceLabel: "este profissional executor", requirePartner: Boolean(input.partnerId) }); } catch (error) { throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Você não possui escopo para cadastrar este executor." }); } } const result = await db.insert(networkExecutors).values({ ...input, displayName: input.displayName.trim(), email: input.email?.trim() || null, whatsapp: input.whatsapp?.trim() || null, instagramHandle: parseAuthorizedInstagramHandle(input.instagramHandle), profileNote: input.profileNote?.trim() || null, linkedUserId: input.linkedUserId ?? null, partnerId: input.partnerId ?? null, territoryId: input.territoryId ?? null, publicSlug: await uniqueExecutorSlug(db, input.displayName.trim()), publicVisible: false, createdByUserId: ctx.user.id }); const id = Number(result[0].insertId); await attachExecutorRecordToProfile(db, { executorId: id, email: input.email, linkedUserId: input.linkedUserId ?? null });     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: input.partnerId ?? null, territoryId: input.territoryId ?? null, resourceType: "network-executor", resourceId: id, action: "executor-created", detail: "Profissional executor cadastrado no escopo informado." }); return { id }; }),
   updateExecutor: protectedProcedure.input(z.object({ id: z.number().int().positive(), displayName: z.string().min(2).max(240).optional(), profileNote: z.string().max(3000).nullable().optional(), instagramHandle: z.string().max(80).nullable().optional(), publicVisible: z.boolean().optional() })).mutation(async ({ ctx, input }) => {
     requireNetworkAccess(ctx.user.role);
     const db = await requireDb();

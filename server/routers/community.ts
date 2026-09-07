@@ -10,6 +10,7 @@ import { activeCommercialPolicy, createPayoutNotification } from "../financialGo
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { publishEditorialEvent } from "../editorialEvents";
 import { assertPartnerScope } from "../partnerScope";
+import { decideCommunityHouseDirectory } from "@shared/territorialVisibility";
 
 const recordStatuses = ["Rascunho", "Em revisão", "Publicada", "Arquivada"] as const;
 const consentStatuses = ["Pendente", "Autorizado", "Retirado"] as const;
@@ -78,7 +79,13 @@ export const communityRouter = router({
     const mediaById = new Map(media.map(item => [item.id, item]));
     const partnerById = new Map(visiblePartners.map(item => [item.id, item]));
     const territoryById = new Map(territoryRows.map(item => [item.id, item.name]));
-    return rows.filter(row => row.directoryScope !== "Serviço comunitário" || byInstitution.has(row.id)).map(row => {
+    return rows.filter(row => decideCommunityHouseDirectory({
+      status: row.status,
+      consentStatus: row.consentStatus,
+      deletedAt: row.deletedAt,
+      directoryScope: row.directoryScope,
+      hasActiveInstitutionalVisibilityPlan: byInstitution.has(row.id),
+    }).allowed).map(row => {
       const visibility = byInstitution.get(row.id);
       const showLocation = row.locationVisibility !== "Não divulgar";
       const primaryMedia = row.primaryMediaId ? mediaById.get(row.primaryMediaId) : null;

@@ -1,4 +1,4 @@
-import { BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandshake, Home, Image, LifeBuoy, ListFilter, MapPinned, Route, ScrollText, Settings, ShieldAlert, Sparkles, Trash2, UserPlus, Users, Wallet } from "lucide-react";
+import { Bell, BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandshake, Home, Image, LifeBuoy, ListFilter, MapPinned, Route, ScrollText, Settings, ShieldAlert, Sparkles, Trash2, UserPlus, Users, Wallet } from "lucide-react";
 
 export type AdminNavItem = {
   label: string;
@@ -62,6 +62,10 @@ export const adminNavGroups: AdminNavGroup[] = [
     partnerLabel: "Pedidos",
     items: [
       { label: "Solicitações", partnerLabel: "Pedidos do território", href: "/admin/solicitacoes", icon: BriefcaseBusiness },
+      { label: "Oportunidades", partnerLabel: "Minhas oportunidades", href: "/admin/oportunidades", icon: BriefcaseBusiness },
+      { label: "Produções", partnerLabel: "Minhas produções", href: "/admin/producoes", icon: Camera },
+      { label: "Notificações", href: "/admin/notificacoes-rede", icon: Bell },
+      { label: "Comercial da Rede", partnerLabel: "Entregas", href: "/admin/comercial-rede", icon: Wallet },
       { label: "Contratos", href: "/admin/contratos", icon: FilePenLine, partnerHidden: true },
       { label: "Meus ganhos", href: "/admin/ganhos", icon: Wallet, partnerHidden: true },
     ],

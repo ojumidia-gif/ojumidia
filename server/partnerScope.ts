@@ -33,6 +33,7 @@ export async function activePartnerMemberships(db: Db, userId: number) {
       partnerStatus: partners.status,
       publicVisibility: partners.publicVisibility,
       instagramHandle: partners.instagramHandle,
+      partnerDescription: partners.description,
       operationalRole: partnerMembers.operationalRole,
       territoryId: partnerMembers.territoryId,
     })

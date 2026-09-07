@@ -23,7 +23,7 @@ export default function PhotographersAdmin() {
 
   return (
     <AdminPage eyebrow="Portal → Fotógrafos" title="Cadastrar e publicar fichas.">
-      <p className="-mt-4 mb-4 max-w-3xl text-sm leading-6 text-oju-terra-suave">Nome + apresentação. No card: Publicar no site. Crédito nas fotos do Acervo não depende desta ficha.</p>
+      <p className="-mt-4 mb-4 max-w-3xl text-sm leading-6 text-oju-terra-suave">Diretório existente da Rede. Se o e-mail coincidir com um perfil profissional, a ficha aponta para essa pessoa — sem segundo cadastro. Publicar no site continua sendo permissão de administrador, não de especialidade.</p>
       <AdminFlowGuide destinationId="fotografos" />
       <section className="grid gap-7 xl:grid-cols-[380px_1fr]">
         <form className="admin-card grid gap-3 p-5" onSubmit={async event => {
@@ -72,7 +72,7 @@ export default function PhotographersAdmin() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="font-medium">{item.displayName}</p>
-                  <p className="mt-1 text-xs text-oju-terra-suave">{item.specialty}{item.publicVisible ? " · visível em /fotografos" : " · ainda fora do portal"}</p>
+                  <p className="mt-1 text-xs text-oju-terra-suave">{item.specialty}{item.publicVisible ? " · visível em /fotografos" : " · ainda fora do portal"}{item.professional ? ` · perfil ${item.professional.specialties.map(specialty => specialty.label).join(" · ") || item.professional.id}` : ""}{item.professionalProfileId && !item.professional ? " · ligado ao perfil profissional" : ""}</p>
                 </div>
                 {canPublish ? (
                   <Button size="sm" variant={item.publicVisible ? "outline" : "default"} className={item.publicVisible ? "" : "bg-oju-verde text-oju-branco"} disabled={updateExecutor.isPending} onClick={() => updateExecutor.mutate({ id: item.id, publicVisible: !item.publicVisible }, { onSuccess: () => toast.success(item.publicVisible ? "Fora do site." : "No portal, em /fotografos.") })}>
@@ -92,6 +92,38 @@ export default function PhotographersAdmin() {
           )) : <EmptyAdmin text="Nenhum fotógrafo cadastrado. Crie a ficha e publique no portal." />}
         </div>
       </section>
+      <section className="mt-10">
+        <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Presença na Rede (/rede)</p>
+        <p className="mt-2 mb-4 max-w-3xl text-sm text-oju-terra-suave">Usa o perfil profissional existente. Pagamento não publica. Perfil suspenso não entra.</p>
+        <DirectoryProfiles canPublish={canPublish} />
+      </section>
     </AdminPage>
+  );
+}
+
+function DirectoryProfiles({ canPublish }: { canPublish: boolean }) {
+  const utils = trpc.useUtils();
+  const profiles = trpc.networkDirectory.adminProfiles.useQuery();
+  const setVisible = trpc.networkDirectory.setVisible.useMutation({
+    onSuccess: () => { toast.success("Presença na Rede atualizada."); utils.networkDirectory.adminProfiles.invalidate(); },
+    onError: error => toast.error(error.message),
+  });
+  if (!profiles.data?.length) return <p className="text-sm text-oju-terra-suave">Nenhum perfil profissional neste escopo.</p>;
+  return (
+    <div className="grid gap-3">
+      {profiles.data.map(item => (
+        <article key={item.id} className="admin-card flex flex-wrap items-center justify-between gap-3 p-4">
+          <div>
+            <p className="font-medium">{item.displayName}</p>
+            <p className="text-xs text-oju-terra-suave">{item.status} · {item.publicVisible ? `/rede/profissionais/${item.publicSlug}` : "fora do diretório"}</p>
+          </div>
+          {canPublish ? (
+            <Button size="sm" variant="outline" disabled={setVisible.isPending} onClick={() => setVisible.mutate({ profileId: item.id, publicVisible: !item.publicVisible })}>
+              {item.publicVisible ? "Ocultar da Rede" : "Publicar na Rede"}
+            </Button>
+          ) : null}
+        </article>
+      ))}
+    </div>
   );
 }

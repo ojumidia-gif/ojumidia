@@ -10,6 +10,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
 import { OjuBot } from "./OjuBot";
+import { PageMeta } from "./PageMeta";
 
 type AuthStatus = { googleOAuth: boolean; localDevLogin: boolean; loginMode: string; message: string };
 
@@ -82,6 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
   return (
     <div className="min-h-screen bg-oju-paz text-oju-terra">
+      <PageMeta title="Centro Administrativo Ojú" description="Área restrita da operação editorial. Não faz parte do portal público." robots="noindex, nofollow" />
       <div className="fixed inset-y-0 left-0 z-30 hidden lg:block"><Sidebar /></div>
       {open && <div className="fixed inset-0 z-50 bg-black/45 lg:hidden"><div className="h-full"><Sidebar /></div><button onClick={() => setOpen(false)} className="absolute right-5 top-5 rounded-sm bg-oju-paz p-2"><X className="h-5 w-5" /></button></div>}
       <div className="min-h-screen lg:pl-[272px]">
@@ -92,7 +94,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {principal
               ? "Equipe Ojú · o site, a Home e os textos do portal. Parceiros trabalham a cidade."
               : partnerLabel
-                ? `Criador parceiro · ${partnerLabel.territories.map(item => item.name).join(", ") || "escopo autorizado"}. Sem CMS, sem Home nacional.`
+                ? `Criador parceiro · ${partnerLabel.territories.map(item => item.name).join(", ") || "escopo autorizado"}. Pedidos da cidade somem se outra pessoa aceitar.`
                 : "Operação editorial · rascunho, revisão, aprovação e só então o portal."}
           </p>
           <div className="ml-auto flex items-center gap-2">

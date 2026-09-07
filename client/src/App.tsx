@@ -20,6 +20,10 @@ import PublicationEdit from "./pages/admin/PublicationEdit";
 import RequestCoverage from "./pages/RequestCoverage";
 import AboutOju from "./pages/AboutOju";
 import RequestsAdmin from "./pages/admin/RequestsAdmin";
+import OpportunitiesAdmin from "./pages/admin/OpportunitiesAdmin";
+import ProductionsAdmin from "./pages/admin/ProductionsAdmin";
+import NetworkNotificationsAdmin from "./pages/admin/NetworkNotificationsAdmin";
+import NetworkCommerceAdmin from "./pages/admin/NetworkCommerceAdmin";
 import RevenueAdmin from "./pages/admin/RevenueAdmin";
 import AdsAdmin from "./pages/admin/AdsAdmin";
 import AdvertisementEdit from "./pages/admin/AdvertisementEdit";
@@ -32,6 +36,12 @@ import StoriesPreview from "./pages/StoriesPreview";
 import TerritoriesPreview from "./pages/TerritoriesPreview";
 import PhotographersPublic from "./pages/PhotographersPublic";
 import PhotographerProfile from "./pages/PhotographerProfile";
+import NetworkPublic from "./pages/NetworkPublic";
+import NetworkProfessionalPublic from "./pages/NetworkProfessionalPublic";
+import NetworkOriginate from "./pages/NetworkOriginate";
+import NetworkHousePublic from "./pages/NetworkHousePublic";
+import NetworkProjectPublic from "./pages/NetworkProjectPublic";
+import NetworkPartnerPublic from "./pages/NetworkPartnerPublic";
 import ArchivePreview from "./pages/ArchivePreview";
 import CoveragesPublic from "./pages/CoveragesPublic";
 import DocumentariesPublic from "./pages/DocumentariesPublic";
@@ -92,6 +102,14 @@ function Router() {
       <Route path={"/documentarios"} component={DocumentariesPublic} />
       <Route path={"/projetos"} component={ProjectsPublic} />
       <Route path={"/territorios"} component={TerritoriesPreview} />
+      <Route path={"/rede"} component={NetworkPublic} />
+      <Route path={"/rede/profissionais"} component={NetworkPublic} />
+      <Route path={"/rede/profissionais/:slug"} component={NetworkProfessionalPublic} />
+      <Route path={"/rede/originar"} component={NetworkOriginate} />
+      <Route path={"/rede/casas/:slug"} component={NetworkHousePublic} />
+      <Route path={"/rede/instituicoes/:slug"} component={NetworkHousePublic} />
+      <Route path={"/rede/projetos/:slug"} component={NetworkProjectPublic} />
+      <Route path={"/rede/parceiros/:slug"} component={NetworkPartnerPublic} />
       <Route path={"/fotografos"} component={PhotographersPublic} />
       <Route path={"/fotografos/:slug"} component={PhotographerProfile} />
       <Route path={"/acervo"} component={ArchivePreview} />
@@ -129,6 +147,10 @@ function Router() {
       <Route path={"/admin/home-preview/:id"} component={HomePreview} />
       <Route path={"/admin/editar/:id"} component={PublicationEdit} />
       <Route path={"/admin/solicitacoes"} component={RequestsAdmin} />
+      <Route path={"/admin/oportunidades"} component={OpportunitiesAdmin} />
+      <Route path={"/admin/producoes"} component={ProductionsAdmin} />
+      <Route path={"/admin/notificacoes-rede"} component={NetworkNotificationsAdmin} />
+      <Route path={"/admin/comercial-rede"} component={NetworkCommerceAdmin} />
       <Route path={"/admin/receitas"} component={RevenueAdmin} />
       <Route path={"/admin/comunidade"} component={CommunityAdmin} />
       <Route path={"/admin/nova-instituicao"} component={InstitutionRegistrationAdmin} />

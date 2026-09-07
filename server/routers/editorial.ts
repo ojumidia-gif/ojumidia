@@ -11,6 +11,7 @@ import { activePartnerMemberships, assertPartnerScope, canAccessCentralPublicati
 import { editorialTrashDeadline, isEditorialTrashExpired, permanentlyPurgePublication } from "../editorialTrash";
 import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { isHomeCurated, sortHomeCurated } from "../editorialScale";
+import { publicationEligibleForPortal } from "@shared/territorialVisibility";
 import { groupDuplicateTeamIds, pickReusableTeam } from "@shared/teamCredits";
 import { MAX_MINICLIPS, MAX_PHOTOS } from "@shared/const";
 import { resolveCityOfOperation, type CitySelection } from "@shared/brazilPlaces";
@@ -120,7 +121,14 @@ export function requiresCommercialEditorialAuthorization(publication: Pick<Porta
 
 export function canExposeOnPublicPortal(publication: PortalPublication, authorization?: boolean | CommercialEditorialAuthorization | null) {
   const authorized = typeof authorization === "boolean" ? authorization : canUseOnPortal(authorization);
-  return publication.status === "Publicada" && publication.isPublic && !publication.quarantinedAt && !publication.deletedAt && (!requiresCommercialEditorialAuthorization(publication) || authorized);
+  return publicationEligibleForPortal({
+    status: publication.status,
+    isPublic: publication.isPublic,
+    quarantinedAt: publication.quarantinedAt,
+    deletedAt: publication.deletedAt,
+    commercialRequestId: publication.commercialRequestId,
+    commerciallyAuthorized: authorized,
+  });
 }
 
 export function recordPhotoCap(contentKind: string, photoLimit: number | null) {

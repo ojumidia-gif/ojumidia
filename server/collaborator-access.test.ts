@@ -20,7 +20,9 @@ describe("gestão individual de colaboradores", () => {
     expect(router).toContain("Somente o administrador principal pode gerenciar colaboradores");
     expect(router).toContain('const collaboratorRoles = ["criador", "editor", "aprovador", "administrador"]');
     expect(source("drizzle/schema.ts")).toContain("collaboratorAccessGrants");
-    expect(router).toContain("Administrador territorial precisa de Parceiro Ojú");
+    expect(router).toContain("Criador parceiro precisa de Parceiro Ojú");
+    expect(router).toContain("authorizePartnerCandidate");
+    expect(router).toContain("Especialidades:");
     expect(router).toContain("setAccountStatus");
     expect(router).toContain("Não é permitido alterar o próprio escopo");
   });

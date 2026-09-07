@@ -104,3 +104,15 @@ export function citySelectionText(selection: CitySelection) {
     return "";
   }
 }
+
+export function citySelectionFromLabel(text: string): CitySelection {
+  const match = text.trim().match(/^(.+?)\s+[—–-]\s+([A-Za-z]{2})$/);
+  if (!match) return emptyCitySelection();
+  const name = match[1].trim();
+  const uf = match[2].toUpperCase();
+  const found = municipalitiesForUf(uf).find(item => item.name.localeCompare(name, "pt-BR", { sensitivity: "accent" }) === 0 || item.name.toLowerCase() === name.toLowerCase());
+  if (found) return { uf, ibgeId: found.ibge, customName: "" };
+  if (!brazilState(uf)) return emptyCitySelection();
+  return { uf, ibgeId: OTHER_CITY_ID, customName: name };
+}
+

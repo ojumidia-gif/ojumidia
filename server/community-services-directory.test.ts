@@ -16,7 +16,8 @@ describe("Rede de Serviços e Saberes", () => {
 
   it("restringe serviços comunitários à visibilidade comercial ativa e mantém localização sob consentimento", () => {
     expect(router).toContain("publicDirectory");
-    expect(router).toContain('row.directoryScope !== "Serviço comunitário" || byInstitution.has(row.id)');
+    expect(router).toContain("decideCommunityHouseDirectory");
+    expect(router).toContain("hasActiveInstitutionalVisibilityPlan: byInstitution.has(row.id)");
     expect(router).toContain('row.locationVisibility !== "Não divulgar"');
     expect(router).toContain('row.locationVisibility === "Pública"');
   });

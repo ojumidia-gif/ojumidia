@@ -15,7 +15,7 @@ export const publicNavGroups = [
     id: "chao",
     label: "Chão",
     description: "Cidades, casas, agendas, vozes e quem fotografa.",
-    hrefs: ["/territorios", "/instituicoes", "/agenda", "/memorias", "/fotografos"],
+    hrefs: ["/territorios", "/rede", "/instituicoes", "/agenda", "/memorias", "/fotografos"],
   },
   {
     id: "chamar",

@@ -3,6 +3,7 @@ services:
     runtime: node
     name: oju-midia
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    # 0048–0053 já estão no journal e já foram aplicadas no Aiven. O preDeploy `pnpm db:migrate` deve ser no-op.
     preDeployCommand: pnpm db:migrate
     startCommand: pnpm start
     healthCheckPath: /health

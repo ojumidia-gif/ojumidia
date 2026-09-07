@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BRAZIL_MUNICIPALITIES } from "./brazilMunicipalities";
-import { BRAZIL_STATES, municipalitiesForUf, resolveCityOfOperation, taxonomyDimensionLabel } from "./brazilPlaces";
+import { BRAZIL_STATES, citySelectionFromLabel, municipalitiesForUf, resolveCityOfOperation, taxonomyDimensionLabel } from "./brazilPlaces";
 
 describe("cidade de atuação no Brasil", () => {
   it("cobre os 27 estados e os municípios IBGE, com capitais no topo", () => {
@@ -20,5 +20,10 @@ describe("cidade de atuação no Brasil", () => {
     });
     expect(resolveCityOfOperation({ uf: "AM", ibgeId: "outro", customName: "Comunidade do Rio Negro" }).name).toBe("Comunidade do Rio Negro — AM");
     expect(taxonomyDimensionLabel("Território")).toBe("Cidade de atuação");
+  });
+
+  it("reconstrói a seleção a partir do rótulo cidade — UF", () => {
+    const manaus = BRAZIL_MUNICIPALITIES.AM.find(([, name]) => name === "Manaus");
+    expect(citySelectionFromLabel("Manaus — AM")).toEqual({ uf: "AM", ibgeId: manaus![0], customName: "" });
   });
 });

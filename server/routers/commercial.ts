@@ -1,12 +1,16 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
-import { advertisements, authorizationTerms, commercialActivities, commercialEditorialAuthorizations, commercialMiniclips, commercialRequests, contracts, publications, users } from "../../drizzle/schema";
+import { advertisements, authorizationTerms, commercialActivities, commercialEditorialAuthorizations, commercialMiniclips, commercialRequests, contracts, coverageOfferDeclines, publications, users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { canUseOnPortal, isEditorialAuthorizationCurrent } from "../commercialEditorialAuthorization";
 import { activeCommercialPolicy, createPayoutNotification } from "../financialGovernance";
 import { assertPartnerScope, assertTerritoryTaxonomies, partnerTerritoryIds, recordAuditEvent } from "../partnerScope";
+import { createVisitorRequestForProfessional, listMyOriginationLeads, submitProfessionalOrigination } from "../professionalOrigination";
+import { opportunityWorkTypes } from "@shared/networkOpportunities";
+import { declinedOfferIds, matchingPartnerTerritory, offerMatchesPartner, partnerCoverageContext } from "../coverageOfferAccess";
+import { ensureCoverageOfferDeclinesTable, hideCoverageOfferSql } from "../coverageOfferDeclinesTable";
 
 async function requireDb() { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco de dados indisponível." }); return db; }
 export const isPrincipal = (role: string) => role === "administrador principal";
@@ -17,7 +21,7 @@ export const commercialAccessPolicy = { canListAllAds: isPrincipal, canEditAd: c
 const commercialRole = (role: string) => ["administrador", "administrador principal"].includes(role);
 function requireCommercial(role: string) { if (!commercialRole(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso comercial não autorizado." }); }
 function requirePrincipal(role: string) { if (!isPrincipal(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Apenas o administrador principal acessa este consolidado." }); }
-const requestInput = z.object({ clientName: z.string().min(2).max(200), contact: z.string().min(5).max(280), email: z.string().email().max(320).optional(), whatsapp: z.string().max(40).optional(), eventType: z.string().min(2).max(180), eventDate: z.date().optional(), eventTime: z.string().max(80).optional(), location: z.string().max(280).optional(), state: z.string().max(120).optional(), duration: z.string().max(120).optional(), needsPhotography: z.boolean(), needsVideo: z.boolean(), needsMiniclip: z.boolean(), needsDocumentary: z.boolean(), needsFullCoverage: z.boolean(), needsFormatGuidance: z.boolean(), objective: z.string().max(4000).optional(), notes: z.string().max(4000).optional() });
+const requestInput = z.object({ clientName: z.string().min(2).max(200), contact: z.string().min(5).max(280), email: z.string().email().max(320).optional(), whatsapp: z.string().max(40).optional(), eventType: z.string().min(2).max(180), eventDate: z.date().optional(), eventTime: z.string().max(80).optional(), location: z.string().max(280).optional(), state: z.string().max(120).optional(), duration: z.string().max(120).optional(), needsPhotography: z.boolean(), needsVideo: z.boolean(), needsMiniclip: z.boolean(), needsDocumentary: z.boolean(), needsFullCoverage: z.boolean(), needsFormatGuidance: z.boolean(), objective: z.string().max(4000).optional(), notes: z.string().max(4000).optional(), professionalSlug: z.string().trim().min(1).max(260).optional() });
 const requestStatus = z.enum(["Solicitação", "Em análise", "Conversa", "Orçamento", "Proposta", "Aceite", "Contratado", "Produção", "Entrega", "Concluído", "Arquivado"]);
 const adInput = z.object({ advertiserName: z.string().min(2).max(240), title: z.string().min(2).max(280), description: z.string().max(4000).optional(), contact: z.string().min(3).max(280), services: z.string().max(4000).optional(), format: z.enum(["Cartão de serviço", "Banner", "Destaque de parceiro"]), mediaUrl: z.string().max(2048).optional(), mediaType: z.enum(["foto", "vídeo"]).optional(), startsAt: z.date(), endsAt: z.date(), renewalAt: z.date().optional(), capturedByUserId: z.number().int().positive(), contractedAmount: z.number().positive(), ojuSharePercent: z.number().min(0).max(100), captorSharePercent: z.number().min(0).max(100), status: z.enum(["Rascunho", "Ativo", "Pausado", "Encerrado"]) });
 const contractInput = z.object({ id: z.number().int().positive().optional(), publicationId: z.number().int().positive(), requestId: z.number().int().positive().nullable().optional(), contractor: z.string().min(2).max(240), documentUrl: z.string().min(2).max(2048), status: z.enum(["Rascunho", "Enviado", "Assinado", "Arquivado"]), signedAt: z.date().nullable().optional(), managedByUserId: z.number().int().positive().optional() });
@@ -51,9 +55,114 @@ async function recordCommercialActivity(db: NonNullable<Awaited<ReturnType<typeo
 
 export const commercialRouter = router({
   access: protectedProcedure.query(({ ctx }) => { requireCommercial(ctx.user.role); return { scope: isPrincipal(ctx.user.role) ? "consolidado" : "proprio", isPrincipal: isPrincipal(ctx.user.role), userId: ctx.user.id }; }),
-  requestCoverage: publicProcedure.input(requestInput).mutation(async ({ input }) => { const db = await requireDb(); const result = await db.insert(commercialRequests).values(input); const id = Number(result[0].insertId); await recordCommercialActivity(db, id, null, "Solicitação", "Solicitação pública recebida e aguardando análise da Ojú."); return { id }; }),
+  requestCoverage: publicProcedure.input(requestInput).mutation(async ({ input }) => {
+    const db = await requireDb();
+    const { professionalSlug, ...payload } = input;
+    if (professionalSlug) {
+      return createVisitorRequestForProfessional(db, { ...payload, professionalSlug });
+    }
+    const result = await db.insert(commercialRequests).values(payload);
+    const id = Number(result[0].insertId);
+    await recordCommercialActivity(db, id, null, "Solicitação", "Solicitação pública recebida e aguardando análise da Ojú.");
+    return { id };
+  }),
+  originateLead: publicProcedure.input(z.object({
+    clientName: z.string().min(2).max(200),
+    contact: z.string().min(5).max(280),
+    title: z.string().trim().min(3).max(180),
+    briefing: z.string().trim().min(10).max(4000),
+    workType: z.enum(opportunityWorkTypes),
+    eventDate: z.date().nullable().optional(),
+    durationText: z.string().trim().max(120).nullable().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    if (!ctx.user || (ctx.user.accountStatus && ctx.user.accountStatus !== "Ativo")) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Entre com a conta vinculada ao seu perfil profissional." });
+    }
+    const db = await requireDb();
+    return submitProfessionalOrigination(db, ctx.user, input);
+  }),
+  myOriginationLeads: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user || (ctx.user.accountStatus && ctx.user.accountStatus !== "Ativo")) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Entre com a conta vinculada ao seu perfil profissional." });
+    }
+    const db = await requireDb();
+    return listMyOriginationLeads(db, ctx.user);
+  }),
   list: protectedProcedure.query(async ({ ctx }) => { requireCommercial(ctx.user.role); const db = await requireDb(); return isPrincipal(ctx.user.role) ? db.select().from(commercialRequests).orderBy(desc(commercialRequests.createdAt)) : db.select().from(commercialRequests).where(eq(commercialRequests.managedByUserId, ctx.user.id)).orderBy(desc(commercialRequests.createdAt)); }),
-  claimRequest: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => { requireCommercial(ctx.user.role); const db = await requireDb(); const request = (await db.select().from(commercialRequests).where(eq(commercialRequests.id, input.id)).limit(1))[0]; if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada." }); if (!isPrincipal(ctx.user.role) && request.managedByUserId && request.managedByUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Esta solicitação já pertence a outra carteira." }); if (!isPrincipal(ctx.user.role)) { if (!request.partnerId || !request.territoryId) throw new TRPCError({ code: "FORBIDDEN", message: "Solicitações públicas sem parceiro e território devem ser distribuídas pelo Super Admin." }); await requireCommercialPartnerScope(db, ctx.user, request, "esta solicitação"); } const nextStatus = request.status === "Solicitação" ? "Em análise" : request.status; const updated = await db.update(commercialRequests).set({ managedByUserId: ctx.user.id, status: nextStatus, version: request.version + 1 }).where(and(eq(commercialRequests.id, input.id), eq(commercialRequests.version, request.version))); if (!updated[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "A solicitação foi distribuída ou alterada por outra pessoa. Atualize a carteira." }); await recordCommercialActivity(db, input.id, ctx.user.id, "Carteira", nextStatus === "Em análise" ? "Carteira assumida e solicitação movida para Em análise." : "Carteira assumida pelo administrador responsável."); await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: request.partnerId, territoryId: request.territoryId, resourceType: "commercial-request", resourceId: input.id, action: "commercial-request-claimed", previousState: { managedByUserId: request.managedByUserId, version: request.version }, nextState: { managedByUserId: ctx.user.id, version: request.version + 1 }, detail: "Oportunidade assumida dentro do escopo comercial." }); return { success: true }; }),
+  regionalOffers: protectedProcedure.query(async ({ ctx }) => {
+    requireCommercial(ctx.user.role);
+    if (isPrincipal(ctx.user.role)) return [];
+    const db = await requireDb();
+    await ensureCoverageOfferDeclinesTable(db);
+    const context = await partnerCoverageContext(db, ctx.user.id);
+    if (!context.receivesCoverageOffers) return [];
+    const declined = await declinedOfferIds(db, ctx.user.id);
+    const open = await db.select().from(commercialRequests).where(eq(commercialRequests.status, "Solicitação")).orderBy(desc(commercialRequests.createdAt));
+    return open.filter(request => !declined.has(request.id) && offerMatchesPartner(request, context)).map(request => ({
+      id: request.id,
+      eventType: request.eventType,
+      location: request.location,
+      state: request.state,
+      eventDate: request.eventDate,
+      eventTime: request.eventTime,
+      duration: request.duration,
+      needsPhotography: request.needsPhotography,
+      needsVideo: request.needsVideo,
+      needsMiniclip: request.needsMiniclip,
+      needsDocumentary: request.needsDocumentary,
+      needsFullCoverage: request.needsFullCoverage,
+      createdAt: request.createdAt,
+    }));
+  }),
+  declineRegionalOffer: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    requireCommercial(ctx.user.role);
+    if (isPrincipal(ctx.user.role)) throw new TRPCError({ code: "BAD_REQUEST", message: "A Equipe Ojú distribui ou arquiva o pedido; recusa regional é do parceiro da cidade." });
+    const db = await requireDb();
+    try {
+      await ensureCoverageOfferDeclinesTable(db);
+      const request = (await db.select().from(commercialRequests).where(eq(commercialRequests.id, input.id)).limit(1))[0];
+      if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada." });
+      const context = await partnerCoverageContext(db, ctx.user.id);
+      if (!offerMatchesPartner(request, context)) throw new TRPCError({ code: "FORBIDDEN", message: "Este pedido não está na sua cidade, já foi aceito ou expirou." });
+      await db.insert(coverageOfferDeclines).values({ requestId: input.id, userId: ctx.user.id });
+      return { success: true as const };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      const text = error instanceof Error ? error.message : String(error);
+      if (/ER_DUP_ENTRY|Duplicate/i.test(text)) return { success: true as const };
+      hideCoverageOfferSql(error);
+    }
+  }),
+  claimRequest: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+    requireCommercial(ctx.user.role);
+    const db = await requireDb();
+    const request = (await db.select().from(commercialRequests).where(eq(commercialRequests.id, input.id)).limit(1))[0];
+    if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada." });
+    if (!isPrincipal(ctx.user.role) && request.managedByUserId && request.managedByUserId !== ctx.user.id) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Esta solicitação já pertence a outra carteira." });
+    }
+    let partnerId = request.partnerId;
+    let territoryId = request.territoryId;
+    if (!isPrincipal(ctx.user.role)) {
+      const context = await partnerCoverageContext(db, ctx.user.id);
+      if (!request.managedByUserId) {
+        if (!offerMatchesPartner(request, context)) throw new TRPCError({ code: "FORBIDDEN", message: "Este pedido não está na sua cidade, já foi aceito ou expirou." });
+        const match = matchingPartnerTerritory(request, context);
+        if (!match) throw new TRPCError({ code: "FORBIDDEN", message: "Não há cidade autorizada para aceitar este pedido." });
+        partnerId = match.partnerId;
+        territoryId = match.territoryId;
+      } else {
+        if (!request.partnerId || !request.territoryId) throw new TRPCError({ code: "FORBIDDEN", message: "Solicitações públicas sem parceiro e território devem ser distribuídas pelo Super Admin." });
+        await requireCommercialPartnerScope(db, ctx.user, request, "esta solicitação");
+      }
+    }
+    const nextStatus = request.status === "Solicitação" ? "Em análise" : request.status;
+    const updated = await db.update(commercialRequests).set({ managedByUserId: ctx.user.id, partnerId, territoryId, status: nextStatus, version: request.version + 1 }).where(and(eq(commercialRequests.id, input.id), eq(commercialRequests.version, request.version)));
+    if (!updated[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "A solicitação foi distribuída ou alterada por outra pessoa. Atualize a carteira." });
+    await recordCommercialActivity(db, input.id, ctx.user.id, "Carteira", nextStatus === "Em análise" ? "Pedido aceito na cidade. A solicitação foi para Em análise." : "Carteira assumida pelo administrador responsável.");
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId, territoryId, resourceType: "commercial-request", resourceId: input.id, action: "commercial-request-claimed", previousState: { managedByUserId: request.managedByUserId, version: request.version }, nextState: { managedByUserId: ctx.user.id, version: request.version + 1, partnerId, territoryId }, detail: "Oportunidade aceita no escopo da cidade." });
+    return { success: true };
+  }),
   assignRequest: protectedProcedure.input(z.object({ id: z.number().int().positive(), managedByUserId: z.number().int().positive().nullable(), partnerId: z.number().int().positive().nullable().optional(), territoryId: z.number().int().positive().nullable().optional() })).mutation(async ({ ctx, input }) => { requirePrincipal(ctx.user.role); const db = await requireDb(); const request = (await db.select().from(commercialRequests).where(eq(commercialRequests.id, input.id)).limit(1))[0]; if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada." }); const partnerId = input.partnerId === undefined ? request.partnerId : input.partnerId; const territoryId = input.territoryId === undefined ? request.territoryId : input.territoryId; if (partnerId && !territoryId) throw new TRPCError({ code: "BAD_REQUEST", message: "Uma oportunidade de parceiro exige território definido." }); if (partnerId && territoryId) { await assertTerritoryTaxonomies(db, [territoryId]); const territoryIds = await partnerTerritoryIds(db, partnerId); if (!territoryIds.includes(territoryId)) throw new TRPCError({ code: "BAD_REQUEST", message: "O território informado não está autorizado para este Parceiro Ojú." }); } const updated = await db.update(commercialRequests).set({ managedByUserId: input.managedByUserId, partnerId, territoryId, version: request.version + 1 }).where(and(eq(commercialRequests.id, input.id), eq(commercialRequests.version, request.version))); if (!updated[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "A solicitação foi alterada por outra pessoa. Atualize a carteira." }); await recordCommercialActivity(db, input.id, ctx.user.id, "Carteira", input.managedByUserId ? "Carteira distribuída ou atualizada pelo administrador principal." : "Solicitação removida da carteira responsável."); await recordAuditEvent(db, { actorId: ctx.user.id, partnerId, territoryId, resourceType: "commercial-request", resourceId: input.id, action: "commercial-request-assigned", previousState: { managedByUserId: request.managedByUserId, partnerId: request.partnerId, territoryId: request.territoryId }, nextState: { managedByUserId: input.managedByUserId, partnerId, territoryId }, detail: "Distribuição comercial definida pelo Super Admin." }); return { success: true }; }),
   updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: requestStatus })).mutation(async ({ ctx, input }) => { requireCommercial(ctx.user.role); const db = await requireDb(); const request = (await db.select().from(commercialRequests).where(eq(commercialRequests.id, input.id)).limit(1))[0]; if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada." }); secureOwner(ctx.user.role, ctx.user.id, request.managedByUserId, "solicitações"); await requireCommercialPartnerScope(db, ctx.user, request, "esta solicitação"); const now = new Date(); const updated = await db.update(commercialRequests).set({ status: input.status, proposalSentAt: input.status === "Proposta" ? now : undefined, acceptedAt: input.status === "Aceite" ? now : undefined, productionStartedAt: input.status === "Produção" ? now : undefined, deliveredAt: input.status === "Entrega" ? now : undefined, version: request.version + 1 }).where(and(eq(commercialRequests.id, input.id), eq(commercialRequests.version, request.version))); if (!updated[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "A solicitação foi atualizada por outra pessoa. Atualize a carteira." }); if (request.status !== input.status) await recordCommercialActivity(db, input.id, ctx.user.id, "Status", `Etapa alterada de ${request.status} para ${input.status}.`); return { success: true }; }),
   updateRequestOperation: protectedProcedure.input(z.object({ id: z.number().int().positive(), proposalSummary: z.string().max(4000).nullable().optional(), proposalAmount: z.number().positive().nullable().optional(), notes: z.string().max(4000).nullable().optional(), deliveryDetails: z.string().max(4000).nullable().optional(), deliveryUrl: z.string().url().max(2048).nullable().optional(), delivered: z.boolean().optional() })).mutation(async ({ ctx, input }) => { requireCommercial(ctx.user.role); const db = await requireDb(); const request = (await db.select().from(commercialRequests).where(eq(commercialRequests.id, input.id)).limit(1))[0]; if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada." }); secureOwner(ctx.user.role, ctx.user.id, request.managedByUserId, "solicitações"); const { id, proposalAmount, delivered, ...values } = input; const events = commercialOperationEvents(request, input); await db.update(commercialRequests).set({ ...values, proposalAmount: proposalAmount === undefined || proposalAmount === null ? proposalAmount : proposalAmount.toFixed(2), deliveredAt: delivered === true ? (request.deliveredAt || new Date()) : delivered === false ? null : undefined }).where(eq(commercialRequests.id, id)); for (const event of events) await recordCommercialActivity(db, id, ctx.user.id, event.activityType, event.detail); return { success: true }; }),

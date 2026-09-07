@@ -37,6 +37,12 @@ OJU_LOCAL_DEV_LOGIN_ENABLED=true
 
 `OJU_LOCAL_DEV_LOGIN_ENABLED` deve permanecer ausente ou `false` no Render.
 
+## Documentação operacional
+
+Ver [docs/FASE7_OPERACAO.md](docs/FASE7_OPERACAO.md): identidade, Opportunity/Production, pagamentos, ENV, **estado das migrations 0048–0053** e plano de aplicação (ainda **não** autorizado).
+
+O journal Drizzle termina em **0047**. Os arquivos `0048`–`0053` existem no repositório e **não** estão no journal: o pre-deploy `pnpm db:migrate` **não** os aplica.
+
 ## Comandos
 
 ```bash

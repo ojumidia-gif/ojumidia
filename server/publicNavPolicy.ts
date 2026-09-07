@@ -9,6 +9,7 @@ export const ALLOWED_PUBLIC_HREFS = [
   "/documentarios",
   "/projetos",
   "/territorios",
+  "/rede",
   "/fotografos",
   "/acervo",
   "/fotografia-documental",

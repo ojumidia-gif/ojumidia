@@ -21,7 +21,8 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
       { label: "Projetos", href: "/projetos", order: 4, active: true, featured: false },
       { label: "Fotografia documental", href: "/fotografia-documental", order: 5, active: true, featured: false },
       { label: "Territórios", href: "/territorios", order: 6, active: true, featured: false },
-      { label: "Fotógrafos", href: "/fotografos", order: 7, active: true, featured: false },
+      { label: "Rede", href: "/rede", order: 7, active: true, featured: false },
+      { label: "Fotógrafos", href: "/fotografos", order: 8, active: true, featured: false },
       { label: "Instituições", href: "/instituicoes", order: 8, active: true, featured: false },
       { label: "Agenda", href: "/agenda", order: 9, active: true, featured: false },
       { label: "Memórias", href: "/memorias", order: 10, active: true, featured: false },
@@ -75,7 +76,7 @@ export const PORTAL_DEFAULT_BLOCKS: Array<{
       { label: "Documentários", title: "Filmes que contam nossas histórias", action: "Assistir agora", href: "/documentarios" },
       { label: "Coberturas", title: "Registro de eventos e celebrações", action: "Ver coberturas", href: "/coberturas" },
       { label: "Projetos", title: "Iniciativas que transformam", action: "Conhecer projetos", href: "/projetos" },
-      { label: "Fotografia", title: "Coleções com território e biografia viva", action: "Ver coleções", href: "/fotografia-documental" },
+      { label: "Rede", title: "Pessoas, casas e territórios da Rede Ojú", action: "Conheça a Rede", href: "/rede" },
     ] },
   },
   {

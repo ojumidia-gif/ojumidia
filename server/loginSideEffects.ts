@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { collaboratorAccessGrants, users } from "../drizzle/schema";
 import { getDb } from "./db";
 import { recordAuditEvent, syncPartnerMemberFromGrant } from "./partnerScope";
+import { attachProfessionalProfileUser } from "./professionalNetwork";
 
 export async function applyLoginSideEffects(input: {
   openId: string;
@@ -21,6 +22,13 @@ export async function applyLoginSideEffects(input: {
       await syncPartnerMemberFromGrant(db, { userId: account.id, partnerId: grant.partnerId, territoryId: grant.territoryId, createdBy: grant.createdBy });
     } catch (error) {
       console.warn("[Auth] Escopo territorial do grant não pôde ser aplicado no login:", error);
+    }
+  }
+  if (input.outcome === "success" && account?.email) {
+    try {
+      await attachProfessionalProfileUser(db, { email: account.email, userId: account.id });
+    } catch (error) {
+      console.warn("[Auth] Perfil profissional não pôde ser ligado no login:", error);
     }
   }
   await recordAuditEvent(db, {

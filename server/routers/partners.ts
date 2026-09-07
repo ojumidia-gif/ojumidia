@@ -6,6 +6,9 @@ import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { activePartnerMemberships, assertTerritoryTaxonomies, recordAuditEvent } from "../partnerScope";
 import { normalizeInstagramHandle } from "@shared/instagramHandle";
+import { decodePartnerVocations } from "@shared/partnerVocations";
+import { decodeSpecialties } from "@shared/professionalSpecialties";
+import { professionalProfileForUser } from "../professionalNetwork";
 
 const partnerStatuses = ["Rascunho", "Em revisão", "Ativo", "Suspenso", "Desativado"] as const;
 const memberRoles = ["Gestor territorial", "Operador territorial", "Curador territorial"] as const;
@@ -62,9 +65,28 @@ export const partnersRouter = router({
     const territoryRows = partnerIds.length
       ? await db.select({ partnerId: partnerTerritories.partnerId, id: taxonomies.id, name: taxonomies.name }).from(partnerTerritories).innerJoin(taxonomies, eq(partnerTerritories.territoryId, taxonomies.id)).where(and(inArray(partnerTerritories.partnerId, partnerIds), eq(partnerTerritories.status, "Ativa"))).orderBy(asc(taxonomies.name))
       : [];
+    const professional = await professionalProfileForUser(db, ctx.user.id);
     return {
       scope: memberships.length ? "partner" as const : "central-legacy" as const,
-      partners: memberships.map(membership => ({ ...membership, territories: territoryRows.filter(item => item.partnerId === membership.partnerId).map(({ id, name }) => ({ id, name })) })),
+      professional: professional
+        ? {
+          id: professional.id,
+          displayName: professional.displayName,
+          networkBond: professional.networkBond,
+          hasOwnMedia: professional.hasOwnMedia,
+          mediaOutletName: professional.mediaOutletName,
+          mediaOutletUrl: professional.mediaOutletUrl,
+          partnerId: professional.partnerId,
+          territoryId: professional.territoryId,
+          specialties: decodeSpecialties(professional.specialtyIds.join(" · ")),
+        }
+        : null,
+      partners: memberships.map(membership => ({
+        ...membership,
+        vocations: decodePartnerVocations(membership.partnerDescription),
+        specialties: decodeSpecialties(membership.partnerDescription),
+        territories: territoryRows.filter(item => item.partnerId === membership.partnerId).map(({ id, name }) => ({ id, name })),
+      })),
     };
   }),
   create: protectedProcedure.input(partnerInput).mutation(async ({ ctx, input }) => {

@@ -11,10 +11,19 @@ import {
   resetAdminJoinRequestsTableCache,
   shouldRetryJoinRequestSetup,
 } from "../joinRequestsTable";
+import { decodeSpecialties, bondLabel, encodeSpecialties, specialtyIdsOf, resolveNetworkBond, networkBondNowIds } from "@shared/professionalSpecialties";
+import { upsertProfessionalProfile } from "../professionalNetwork";
 import { recordAuditEvent } from "../partnerScope";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
-const practices = ["Fotografia", "Vídeo", "Produção territorial", "Casa ou coletivo", "Outro"] as const;
+function mapJoinRows(rows: typeof adminJoinRequests.$inferSelect[]) {
+  return rows.map(row => ({
+    ...row,
+    specialties: decodeSpecialties(row.practice),
+    bondLabel: bondLabel(row.networkBond),
+  }));
+}
+
 const statuses = ["Recebida", "Em conversa", "Aprovada", "Recusada", "Arquivada"] as const;
 
 async function requireDb() {
@@ -33,11 +42,20 @@ async function saveJoinRequest(input: {
   email: string;
   whatsapp: string;
   territoryText: string;
-  practice: (typeof practices)[number];
+  practices: string[];
   message: string;
+  hasOwnMedia?: boolean;
+  mediaOutletName?: string | null;
+  mediaOutletUrl?: string | null;
+  networkBond?: string | null;
 }) {
   const db = await requireDb();
   const email = publicJoinEmail(input.email);
+  const specialtyIds = specialtyIdsOf(input.practices);
+  const practice = encodeSpecialties(specialtyIds);
+  if (!practice) throw new TRPCError({ code: "BAD_REQUEST", message: "Escolha ao menos uma especialidade: fotógrafo, videomaker, historymaker e as demais da Rede. Isso não libera o painel sozinho." });
+  const hasOwnMedia = Boolean(input.hasOwnMedia);
+  const networkBond = resolveNetworkBond({ hasOwnMedia, bond: input.networkBond });
   const recent = await db.select({ id: adminJoinRequests.id }).from(adminJoinRequests).where(and(
     eq(adminJoinRequests.email, email),
     or(eq(adminJoinRequests.status, "Recebida"), eq(adminJoinRequests.status, "Em conversa")),
@@ -48,8 +66,22 @@ async function saveJoinRequest(input: {
     email,
     whatsapp: input.whatsapp,
     territoryText: input.territoryText,
-    practice: input.practice,
+    practice,
+    networkBond,
+    hasOwnMedia,
+    mediaOutletName: input.mediaOutletName?.trim() || null,
+    mediaOutletUrl: input.mediaOutletUrl?.trim() || null,
     message: input.message,
+  });
+  await upsertProfessionalProfile(db, {
+    email,
+    displayName: input.name,
+    specialties: specialtyIds,
+    hasOwnMedia,
+    mediaOutletName: input.mediaOutletName,
+    mediaOutletUrl: input.mediaOutletUrl,
+    bond: networkBond,
+    activate: false,
   });
   return { success: true as const };
 }
@@ -60,7 +92,11 @@ export const joinRequestsRouter = router({
     email: z.string().trim().max(320).refine(isPublicJoinEmail, "Informe um e-mail válido."),
     whatsapp: z.string().trim().min(8).max(40),
     territoryText: z.string().trim().min(2).max(240),
-    practice: z.enum(practices),
+    practices: z.array(z.string().trim().min(2).max(80)).min(1).max(9),
+    hasOwnMedia: z.boolean().optional(),
+    mediaOutletName: z.string().trim().max(240).nullable().optional(),
+    mediaOutletUrl: z.string().trim().max(320).nullable().optional(),
+    networkBond: z.enum(networkBondNowIds).optional(),
     message: z.string().trim().min(10).max(4000),
   })).mutation(async ({ input }) => {
     try {
@@ -85,7 +121,7 @@ export const joinRequestsRouter = router({
       const db = await requireDb();
       const rows = await db.select().from(adminJoinRequests).orderBy(desc(adminJoinRequests.createdAt));
       const open = rows.filter(row => row.status === "Recebida" || row.status === "Em conversa").length;
-      return { items: rows, open };
+      return { items: mapJoinRows(rows), open };
     } catch (error) {
       if (shouldRetryJoinRequestSetup(error)) {
         resetAdminJoinRequestsTableCache();
@@ -93,7 +129,7 @@ export const joinRequestsRouter = router({
           const db = await requireDb();
           const rows = await db.select().from(adminJoinRequests).orderBy(desc(adminJoinRequests.createdAt));
           const open = rows.filter(row => row.status === "Recebida" || row.status === "Em conversa").length;
-          return { items: rows, open };
+          return { items: mapJoinRows(rows), open };
         } catch (retryError) {
           hideJoinRequestSql(retryError);
         }

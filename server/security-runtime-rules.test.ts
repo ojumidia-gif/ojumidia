@@ -11,6 +11,7 @@ describe("regras de segurança de execução", () => {
     expect(server).toContain('"X-Content-Type-Options", "nosniff"');
     expect(server).toContain('"X-Frame-Options", "DENY"');
     expect(server).toContain('"Referrer-Policy", "strict-origin-when-cross-origin"');
+    expect(server).toContain('"X-Robots-Tag", "noindex, nofollow"');
   });
 
   it("protege o upload por autenticação, papel permitido, tipo e limite de tamanho", () => {

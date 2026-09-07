@@ -4,12 +4,10 @@ import { describe, expect, it } from "vitest";
 import { isPublicJoinEmail, publicJoinEmail } from "./joinRequestsTable";
 
 describe("candidaturas públicas", () => {
-  it("cria a tabela se faltar e não vaza SQL no pedido público", () => {
+  it("não cria a tabela em runtime; schema vem da migration", () => {
     const table = readFileSync(resolve(process.cwd(), "server/joinRequestsTable.ts"), "utf8");
     const router = readFileSync(resolve(process.cwd(), "server/routers/joinRequests.ts"), "utf8");
-    expect(table).toContain("CREATE TABLE IF NOT EXISTS");
-    expect(table).toContain("adminJoinRequests");
-    expect(table).toContain("utf8mb4");
+    expect(table).not.toMatch(/CREATE TABLE|ALTER TABLE/i);
     expect(table).toContain("Não foi possível registrar o pedido agora");
     expect(router).toContain("ensureAdminJoinRequestsTable");
     expect(router).toContain("hideJoinRequestSql");

@@ -132,8 +132,10 @@ export const collaboratorAccessGrants = mysqlTable("collaboratorAccessGrants", {
   index("collaborator_grant_status_idx").on(table.status, table.role),
 ]);
 
-export const joinRequestPractices = ["Fotografia", "Vídeo", "Produção territorial", "Casa ou coletivo", "Outro"] as const;
+export const joinRequestPractices = ["Fotógrafo / videomaker", "História maker", "Casa de mídia / equipe"] as const;
 export const joinRequestStatuses = ["Recebida", "Em conversa", "Aprovada", "Recusada", "Arquivada"] as const;
+export const networkBonds = ["criador-parceiro", "parceiro-midia"] as const;
+export const professionalProfileStatuses = ["Rascunho", "Ativo", "Suspenso"] as const;
 
 export const adminJoinRequests = mysqlTable("adminJoinRequests", {
   id: int("id").autoincrement().primaryKey(),
@@ -141,7 +143,11 @@ export const adminJoinRequests = mysqlTable("adminJoinRequests", {
   email: varchar("email", { length: 320 }).notNull(),
   whatsapp: varchar("whatsapp", { length: 40 }).notNull(),
   territoryText: varchar("territoryText", { length: 240 }).notNull(),
-  practice: mysqlEnum("practice", joinRequestPractices).notNull(),
+  practice: varchar("practice", { length: 280 }).notNull(),
+  networkBond: mysqlEnum("networkBond", networkBonds).default("criador-parceiro").notNull(),
+  hasOwnMedia: boolean("hasOwnMedia").default(false).notNull(),
+  mediaOutletName: varchar("mediaOutletName", { length: 240 }),
+  mediaOutletUrl: varchar("mediaOutletUrl", { length: 320 }),
   message: text("message").notNull(),
   status: mysqlEnum("status", joinRequestStatuses).default("Recebida").notNull(),
   reviewNote: text("reviewNote"),
@@ -150,6 +156,290 @@ export const adminJoinRequests = mysqlTable("adminJoinRequests", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [
   index("join_request_status_idx").on(table.status, table.createdAt),
+]);
+
+export const professionalProfiles = mysqlTable("professionalProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  userId: int("userId").unique(),
+  joinRequestId: int("joinRequestId"),
+  partnerId: int("partnerId"),
+  territoryId: int("territoryId"),
+  displayName: varchar("displayName", { length: 240 }).notNull(),
+  networkBond: mysqlEnum("networkBond", networkBonds).default("criador-parceiro").notNull(),
+  hasOwnMedia: boolean("hasOwnMedia").default(false).notNull(),
+  mediaOutletName: varchar("mediaOutletName", { length: 240 }),
+  mediaOutletUrl: varchar("mediaOutletUrl", { length: 320 }),
+  status: mysqlEnum("status", professionalProfileStatuses).default("Rascunho").notNull(),
+  publicSlug: varchar("publicSlug", { length: 260 }).unique(),
+  publicVisible: boolean("publicVisible").default(false).notNull(),
+  publicBio: text("publicBio"),
+  publicContact: varchar("publicContact", { length: 320 }),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("professional_profile_partner_idx").on(table.partnerId, table.status),
+  index("professional_profile_territory_idx").on(table.territoryId, table.status),
+  index("professional_profile_bond_idx").on(table.networkBond, table.status),
+  index("professional_profile_public_idx").on(table.publicVisible, table.status),
+]);
+
+export const professionalProfileSpecialties = mysqlTable("professionalProfileSpecialties", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: int("profileId").notNull(),
+  specialtyId: varchar("specialtyId", { length: 40 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("professional_profile_specialty_unique").on(table.profileId, table.specialtyId),
+  index("professional_profile_specialty_id_idx").on(table.specialtyId),
+]);
+
+export const mediaOutlets = mysqlTable("mediaOutlets", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: int("profileId").notNull(),
+  name: varchar("name", { length: 240 }).notNull(),
+  instagramHandle: varchar("instagramHandle", { length: 30 }),
+  siteUrl: varchar("siteUrl", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("media_outlet_profile_idx").on(table.profileId),
+]);
+
+export const opportunityStatuses = ["Rascunho", "Aberta", "Aceita", "Cancelada", "Expirada"] as const;
+export const opportunityInviteStatuses = ["Pendente", "Aceita", "Recusada", "Expirada", "Cancelada", "Superada"] as const;
+export const opportunityOrigins = ["Comercial", "Mesa", "Manual"] as const;
+export const opportunityWorkTypes = ["Cobertura", "Documentário", "Fotografia", "Outro"] as const;
+
+export const networkOpportunities = mysqlTable("networkOpportunities", {
+  id: int("id").autoincrement().primaryKey(),
+  commercialRequestId: int("commercialRequestId"),
+  title: varchar("title", { length: 240 }).notNull(),
+  briefing: text("briefing").notNull(),
+  workType: mysqlEnum("workType", opportunityWorkTypes).default("Cobertura").notNull(),
+  origin: mysqlEnum("origin", opportunityOrigins).default("Manual").notNull(),
+  territoryId: int("territoryId").notNull(),
+  partnerId: int("partnerId"),
+  cityLabel: varchar("cityLabel", { length: 180 }).notNull(),
+  uf: varchar("uf", { length: 2 }).notNull(),
+  eventDate: timestamp("eventDate"),
+  startAt: timestamp("startAt"),
+  endAt: timestamp("endAt"),
+  durationText: varchar("durationText", { length: 120 }),
+  totalValue: decimal("totalValue", { precision: 12, scale: 2 }).notNull(),
+  professionalValue: decimal("professionalValue", { precision: 12, scale: 2 }).notNull(),
+  ojuValue: decimal("ojuValue", { precision: 12, scale: 2 }).notNull(),
+  networkFundValue: decimal("networkFundValue", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  captorValue: decimal("captorValue", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  executorPercent: decimal("executorPercent", { precision: 5, scale: 2 }).notNull(),
+  ojuPercent: decimal("ojuPercent", { precision: 5, scale: 2 }).notNull(),
+  developmentPercent: decimal("developmentPercent", { precision: 5, scale: 2 }).notNull(),
+  captorPercent: decimal("captorPercent", { precision: 5, scale: 2 }).notNull(),
+  commercialPolicyId: int("commercialPolicyId").notNull(),
+  commercialPolicyVersion: int("commercialPolicyVersion").notNull(),
+  status: mysqlEnum("status", opportunityStatuses).default("Rascunho").notNull(),
+  acceptanceDeadline: timestamp("acceptanceDeadline"),
+  createdBy: int("createdBy").notNull(),
+  responsibleUserId: int("responsibleUserId").notNull(),
+  acceptedProfessionalProfileId: int("acceptedProfessionalProfileId"),
+  acceptedUserId: int("acceptedUserId"),
+  acceptedExecutorId: int("acceptedExecutorId"),
+  acceptedAt: timestamp("acceptedAt"),
+  frozenAt: timestamp("frozenAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("network_opportunity_request_idx").on(table.commercialRequestId, table.status),
+  index("network_opportunity_territory_idx").on(table.territoryId, table.status),
+  index("network_opportunity_partner_idx").on(table.partnerId, table.status),
+  index("network_opportunity_accepted_profile_idx").on(table.acceptedProfessionalProfileId, table.status),
+]);
+
+export const networkOpportunitySpecialties = mysqlTable("networkOpportunitySpecialties", {
+  id: int("id").autoincrement().primaryKey(),
+  opportunityId: int("opportunityId").notNull(),
+  specialtyId: varchar("specialtyId", { length: 40 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("network_opportunity_specialty_unique").on(table.opportunityId, table.specialtyId),
+  index("network_opportunity_specialty_id_idx").on(table.specialtyId),
+]);
+
+export const networkOpportunityInvites = mysqlTable("networkOpportunityInvites", {
+  id: int("id").autoincrement().primaryKey(),
+  opportunityId: int("opportunityId").notNull(),
+  professionalProfileId: int("professionalProfileId").notNull(),
+  userId: int("userId"),
+  executorId: int("executorId"),
+  status: mysqlEnum("status", opportunityInviteStatuses).default("Pendente").notNull(),
+  invitedAt: timestamp("invitedAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+  respondedAt: timestamp("respondedAt"),
+  declineReason: varchar("declineReason", { length: 480 }),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("network_opportunity_invite_target_unique").on(table.opportunityId, table.professionalProfileId),
+  index("network_opportunity_invite_profile_idx").on(table.professionalProfileId, table.status),
+  index("network_opportunity_invite_status_idx").on(table.opportunityId, table.status),
+]);
+
+export const productionStatuses = ["Planejada", "Confirmada", "Em produção", "Aguardando mídia", "Em revisão", "Concluída", "Cancelada"] as const;
+export const productionMediaLayers = ["Operacional", "Editorial"] as const;
+
+export const networkProductions = mysqlTable("networkProductions", {
+  id: int("id").autoincrement().primaryKey(),
+  opportunityId: int("opportunityId").notNull().unique(),
+  commercialRequestId: int("commercialRequestId"),
+  publicationId: int("publicationId"),
+  professionalProfileId: int("professionalProfileId").notNull(),
+  professionalUserId: int("professionalUserId"),
+  executorId: int("executorId"),
+  partnerId: int("partnerId"),
+  territoryId: int("territoryId").notNull(),
+  workType: mysqlEnum("workType", opportunityWorkTypes).default("Cobertura").notNull(),
+  title: varchar("title", { length: 240 }).notNull(),
+  briefing: text("briefing").notNull(),
+  eventDate: timestamp("eventDate"),
+  status: mysqlEnum("status", productionStatuses).default("Planejada").notNull(),
+  notes: text("notes"),
+  responsibleUserId: int("responsibleUserId").notNull(),
+  startedAt: timestamp("startedAt"),
+  submittedAt: timestamp("submittedAt"),
+  completedAt: timestamp("completedAt"),
+  cancelledAt: timestamp("cancelledAt"),
+  deliveredAt: timestamp("deliveredAt"),
+  editorialReady: boolean("editorialReady").default(false).notNull(),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("network_production_profile_idx").on(table.professionalProfileId, table.status),
+  index("network_production_territory_idx").on(table.territoryId, table.status),
+  index("network_production_partner_idx").on(table.partnerId, table.status),
+]);
+
+export const networkProductionMedia = mysqlTable("networkProductionMedia", {
+  id: int("id").autoincrement().primaryKey(),
+  productionId: int("productionId").notNull(),
+  mediaId: int("mediaId").notNull(),
+  layer: mysqlEnum("layer", productionMediaLayers).default("Editorial").notNull(),
+  displayOrder: int("displayOrder").default(0).notNull(),
+  attachedBy: int("attachedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("network_production_media_unique").on(table.productionId, table.mediaId),
+  index("network_production_media_media_idx").on(table.mediaId),
+]);
+
+export const productionPaymentStatuses = [
+  "Aguardando pagamento",
+  "Pagamento recebido",
+  "Pagamento parcial",
+  "Pagamento confirmado",
+  "Pagamento cancelado",
+  "Reembolso",
+  "Encerrado",
+] as const;
+
+export const networkNotifications = mysqlTable("networkNotifications", {
+  id: int("id").autoincrement().primaryKey(),
+  recipientUserId: int("recipientUserId").notNull(),
+  type: varchar("type", { length: 80 }).notNull(),
+  referenceType: varchar("referenceType", { length: 80 }).notNull(),
+  referenceId: int("referenceId").notNull(),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("network_notification_recipient_idx").on(table.recipientUserId, table.readAt, table.createdAt),
+  index("network_notification_reference_idx").on(table.referenceType, table.referenceId),
+]);
+
+export const networkNotificationPreferences = mysqlTable("networkNotificationPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  inApp: boolean("inApp").default(true).notNull(),
+  emailTransactional: boolean("emailTransactional").default(false).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const networkProductionSettlements = mysqlTable("networkProductionSettlements", {
+  id: int("id").autoincrement().primaryKey(),
+  productionId: int("productionId").notNull().unique(),
+  opportunityId: int("opportunityId").notNull(),
+  commercialRequestId: int("commercialRequestId"),
+  commercialTransactionId: int("commercialTransactionId"),
+  totalValue: decimal("totalValue", { precision: 12, scale: 2 }).notNull(),
+  professionalValue: decimal("professionalValue", { precision: 12, scale: 2 }).notNull(),
+  ojuValue: decimal("ojuValue", { precision: 12, scale: 2 }).notNull(),
+  networkFundValue: decimal("networkFundValue", { precision: 12, scale: 2 }).notNull(),
+  captorValue: decimal("captorValue", { precision: 12, scale: 2 }).notNull(),
+  commercialPolicyId: int("commercialPolicyId").notNull(),
+  commercialPolicyVersion: int("commercialPolicyVersion").notNull(),
+  paymentStatus: mysqlEnum("paymentStatus", productionPaymentStatuses).default("Aguardando pagamento").notNull(),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("network_production_settlement_opportunity_idx").on(table.opportunityId),
+  index("network_production_settlement_payment_idx").on(table.paymentStatus),
+]);
+
+export const networkProductionDeliveries = mysqlTable("networkProductionDeliveries", {
+  id: int("id").autoincrement().primaryKey(),
+  productionId: int("productionId").notNull(),
+  mediaId: int("mediaId").notNull(),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("network_production_delivery_unique").on(table.productionId, table.mediaId),
+  index("network_production_delivery_media_idx").on(table.mediaId),
+]);
+
+export const paymentIntentStatuses = [
+  "Aguardando",
+  "Iniciado",
+  "Pendente",
+  "Pago",
+  "Falhou",
+  "Cancelado",
+  "Estornado",
+  "Parcial",
+  "Encerrado",
+] as const;
+
+export const networkPaymentIntents = mysqlTable("networkPaymentIntents", {
+  id: int("id").autoincrement().primaryKey(),
+  productionId: int("productionId").notNull(),
+  opportunityId: int("opportunityId").notNull(),
+  settlementId: int("settlementId"),
+  provider: varchar("provider", { length: 40 }).notNull(),
+  providerTransactionId: varchar("providerTransactionId", { length: 160 }).notNull(),
+  idempotencyKey: varchar("idempotencyKey", { length: 160 }).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("BRL").notNull(),
+  status: mysqlEnum("status", paymentIntentStatuses).default("Aguardando").notNull(),
+  paidAt: timestamp("paidAt"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("network_payment_provider_tx_unique").on(table.providerTransactionId),
+  uniqueIndex("network_payment_idempotency_unique").on(table.idempotencyKey),
+  index("network_payment_production_idx").on(table.productionId, table.status),
+]);
+
+export const networkPaymentWebhookReceipts = mysqlTable("networkPaymentWebhookReceipts", {
+  id: int("id").autoincrement().primaryKey(),
+  eventId: varchar("eventId", { length: 160 }).notNull(),
+  providerTransactionId: varchar("providerTransactionId", { length: 160 }).notNull(),
+  payloadHash: varchar("payloadHash", { length: 64 }).notNull(),
+  result: varchar("result", { length: 40 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("network_payment_webhook_event_unique").on(table.eventId),
 ]);
 
 export const administratorResponsibilityTermStatuses = ["Gerado", "Aguardando assinatura gov.br", "Assinado via gov.br", "Arquivado"] as const;
@@ -447,6 +737,16 @@ export const commercialRequests = mysqlTable("commercialRequests", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [index("commercial_request_manager_idx").on(table.managedByUserId), index("commercial_request_partner_idx").on(table.partnerId, table.status), index("commercial_request_territory_idx").on(table.territoryId, table.status)]);
 
+export const coverageOfferDeclines = mysqlTable("coverageOfferDeclines", {
+  id: int("id").autoincrement().primaryKey(),
+  requestId: int("requestId").notNull(),
+  userId: int("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("coverage_offer_decline_unique").on(table.requestId, table.userId),
+  index("coverage_offer_decline_user_idx").on(table.userId, table.createdAt),
+]);
+
 export const commercialActivityTypes = [
   "Solicitação",
   "Carteira",
@@ -534,11 +834,12 @@ export const networkExecutors = mysqlTable("networkExecutors", {
   publicVisible: boolean("publicVisible").default(false).notNull(),
   instagramHandle: varchar("instagramHandle", { length: 30 }),
   linkedUserId: int("linkedUserId"),
+  professionalProfileId: int("professionalProfileId"),
   status: mysqlEnum("status", executorStatuses).default("Ativo").notNull(),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, table => [index("network_executor_status_idx").on(table.status, table.specialty), index("network_executor_linked_user_idx").on(table.linkedUserId), index("network_executor_partner_scope_idx").on(table.partnerId, table.territoryId, table.status)]);
+}, table => [index("network_executor_status_idx").on(table.status, table.specialty), index("network_executor_linked_user_idx").on(table.linkedUserId), index("network_executor_profile_idx").on(table.professionalProfileId), index("network_executor_partner_scope_idx").on(table.partnerId, table.territoryId, table.status)]);
 
 export const commercialClosings = mysqlTable("commercialClosings", {
   id: int("id").autoincrement().primaryKey(),

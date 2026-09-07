@@ -7,7 +7,21 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AdminPage, EmptyAdmin, FirstUserWelcome, statusStyle } from "./_shared";
+import { partnerDoorKeys } from "@shared/partnerVocations";
+import { specialtyDoorKeys } from "@shared/professionalSpecialties";
 import { useDaypartGreeting } from "@/hooks/useDaypartGreeting";
+
+const partnerDoors = [
+  { key: "historias", href: "/admin/publicacoes?tipo=História", title: "Histórias", text: "Texto, cidade e capa. Publica em /historias." },
+  { key: "coberturas", href: "/admin/publicacoes?tipo=Cobertura", title: "Coberturas", text: "Evento e fotos. Publica em /coberturas." },
+  { key: "documentarios", href: "/admin/publicacoes?tipo=Documentário", title: "Documentários", text: "Filme e materiais. Publica em /documentarios." },
+  { key: "projetos", href: "/admin/publicacoes?tipo=Projeto", title: "Projetos", text: "Série documental. Publica em /projetos." },
+  { key: "fotografia", href: "/admin/publicacoes?tipo=Fotografia%20documental", title: "Fotografia documental", text: "Até 5 fotos. Publica em /fotografia-documental." },
+  { key: "casas", href: "/admin/comunidade?aba=instituicoes", title: "Casas e instituições", text: "Perfil com consentimento. Publica em /instituicoes." },
+  { key: "fotografos", href: "/admin/fotografos", title: "Fotógrafos", text: "Ficha pública. Crédito na foto vale mesmo sem ficha." },
+  { key: "midias", href: "/admin/midias", title: "Fotos e vídeos", text: "Envie com crédito e autorização. Marque a capa no conteúdo." },
+  { key: "equipes", href: "/admin/equipes", title: "Equipe e créditos", text: "Pessoas da casa de mídia no crédito da publicação." },
+] as const;
 
 const workDoors = [
   { href: "/admin/publicacoes", title: "Escrever", text: "Três passos: texto, cidade e capa. Depois Publicar no site. Home é outra tela." },
@@ -33,6 +47,12 @@ export default function AdminDashboard() {
   const operations = trpc.operations.overview.useQuery({ limit: 6 }, { refetchInterval: 30_000 });
   const context = trpc.partners.myContext.useQuery();
   const partner = context.data?.scope === "partner" ? context.data.partners[0] : null;
+  const professional = context.data && "professional" in context.data ? context.data.professional : null;
+  const specialtyLabels = professional?.specialties?.map(item => item.label) || partner?.specialties?.map(item => item.label) || partner?.vocations?.map(item => item.label) || [];
+  const doorKeys = professional?.specialties?.length
+    ? specialtyDoorKeys(professional.specialties.map(item => item.id), professional.hasOwnMedia)
+    : partnerDoorKeys(specialtyLabels.join(" · "));
+  const offers = trpc.commercial.regionalOffers.useQuery(undefined, { enabled: Boolean(partner) && doorKeys.has("ofertas"), refetchInterval: 8000 });
   const principal = auth.data?.role === "administrador principal";
   const [partnerHandle, setPartnerHandle] = useState("");
   useEffect(() => { setPartnerHandle(partner?.instagramHandle ? `@${partner.instagramHandle}` : ""); }, [partner?.instagramHandle]);
@@ -65,13 +85,32 @@ export default function AdminDashboard() {
       {partner ? (
         <>
           <p className="-mt-2 mb-4 max-w-3xl text-sm leading-6 text-oju-terra-suave">
-            Você trabalha só {partner.territories.map(item => item.name).join(", ") || "a cidade autorizada"}. Escrever, fotos, lugares e casas. A Equipe Ojú é quem muda o site, a Home e os textos do portal.
+            Você trabalha só {partner.territories.map(item => item.name).join(", ") || "a cidade autorizada"}. Perfil: {professional?.displayName || partner.partnerName}. Especialidade: {specialtyLabels.join(" · ") || "a que a Equipe Ojú registrou"}. Vínculo: {professional?.networkBond === "parceiro-midia" ? "parceiro de mídia" : "criador parceiro"}. {professional?.hasOwnMedia ? `Mídia própria: ${professional.mediaOutletName || "declarada"}.` : ""} A Equipe Ojú é quem muda o site, a Home e os textos do portal.
           </p>
+          {doorKeys.has("ofertas") ? (
+            <section className="admin-card mb-6 p-5">
+              <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Pedidos na sua cidade</p>
+              <h2 className="mt-2 font-serif text-2xl">Aceitar, recusar ou deixar expirar.</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-oju-terra-suave">Cobertura fotográfica ou de vídeo pedida à Ojú na sua região. Se outra pessoa aceitar, some daqui. Se ninguém aceitar, some depois do prazo.</p>
+              {offers.data?.length ? (
+                <div className="mt-4 grid gap-2">
+                  {offers.data.map(item => (
+                    <Link key={item.id} href="/admin/solicitacoes" className="rounded-2xl bg-oju-papel px-4 py-4">
+                      <p className="font-semibold">{item.eventType}</p>
+                      <p className="mt-1 text-xs leading-5 text-oju-terra-suave">{[item.location, item.state].filter(Boolean).join(" · ") || "Cidade a confirmar"}{item.eventDate ? ` · ${new Date(item.eventDate).toLocaleDateString("pt-BR")}` : ""}</p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-oju-terra-suave">Nenhum pedido aberto na sua cidade agora.</p>
+              )}
+            </section>
+          ) : null}
           <section className="admin-card mb-6 p-5">
             <p className="text-xs font-bold uppercase tracking-[.14em] text-[#806817]">Seu trabalho</p>
             <h2 className="mt-2 font-serif text-2xl">Alimente a cidade. Não redesenhe o site.</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {workDoors.map(door => (
+              {partnerDoors.filter(door => doorKeys.has(door.key)).map(door => (
                 <Link key={door.href} href={door.href} className="rounded-2xl bg-oju-papel px-4 py-4">
                   <p className="font-semibold">{door.title}</p>
                   <p className="mt-2 text-xs leading-5 text-oju-terra-suave">{door.text}</p>
@@ -199,6 +238,10 @@ export default function AdminDashboard() {
             <Link href="/admin/publicacoes" className="rounded-xl bg-oju-papel px-4 py-3">Criar ou editar</Link>
             <Link href="/admin/midias" className="rounded-xl bg-oju-papel px-4 py-3">Enviar fotos ou vídeo</Link>
             {partner ? <Link href="/admin/solicitacoes" className="rounded-xl bg-oju-papel px-4 py-3">Pedidos do território</Link> : <Link href="/admin/solicitacoes" className="rounded-xl bg-oju-papel px-4 py-3">Ver solicitações</Link>}
+            <Link href="/admin/oportunidades" className="rounded-xl bg-oju-papel px-4 py-3">Oportunidades</Link>
+            <Link href="/admin/producoes" className="rounded-xl bg-oju-papel px-4 py-3">Produções</Link>
+            <Link href="/admin/notificacoes-rede" className="rounded-xl bg-oju-papel px-4 py-3">Notificações</Link>
+            <Link href="/admin/comercial-rede" className="rounded-xl bg-oju-papel px-4 py-3">Comercial da Rede</Link>
           </div>
         </div>
       </section>

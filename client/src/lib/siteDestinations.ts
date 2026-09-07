@@ -60,6 +60,16 @@ export const siteDestinations = [
     steps: ["Estado e município.", "Ligue nas publicações.", "Mapa só se a casa autorizar."],
   },
   {
+    id: "rede",
+    label: "Rede",
+    publicHref: "/rede",
+    adminHref: "/admin/fotografos",
+    action: "link" as const,
+    contentKind: null,
+    how: "Publique o perfil profissional ativo na Rede. Não é portfólio e pagamento não compra visibilidade.",
+    steps: ["Perfil ativo.", "Autorizar presença pública.", "Aparece em /rede."],
+  },
+  {
     id: "fotografos",
     label: "Fotógrafos",
     publicHref: "/fotografos",

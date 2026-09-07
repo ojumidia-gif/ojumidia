@@ -1,9 +1,11 @@
+import { isEditorialHomeSurface } from "@shared/territorialVisibility";
+
 export function slugifyEditorial(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 export function isHomeCurated(publication: { homePlacement: string; manualFeatured: boolean }) {
-  return publication.homePlacement !== "Nenhum" || publication.manualFeatured;
+  return isEditorialHomeSurface(publication);
 }
 
 export const homePlacementRank: Record<string, number> = {
