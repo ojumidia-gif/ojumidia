@@ -10,6 +10,7 @@ export async function applyDueScheduledPublications(db: Db, now = new Date()) {
   const due = await db.select().from(publications).where(and(
     eq(publications.status, "Aprovada"),
     isNull(publications.deletedAt),
+    isNull(publications.quarantinedAt),
     lte(publications.scheduledAt, now),
   ));
   let published = 0;

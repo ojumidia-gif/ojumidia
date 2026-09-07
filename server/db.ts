@@ -4,6 +4,7 @@ import mysql from "mysql2";
 import { administratorResponsibilityTerms, collaboratorAccessGrants, InsertUser, users } from "../drizzle/schema";
 import { isAuthorizedSuperAdmin } from './_core/env';
 import { mysqlConnectionFromUrl } from "./mysqlConnection";
+import { isAccountOperable } from "@shared/governance";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -74,7 +75,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       ? (await db.select().from(administratorResponsibilityTerms).where(and(eq(administratorResponsibilityTerms.grantId, grant.id), eq(administratorResponsibilityTerms.status, "Assinado via gov.br"))).limit(1))[0]
       : undefined;
 
-    if (isLocalPrimaryAdmin) {
+    const existing = (await db.select({ accountStatus: users.accountStatus }).from(users).where(eq(users.openId, user.openId)).limit(1))[0];
+    const accountLocked = existing ? !isAccountOperable(existing.accountStatus) : false;
+
+    if (accountLocked) {
+      values.adminAccess = false;
+      updateSet.adminAccess = false;
+    } else if (isLocalPrimaryAdmin) {
       values.role = "administrador principal";
       updateSet.role = "administrador principal";
       values.adminAccess = true;

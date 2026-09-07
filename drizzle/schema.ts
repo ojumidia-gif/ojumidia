@@ -18,6 +18,13 @@ export const users = mysqlTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["criador", "editor", "aprovador", "administrador", "administrador principal"]).default("criador").notNull(),
   adminAccess: boolean("adminAccess").default(false).notNull(),
+  accountStatus: mysqlEnum("accountStatus", ["Ativo", "Suspenso", "Bloqueado", "Revogado"]).default("Ativo").notNull(),
+  sessionEpoch: int("sessionEpoch").default(0).notNull(),
+  accountStatusReason: text("accountStatusReason"),
+  accountStatusChangedAt: timestamp("accountStatusChangedAt"),
+  accountStatusChangedBy: int("accountStatusChangedBy"),
+  accountStatusCaseId: int("accountStatusCaseId"),
+  accountStatusUntil: timestamp("accountStatusUntil"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -98,6 +105,9 @@ export const auditEvents = mysqlTable("auditEvents", {
   previousState: text("previousState"),
   nextState: text("nextState"),
   detail: text("detail"),
+  requestIp: varchar("requestIp", { length: 64 }),
+  userAgent: varchar("userAgent", { length: 320 }),
+  correlationId: varchar("correlationId", { length: 80 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [
   index("audit_actor_created_idx").on(table.actorId, table.createdAt),
@@ -261,8 +271,13 @@ export const publications = mysqlTable("publications", {
   scheduledAt: timestamp("scheduledAt"),
   highlightExpiresAt: timestamp("highlightExpiresAt"),
   version: int("version").default(1).notNull(),
+  quarantinedAt: timestamp("quarantinedAt"),
+  quarantinedBy: int("quarantinedBy"),
+  quarantineCaseId: int("quarantineCaseId"),
+  quarantinePreviousPublic: boolean("quarantinePreviousPublic"),
 }, table => [
   index("publication_status_idx").on(table.status),
+  index("publication_quarantine_idx").on(table.quarantinedAt),
   index("publication_team_idx").on(table.teamId),
   index("publication_feature_idx").on(table.manualFeatured, table.relevance),
   index("publication_deleted_idx").on(table.deletedAt),
@@ -332,8 +347,12 @@ export const mediaAssets = mysqlTable("mediaAssets", {
   backgroundPriority: int("backgroundPriority").default(0).notNull(),
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  quarantinedAt: timestamp("quarantinedAt"),
+  quarantinedBy: int("quarantinedBy"),
+  quarantineCaseId: int("quarantineCaseId"),
 }, table => [
   index("media_partner_status_idx").on(table.partnerId, table.uploadStatus, table.state),
+  index("media_quarantine_idx").on(table.quarantinedAt),
   index("media_territory_status_idx").on(table.territoryId, table.uploadStatus, table.state),
   index("media_photographer_idx").on(table.photographerId, table.state),
 ]);
@@ -993,6 +1012,117 @@ export const portalContentActivities = mysqlTable("portalContentActivities", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [
   index("portal_content_activity_block_idx").on(table.blockId, table.createdAt),
+]);
+
+export const governanceCaseKinds = ["Denúncia", "Incidente"] as const;
+export const governanceCaseStatuses = ["Aberta", "Em análise", "Quarentena", "Resolvida", "Rejeitada", "Arquivada"] as const;
+export const governanceCaseOutcomes = ["Não confirmada", "Violação confirmada"] as const;
+export const governanceCasePriorities = ["Baixa", "Média", "Alta", "Urgente"] as const;
+export const governanceCaseCategories = [
+  "Violação de direitos de imagem",
+  "Uso não autorizado de conteúdo",
+  "Conteúdo sensível",
+  "Exposição indevida de dados",
+  "Violação de regras da plataforma",
+  "Abuso de privilégio administrativo",
+  "Fraude",
+  "Comportamento suspeito",
+  "Denúncia jurídica",
+  "Solicitação de autoridade",
+  "Outros",
+] as const;
+export const governanceAlertKinds = [
+  "denuncia-aberta",
+  "denuncia-pendente",
+  "conta-inativa-operando",
+  "tentativa-privilegio",
+  "acesso-negado-repetido",
+  "alteracao-permissao",
+  "expurgo-bloqueado",
+] as const;
+
+export const governanceCaseCounters = mysqlTable("governanceCaseCounters", {
+  year: int("year").primaryKey(),
+  lastNumber: int("lastNumber").default(0).notNull(),
+});
+
+export const governanceCases = mysqlTable("governanceCases", {
+  id: int("id").autoincrement().primaryKey(),
+  publicCode: varchar("publicCode", { length: 32 }).notNull().unique(),
+  kind: mysqlEnum("kind", governanceCaseKinds).default("Denúncia").notNull(),
+  status: mysqlEnum("status", governanceCaseStatuses).default("Aberta").notNull(),
+  outcome: mysqlEnum("outcome", governanceCaseOutcomes),
+  priority: mysqlEnum("priority", governanceCasePriorities).default("Média").notNull(),
+  category: mysqlEnum("category", governanceCaseCategories).notNull(),
+  title: varchar("title", { length: 280 }).notNull(),
+  description: text("description").notNull(),
+  publicationId: int("publicationId"),
+  mediaId: int("mediaId"),
+  subjectUserId: int("subjectUserId"),
+  assigneeId: int("assigneeId"),
+  createdBy: int("createdBy").notNull(),
+  decisionNote: text("decisionNote"),
+  decidedBy: int("decidedBy"),
+  decidedAt: timestamp("decidedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("governance_case_status_idx").on(table.status, table.createdAt),
+  index("governance_case_subject_idx").on(table.subjectUserId, table.createdAt),
+  index("governance_case_publication_idx").on(table.publicationId),
+]);
+
+export const governanceCaseEvents = mysqlTable("governanceCaseEvents", {
+  id: int("id").autoincrement().primaryKey(),
+  caseId: int("caseId").notNull(),
+  actorId: int("actorId"),
+  action: varchar("action", { length: 160 }).notNull(),
+  detail: text("detail"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("governance_case_event_idx").on(table.caseId, table.createdAt),
+]);
+
+export const governanceLegalHolds = mysqlTable("governanceLegalHolds", {
+  id: int("id").autoincrement().primaryKey(),
+  caseId: int("caseId").notNull(),
+  resourceType: varchar("resourceType", { length: 120 }).notNull(),
+  resourceId: int("resourceId").notNull(),
+  reason: text("reason").notNull(),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  releasedAt: timestamp("releasedAt"),
+  releasedBy: int("releasedBy"),
+  releaseReason: text("releaseReason"),
+}, table => [
+  index("governance_hold_resource_idx").on(table.resourceType, table.resourceId, table.releasedAt),
+  index("governance_hold_case_idx").on(table.caseId),
+]);
+
+export const governanceEvidenceExports = mysqlTable("governanceEvidenceExports", {
+  id: int("id").autoincrement().primaryKey(),
+  caseId: int("caseId").notNull(),
+  actorId: int("actorId").notNull(),
+  itemCount: int("itemCount").default(0).notNull(),
+  packageChecksum: varchar("packageChecksum", { length: 128 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("governance_export_case_idx").on(table.caseId, table.createdAt),
+]);
+
+export const governanceSecurityAlerts = mysqlTable("governanceSecurityAlerts", {
+  id: int("id").autoincrement().primaryKey(),
+  kind: varchar("kind", { length: 80 }).notNull(),
+  severity: mysqlEnum("severity", ["info", "alerta", "critico"]).default("alerta").notNull(),
+  status: mysqlEnum("status", ["Aberto", "Reconhecido", "Encerrado"]).default("Aberto").notNull(),
+  title: varchar("title", { length: 280 }).notNull(),
+  detail: text("detail"),
+  actorUserId: int("actorUserId"),
+  subjectUserId: int("subjectUserId"),
+  caseId: int("caseId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("governance_alert_status_idx").on(table.status, table.createdAt),
 ]);
 
 export type Publication = typeof publications.$inferSelect;

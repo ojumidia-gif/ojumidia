@@ -54,6 +54,7 @@ import MemoryReviewAdmin from "./pages/admin/MemoryReviewAdmin";
 import LocalDevLogin from "./pages/admin/LocalDevLogin";
 import InstitutionVisibilityAdmin from "./pages/admin/InstitutionVisibilityAdmin";
 import CollaboratorsAdmin from "./pages/admin/CollaboratorsAdmin";
+import GovernanceReportsAdmin from "./pages/admin/GovernanceReportsAdmin";
 import EarningsAdmin from "./pages/admin/EarningsAdmin";
 import CommercialPoliciesAdmin from "./pages/admin/CommercialPoliciesAdmin";
 import PayoutNotificationsAdmin from "./pages/admin/PayoutNotificationsAdmin";
@@ -133,6 +134,7 @@ function Router() {
       <Route path={"/admin/nova-instituicao"} component={InstitutionRegistrationAdmin} />
       <Route path={"/admin/visibilidade-institucional"} component={InstitutionVisibilityAdmin} />
       <Route path={"/admin/colaboradores"} component={CollaboratorsAdmin} />
+      <Route path={"/admin/denuncias"} component={GovernanceReportsAdmin} />
       <Route path={"/admin/candidaturas"} component={JoinRequestsAdmin} />
       <Route path={"/admin/nova-memoria-oral"} component={OralMemoryUploadAdmin} />
       <Route path={"/admin/notificacoes-acolhimento"} component={CareNotificationsAdmin} />

@@ -21,6 +21,8 @@ describe("gestão individual de colaboradores", () => {
     expect(router).toContain('const collaboratorRoles = ["criador", "editor", "aprovador", "administrador"]');
     expect(source("drizzle/schema.ts")).toContain("collaboratorAccessGrants");
     expect(router).toContain("Administrador territorial precisa de Parceiro Ojú");
+    expect(router).toContain("setAccountStatus");
+    expect(router).toContain("Não é permitido alterar o próprio escopo");
   });
 
   it("vincula o convite ao primeiro login e centraliza a ativação de papel na sincronização do grant", () => {

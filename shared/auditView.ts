@@ -8,6 +8,18 @@ export const routineAuditActions = [
 
 export const auditActionLabels: Record<string, string> = {
   "login-success": "Login",
+  "login-failure": "Falha de login",
+  "admin-suspended": "Administrador suspenso",
+  "admin-blocked": "Administrador bloqueado",
+  "admin-reactivated": "Administrador reativado",
+  "admin-revoked": "Acesso revogado",
+  "report-created": "Denúncia aberta",
+  "report-reviewed": "Denúncia analisada",
+  "content-quarantined": "Conteúdo em quarentena",
+  "content-restored-from-quarantine": "Quarentena removida",
+  "evidence-preserved": "Evidência preservada",
+  "evidence-hold-released": "Preservação encerrada",
+  "evidence-exported": "Pacote de evidências exportado",
   "publication-created": "Rascunho criado",
   "publication-status-changed": "Etapa editorial",
   "publication-unpublished": "Retirado do portal",

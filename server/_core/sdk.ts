@@ -6,6 +6,7 @@ import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
+import { isAccountOperable, sessionIsRevoked } from "@shared/governance";
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -13,6 +14,7 @@ const isNonEmptyString = (value: unknown): value is string =>
 export type SessionPayload = {
   openId: string;
   name: string;
+  epoch?: number;
 };
 
 class SDKServer {
@@ -37,12 +39,14 @@ class SDKServer {
 
   async createSessionToken(
     openId: string,
-    options: { expiresInMs?: number; name?: string } = {}
+    options: { expiresInMs?: number; name?: string; epoch?: number } = {}
   ): Promise<string> {
+    const account = options.epoch === undefined ? await db.getUserByOpenId(openId) : undefined;
     return this.signSession(
       {
         openId,
         name: options.name || "",
+        epoch: options.epoch ?? account?.sessionEpoch ?? 0,
       },
       options
     );
@@ -63,6 +67,7 @@ class SDKServer {
     return new SignJWT({
       openId: payload.openId,
       name: payload.name,
+      epoch: payload.epoch ?? 0,
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime(expirationSeconds)
@@ -71,7 +76,7 @@ class SDKServer {
 
   async verifySession(
     cookieValue: string | undefined | null
-  ): Promise<{ openId: string; name: string } | null> {
+  ): Promise<{ openId: string; name: string; epoch: number } | null> {
     if (!cookieValue) {
       console.warn("[Auth] Missing session cookie");
       return null;
@@ -84,7 +89,7 @@ class SDKServer {
         algorithms: ["HS256"],
       });
 
-      const { openId, name } = payload as Record<string, unknown>;
+      const { openId, name, epoch } = payload as Record<string, unknown>;
 
       if (!isNonEmptyString(openId)) {
         console.warn("[Auth] Session payload missing required fields");
@@ -94,6 +99,7 @@ class SDKServer {
       return {
         openId,
         name: typeof name === "string" ? name : "",
+        epoch: typeof epoch === "number" ? epoch : 0,
       };
     } catch (error) {
       console.warn("[Auth] Session verification failed", String(error));
@@ -127,6 +133,10 @@ class SDKServer {
 
     if (!user) {
       throw ForbiddenError("User not found");
+    }
+
+    if (!isAccountOperable(user.accountStatus) || sessionIsRevoked(session.epoch, user.sessionEpoch)) {
+      throw ForbiddenError("Account session is no longer valid");
     }
 
     await db.upsertUser({

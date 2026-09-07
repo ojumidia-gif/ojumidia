@@ -12,6 +12,7 @@ import {
 } from "../drizzle/schema";
 import { getDb } from "./db";
 import { recordAuditEvent } from "./partnerScope";
+import { assertResourcePurgeAllowed, GovernanceHoldError } from "./governance";
 
 export const EDITORIAL_TRASH_RETENTION_MS = 24 * 60 * 60 * 1000;
 
@@ -32,6 +33,7 @@ export async function permanentlyPurgePublication(
   actorId: number,
   detail: string,
 ) {
+  await assertResourcePurgeAllowed(db, "publication", publication.id);
   await recordAuditEvent(db, {
     actorId,
     partnerId: publication.partnerId,
@@ -117,12 +119,18 @@ export async function purgeExpiredEditorialTrash(
     );
 
   for (const publication of expired) {
-    await permanentlyPurgePublication(
-      db,
-      publication,
-      actorId,
-      "Expurgo automático após 24 horas na Lixeira Editorial.",
-    );
+    if (publication.quarantinedAt) continue;
+    try {
+      await permanentlyPurgePublication(
+        db,
+        publication,
+        actorId,
+        "Expurgo automático após 24 horas na Lixeira Editorial.",
+      );
+    } catch (error) {
+      if (error instanceof GovernanceHoldError) continue;
+      throw error;
+    }
   }
 
   return {

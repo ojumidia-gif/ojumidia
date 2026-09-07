@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Express, Request, Response } from "express";
 import { COOKIE_NAME } from "@shared/const";
+import { isAccountOperable } from "@shared/governance";
 import * as db from "../db";
 import { applyLoginSideEffects } from "../loginSideEffects";
 import { getSessionCookieOptions } from "./cookies";
@@ -36,12 +37,17 @@ export function registerLocalDevAuthRoutes(app: Express) {
         loginMethod: "local-development",
         lastSignedIn: new Date(),
       });
+      const account = await db.getUserByOpenId(openId);
+      if (account && !isAccountOperable(account.accountStatus)) {
+        await applyLoginSideEffects({ openId, loginMethod: "local-development", outcome: "failure", detail: "Login local recusado: conta suspensa, bloqueada ou revogada.", email });
+        return res.status(403).json({ message: "Esta conta administrativa está suspensa ou bloqueada." });
+      }
       await applyLoginSideEffects({ openId, loginMethod: "local-development", outcome: "success", detail: "Login local de desenvolvimento autenticado.", email });
 
-      const token = await sdk.signSession(
-        { openId, name: "Administrador local de desenvolvimento" },
-        { expiresInMs: SESSION_DURATION_MS }
-      );
+      const token = await sdk.createSessionToken(openId, {
+        name: "Administrador local de desenvolvimento",
+        expiresInMs: SESSION_DURATION_MS,
+      });
       res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(req), maxAge: SESSION_DURATION_MS });
       return res.status(204).end();
     } catch {

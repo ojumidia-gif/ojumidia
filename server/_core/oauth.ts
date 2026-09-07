@@ -1,4 +1,5 @@
 import { COOKIE_NAME, ONE_YEAR_MS, OAUTH_STATE_COOKIE, decodeOAuthState, encodeOAuthState } from "@shared/const";
+import { isAccountOperable } from "@shared/governance";
 import { parse as parseCookieHeader } from "cookie";
 import { randomUUID } from "node:crypto";
 import type { Express, Request, Response } from "express";
@@ -168,6 +169,12 @@ export function registerOAuthRoutes(app: Express) {
         loginMethod: "google",
         lastSignedIn: new Date(),
       });
+      const account = await db.getUserByOpenId(openId);
+      if (account && !isAccountOperable(account.accountStatus)) {
+        await applyLoginSideEffects({ openId, loginMethod: "google", outcome: "failure", detail: "Login recusado: conta suspensa, bloqueada ou revogada.", email });
+        res.redirect(302, "/admin?erro=conta");
+        return;
+      }
       await applyLoginSideEffects({ openId, loginMethod: "google", outcome: "success", detail: "Login Google administrativo autenticado. Tokens não são registrados.", email });
 
       const sessionToken = await sdk.createSessionToken(openId, {

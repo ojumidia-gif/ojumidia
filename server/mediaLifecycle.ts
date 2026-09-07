@@ -14,6 +14,7 @@ import {
 } from "../drizzle/schema";
 import { getDb } from "./db";
 import { recordAuditEvent } from "./partnerScope";
+import { assertResourcePurgeAllowed } from "./governance";
 import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { storageDeleteConfirmed, storageInspect, type StorageInspectResult } from "./storage";
 
@@ -146,6 +147,10 @@ export async function purgeMediaAsset(db: Database, actorId: number, media: Medi
   if (!confirmationMatchesMedia(media, confirmation)) {
     throw new Error("Digite o nome exato do arquivo (ou “mídia #id”) para confirmar a exclusão definitiva.");
   }
+  if (media.quarantinedAt) {
+    throw new Error("Esta mídia está em quarentena e não pode ser expurgada.");
+  }
+  await assertResourcePurgeAllowed(db, "media", media.id);
 
   const usages = await collectMediaUsages(db, media.id);
   if (usages.length) {

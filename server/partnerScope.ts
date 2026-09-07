@@ -198,6 +198,9 @@ export async function recordAuditEvent(db: Db, input: {
   previousState?: unknown;
   nextState?: unknown;
   detail?: string | null;
+  requestIp?: string | null;
+  userAgent?: string | null;
+  correlationId?: string | null;
 }) {
   await db.insert(auditEvents).values({
     actorId: input.actorId ?? null,
@@ -209,5 +212,8 @@ export async function recordAuditEvent(db: Db, input: {
     previousState: input.previousState === undefined ? null : JSON.stringify(input.previousState),
     nextState: input.nextState === undefined ? null : JSON.stringify(input.nextState),
     detail: input.detail ?? null,
+    requestIp: input.requestIp ?? null,
+    userAgent: input.userAgent ?? null,
+    correlationId: input.correlationId ?? null,
   });
 }

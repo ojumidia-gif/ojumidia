@@ -1,10 +1,12 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { administratorResponsibilityTerms, collaboratorAccessGrants, mediaAssets, publications, users } from "../../drizzle/schema";
+import { administratorResponsibilityTerms, collaboratorAccessGrants, mediaAssets, partnerMembers, publications, users } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { recordAuditEvent, syncPartnerMemberFromGrant } from "../partnerScope";
 import { classifyAdminPulse } from "@shared/adminPulse";
+import { formatAdminId, isAccountOperable, nextSessionEpoch } from "@shared/governance";
+import { recordSecurityAlert } from "../governance";
 import { protectedProcedure, router } from "../_core/trpc";
 
 const collaboratorRoles = ["criador", "editor", "aprovador", "administrador"] as const;
@@ -35,19 +37,36 @@ function assertGrantScope(role: (typeof collaboratorRoles)[number], partnerId?: 
   }
 }
 
+const accountStatuses = ["Ativo", "Suspenso", "Bloqueado", "Revogado"] as const;
+
+async function revokePartnerMemberships(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, userId: number, status: "Suspenso" | "Revogado") {
+  await db.update(partnerMembers).set({ status, revokedAt: new Date() }).where(eq(partnerMembers.userId, userId));
+}
+
+async function bumpSessionEpoch(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, userId: number) {
+  const account = (await db.select({ sessionEpoch: users.sessionEpoch }).from(users).where(eq(users.id, userId)).limit(1))[0];
+  if (!account) return;
+  await db.update(users).set({ sessionEpoch: nextSessionEpoch(account.sessionEpoch) }).where(eq(users.id, userId));
+}
+
 async function synchronizeGrantedAccountRole(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, grant: typeof collaboratorAccessGrants.$inferSelect) {
   if (!grant.userId) return;
+  const account = (await db.select().from(users).where(eq(users.id, grant.userId)).limit(1))[0];
   const signedTerm = grant.role === "administrador"
     ? (await db.select().from(administratorResponsibilityTerms).where(and(eq(administratorResponsibilityTerms.grantId, grant.id), eq(administratorResponsibilityTerms.status, "Assinado via gov.br"))).limit(1))[0]
     : undefined;
-  const isActive = grant.status === "Autorizado" && (grant.role !== "administrador" || Boolean(signedTerm));
-  await db.update(users).set({ role: isActive ? grant.role : "criador", adminAccess: isActive }).where(eq(users.id, grant.userId));
+  const operable = account ? isAccountOperable(account.accountStatus) : true;
+  const isActive = operable && grant.status === "Autorizado" && (grant.role !== "administrador" || Boolean(signedTerm));
+  await db.update(users).set({ role: isActive ? grant.role : (account?.role === "administrador principal" ? account.role : "criador"), adminAccess: isActive }).where(eq(users.id, grant.userId));
   if (isActive && grant.partnerId && grant.territoryId) {
     try {
       await syncPartnerMemberFromGrant(db, { userId: grant.userId, partnerId: grant.partnerId, territoryId: grant.territoryId, createdBy: grant.createdBy });
     } catch (error) {
       throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Não foi possível associar o colaborador ao território." });
     }
+  } else if (grant.userId && grant.status === "Revogado") {
+    await revokePartnerMemberships(db, grant.userId, "Revogado");
+    await bumpSessionEpoch(db, grant.userId);
   }
 }
 
@@ -57,7 +76,7 @@ export const collaboratorsRouter = router({
     const db = await requireDb();
     const [grants, accounts, terms] = await Promise.all([
       db.select().from(collaboratorAccessGrants).orderBy(desc(collaboratorAccessGrants.updatedAt)),
-      db.select({ id: users.id, name: users.name, email: users.email, role: users.role, adminAccess: users.adminAccess, lastSignedIn: users.lastSignedIn }).from(users),
+      db.select({ id: users.id, name: users.name, email: users.email, role: users.role, adminAccess: users.adminAccess, accountStatus: users.accountStatus, lastSignedIn: users.lastSignedIn, createdAt: users.createdAt }).from(users),
       db.select().from(administratorResponsibilityTerms).orderBy(desc(administratorResponsibilityTerms.createdAt)),
     ]);
     const accountsByEmail = new Map(accounts.filter(account => account.email).map(account => [normalizeEmail(account.email!), account]));
@@ -78,7 +97,7 @@ export const collaboratorsRouter = router({
       mediaCount.set(row.createdBy, (mediaCount.get(row.createdBy) || 0) + 1);
     }
     return {
-      superAdmins,
+      superAdmins: superAdmins.map(account => ({ ...account, adminId: formatAdminId(account.id) })),
       grants: grants.map(grant => {
         const term = latestTermByGrant.get(grant.id);
         const safeTerm = term ? (() => { const { signedDocumentUrl: _signedDocumentUrl, signedStorageKey: _signedStorageKey, ...safe } = term; return { ...safe, hasSignedDocument: Boolean(_signedDocumentUrl && _signedStorageKey) }; })() : null;
@@ -91,7 +110,7 @@ export const collaboratorsRouter = router({
           publicationCount: pubs,
           mediaCount: media,
         });
-        return { ...grant, account, responsibilityTerm: safeTerm, publicationCount: pubs, mediaCount: media, pulse };
+        return { ...grant, account: account ? { ...account, adminId: formatAdminId(account.id) } : null, responsibilityTerm: safeTerm, publicationCount: pubs, mediaCount: media, pulse, adminId: account ? formatAdminId(account.id) : null };
       }),
     };
   }),
@@ -106,6 +125,7 @@ export const collaboratorsRouter = router({
     const db = await requireDb();
     const email = normalizeEmail(input.email);
     if (email === COMMERCIAL_CONTACT_EMAIL) throw new TRPCError({ code: "BAD_REQUEST", message: "O e-mail comercial da Ojú não pode receber autorização administrativa." });
+    if (normalizeEmail(ctx.user.email || "") === email) throw new TRPCError({ code: "FORBIDDEN", message: "Não é permitido alterar o próprio escopo ou permissões por esta via." });
     assertGrantScope(input.role, input.partnerId, input.territoryId);
     const existing = (await db.select().from(collaboratorAccessGrants).where(eq(collaboratorAccessGrants.email, email)).limit(1))[0];
     const values = { email, displayName: input.displayName ?? null, role: input.role, note: input.note ?? null, status: "Autorizado" as const, createdBy: ctx.user.id, partnerId: input.partnerId ?? null, territoryId: input.territoryId ?? null };
@@ -135,6 +155,8 @@ export const collaboratorsRouter = router({
     const db = await requireDb();
     const grant = (await db.select().from(collaboratorAccessGrants).where(eq(collaboratorAccessGrants.id, input.id)).limit(1))[0];
     if (!grant) throw new TRPCError({ code: "NOT_FOUND", message: "Autorização de colaborador não encontrada." });
+    if (grant.userId && grant.userId === ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Não é permitido alterar o próprio escopo ou permissões." });
+    if (normalizeEmail(grant.email) === normalizeEmail(ctx.user.email || "")) throw new TRPCError({ code: "FORBIDDEN", message: "Não é permitido alterar o próprio escopo ou permissões." });
     const role = input.role ?? grant.role;
     const partnerId = input.partnerId === undefined ? grant.partnerId : input.partnerId;
     const territoryId = input.territoryId === undefined ? grant.territoryId : input.territoryId;
@@ -163,5 +185,59 @@ export const collaboratorsRouter = router({
     await db.update(administratorResponsibilityTerms).set({ status: "Assinado via gov.br", signedDocumentUrl: input.signedDocumentUrl, signedStorageKey: input.signedStorageKey ?? null, signedFilename: input.signedFilename, signedAt: new Date(), uploadedByUserId: ctx.user.id, notes: input.notes?.trim() || null }).where(eq(administratorResponsibilityTerms.id, term.id));
     await synchronizeGrantedAccountRole(db, grant);
     return { success: true };
+  }),
+  setAccountStatus: protectedProcedure.input(z.object({
+    userId: z.number().int().positive(),
+    status: z.enum(accountStatuses),
+    reason: z.string().min(3).max(2000),
+    caseId: z.number().int().positive().nullable().optional(),
+    until: z.string().datetime().nullable().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    requirePrincipal(ctx.user.role);
+    if (input.userId === ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "O Super Admin não pode suspender ou revogar a própria conta por esta via." });
+    const db = await requireDb();
+    const account = (await db.select().from(users).where(eq(users.id, input.userId)).limit(1))[0];
+    if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "Conta não encontrada." });
+    if (account.role === "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "A Equipe Ojú / Super Admin não pode ser suspensa por este painel." });
+    const previous = account.accountStatus;
+    await db.update(users).set({
+      accountStatus: input.status,
+      accountStatusReason: input.reason,
+      accountStatusChangedAt: new Date(),
+      accountStatusChangedBy: ctx.user.id,
+      accountStatusCaseId: input.caseId ?? null,
+      accountStatusUntil: input.until ? new Date(input.until) : null,
+      adminAccess: input.status === "Ativo" ? account.adminAccess : false,
+    }).where(eq(users.id, account.id));
+    if (input.status !== "Ativo") await bumpSessionEpoch(db, account.id);
+    const grant = account.email ? (await db.select().from(collaboratorAccessGrants).where(eq(collaboratorAccessGrants.email, normalizeEmail(account.email))).limit(1))[0] : undefined;
+    if (grant) {
+      if (input.status === "Revogado") await db.update(collaboratorAccessGrants).set({ status: "Revogado" }).where(eq(collaboratorAccessGrants.id, grant.id));
+      if (input.status === "Ativo") await db.update(collaboratorAccessGrants).set({ status: "Autorizado" }).where(eq(collaboratorAccessGrants.id, grant.id));
+      const updatedGrant = (await db.select().from(collaboratorAccessGrants).where(eq(collaboratorAccessGrants.id, grant.id)).limit(1))[0];
+      if (updatedGrant) await synchronizeGrantedAccountRole(db, updatedGrant);
+    }
+    if (input.status === "Suspenso") await revokePartnerMemberships(db, account.id, "Suspenso");
+    if (input.status === "Bloqueado" || input.status === "Revogado") await revokePartnerMemberships(db, account.id, "Revogado");
+    const action = input.status === "Ativo" ? "admin-reactivated" : input.status === "Suspenso" ? "admin-suspended" : input.status === "Bloqueado" ? "admin-blocked" : "admin-revoked";
+    await recordAuditEvent(db, {
+      actorId: ctx.user.id,
+      resourceType: "user",
+      resourceId: account.id,
+      action,
+      previousState: { accountStatus: previous, adminId: formatAdminId(account.id) },
+      nextState: { accountStatus: input.status, caseId: input.caseId ?? null, until: input.until ?? null },
+      detail: input.reason,
+    });
+    await recordSecurityAlert(db, {
+      kind: "alteracao-permissao",
+      title: `${formatAdminId(account.id)} → ${input.status}`,
+      detail: input.reason,
+      actorUserId: ctx.user.id,
+      subjectUserId: account.id,
+      caseId: input.caseId ?? null,
+      severity: input.status === "Ativo" ? "info" : "alerta",
+    });
+    return { success: true, adminId: formatAdminId(account.id) };
   }),
 });

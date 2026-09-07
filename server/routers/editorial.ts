@@ -111,7 +111,7 @@ async function getMatchingPublicationIds(db: NonNullable<Awaited<ReturnType<type
   return first.filter(id => groups.every(group => group.some(row => row.publicationId === id)));
 }
 
-type PortalPublication = Pick<typeof publications.$inferSelect, "status" | "isPublic" | "commercialRequestId">;
+type PortalPublication = Pick<typeof publications.$inferSelect, "status" | "isPublic" | "commercialRequestId" | "quarantinedAt" | "deletedAt">;
 
 export function requiresCommercialEditorialAuthorization(publication: Pick<PortalPublication, "commercialRequestId">) {
   return publication.commercialRequestId !== null;
@@ -119,7 +119,7 @@ export function requiresCommercialEditorialAuthorization(publication: Pick<Porta
 
 export function canExposeOnPublicPortal(publication: PortalPublication, authorization?: boolean | CommercialEditorialAuthorization | null) {
   const authorized = typeof authorization === "boolean" ? authorization : canUseOnPortal(authorization);
-  return publication.status === "Publicada" && publication.isPublic && (!requiresCommercialEditorialAuthorization(publication) || authorized);
+  return publication.status === "Publicada" && publication.isPublic && !publication.quarantinedAt && !publication.deletedAt && (!requiresCommercialEditorialAuthorization(publication) || authorized);
 }
 
 export function recordPhotoCap(contentKind: string, photoLimit: number | null) {
@@ -255,7 +255,7 @@ export const editorialRouter = router({
     const territoryIds = territories.map(item => item.id);
     const relations = await db.select().from(publicationTaxonomies).where(inArray(publicationTaxonomies.taxonomyId, territoryIds));
     const relationPublicationIds = Array.from(new Set(relations.map(item => item.publicationId)));
-    const published = relationPublicationIds.length ? await db.select({ id: publications.id }).from(publications).where(and(inArray(publications.id, relationPublicationIds), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt))) : [];
+    const published = relationPublicationIds.length ? await db.select({ id: publications.id }).from(publications).where(and(inArray(publications.id, relationPublicationIds), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt), isNull(publications.quarantinedAt))) : [];
     const publishedIds = new Set(published.map(item => item.id));
     const mediaLinks = await db.select().from(taxonomyMedia).where(inArray(taxonomyMedia.taxonomyId, territoryIds)).orderBy(desc(taxonomyMedia.isPrimary), taxonomyMedia.displayOrder);
     const mediaIds = Array.from(new Set(mediaLinks.map(item => item.mediaId)));
@@ -281,7 +281,7 @@ export const editorialRouter = router({
       if (!photographerPublicationIds.length) return { items: [], total: 0, hasMore: false };
     }
     const conditions = [];
-    conditions.push(and(eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt))!);
+    conditions.push(and(eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt), isNull(publications.quarantinedAt))!);
     if (matchingIds) conditions.push(inArray(publications.id, matchingIds));
     if (photographerPublicationIds) conditions.push(inArray(publications.id, photographerPublicationIds));
     if (input.contentKind) conditions.push(eq(publications.contentKind, input.contentKind));
@@ -317,6 +317,7 @@ export const editorialRouter = router({
       eq(publications.status, "Publicada"),
       eq(publications.isPublic, true),
       isNull(publications.deletedAt),
+      isNull(publications.quarantinedAt),
       or(ne(publications.homePlacement, "Nenhum"), eq(publications.manualFeatured, true))!,
     ];
     const records = await db.select().from(publications).where(and(...conditions)).orderBy(desc(publications.manualFeatured), desc(publications.relevance), publications.sponsored, desc(publications.publishedAt)).limit(40);
@@ -354,7 +355,7 @@ export const editorialRouter = router({
 
   photoDocumentary: publicProcedure.input(photoDocumentaryInput).query(async ({ input }) => {
     const db = await requireDb();
-    const photos = await db.select().from(publications).where(and(eq(publications.contentKind, "Fotografia documental"), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt))).orderBy(desc(publications.publishedAt)).limit(input.offset + input.limit + 24);
+    const photos = await db.select().from(publications).where(and(eq(publications.contentKind, "Fotografia documental"), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt), isNull(publications.quarantinedAt))).orderBy(desc(publications.publishedAt)).limit(input.offset + input.limit + 24);
     const permitted = await portalAuthorizedPublications(db, photos);
     const page = permitted.slice(input.offset, input.offset + input.limit);
     const collections = await Promise.all(page.map(async ({ publication, authorization }) => {
@@ -367,7 +368,7 @@ export const editorialRouter = router({
 
   bySlug: publicProcedure.input(z.object({ slug: z.string().min(1) })).query(async ({ input }) => {
     const db = await requireDb();
-    const result = await db.select().from(publications).where(and(eq(publications.slug, input.slug), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt))).limit(1);
+    const result = await db.select().from(publications).where(and(eq(publications.slug, input.slug), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt), isNull(publications.quarantinedAt))).limit(1);
     if (!result[0]) return null;
     const authorization = await commercialAuthorizationByRequestId(db, result[0].commercialRequestId);
     if (!canExposeOnPublicPortal(result[0], authorization)) return null;
@@ -398,7 +399,7 @@ export const editorialRouter = router({
     if (scoped !== "all") conditions.push(inArray(publications.id, scoped));
     if (input?.status) conditions.push(eq(publications.status, input.status));
     if (input?.contentKind) conditions.push(eq(publications.contentKind, input.contentKind));
-    if (input?.publishedOnly) conditions.push(and(eq(publications.status, "Publicada"), eq(publications.isPublic, true))!);
+    if (input?.publishedOnly) conditions.push(and(eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.quarantinedAt))!);
     if (input?.createdByMe && ctx.user.role === "administrador principal") conditions.push(eq(publications.createdBy, ctx.user.id));
     if (input?.query) {
       const term = `%${input.query}%`;
@@ -507,6 +508,7 @@ export const editorialRouter = router({
     const current = await db.select().from(publications).where(eq(publications.id, input.id)).limit(1);
     if (!current[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
     await assertPublicationScope(db, ctx.user, current[0], "esta publicação");
+    if (current[0].quarantinedAt) throw new TRPCError({ code: "FORBIDDEN", message: "Este conteúdo está em quarentena e não pode ser alterado." });
     const role = ctx.user.role as EditorialRole;
     if (!canEditPublication(role, current[0].status as ContentStatus)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode editar nesta etapa." });
     const { id, taxonomyIds, expectedVersion, teamCredit, revisionNote, ...values } = input;
@@ -766,6 +768,7 @@ export const editorialRouter = router({
     const db = await requireDb();
     const current = (await db.select().from(publications).where(eq(publications.id, input.id)).limit(1))[0];
     if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
+    if (current.quarantinedAt) throw new TRPCError({ code: "FORBIDDEN", message: "Conteúdo em quarentena não pode ir para a lixeira. Use o painel de denúncias." });
     if (current.deletedAt) return { success: true };
     if (current.version !== input.expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de excluir." });
     const now = new Date();
@@ -900,7 +903,7 @@ export const editorialRouter = router({
     const credited = await db.select({ publicationId: publicationMedia.publicationId }).from(publicationMedia).innerJoin(mediaAssets, eq(publicationMedia.mediaId, mediaAssets.id)).where(and(eq(mediaAssets.photographerId, photographer.id), isNull(mediaAssets.deletedAt)));
     const publicationIds = Array.from(new Set(credited.map(item => item.publicationId)));
     if (!publicationIds.length) return { photographer, items: [], total: 0, hasMore: false };
-    const whereClause = and(inArray(publications.id, publicationIds), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt));
+    const whereClause = and(inArray(publications.id, publicationIds), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt), isNull(publications.quarantinedAt));
     const totalRow = await db.select({ value: count() }).from(publications).where(whereClause);
     const total = Number(totalRow[0]?.value || 0);
     const records = await db.select().from(publications).where(whereClause).orderBy(desc(publications.publishedAt)).limit(input.limit).offset(input.offset);

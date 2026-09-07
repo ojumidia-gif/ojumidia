@@ -22,9 +22,11 @@ describe("rotas administrativas restritas ao Super Admin", () => {
     expect(labels).not.toContain("/admin/auditoria");
     expect(labels).not.toContain("/admin/candidaturas");
     expect(labels).not.toContain("/admin/colaboradores");
+    expect(labels).not.toContain("/admin/denuncias");
     expect(labels).not.toContain("/admin/anuncios");
     expect(isPrincipalOnlyAdminPath("/admin/candidaturas")).toBe(true);
     expect(isPrincipalOnlyAdminPath("/admin/colaboradores")).toBe(true);
+    expect(isPrincipalOnlyAdminPath("/admin/denuncias")).toBe(true);
     expect(isPrincipalOnlyAdminPath("/admin/anuncios/12")).toBe(true);
     expect(isPrincipalOnlyAdminPath("/admin/destaques")).toBe(true);
     expect(isPrincipalOnlyAdminPath("/admin/configuracoes")).toBe(true);

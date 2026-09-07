@@ -70,8 +70,16 @@ export function requestOAuthCallbackUri(req: Pick<Request, "protocol" | "get" | 
   return origin ? callbackUriForOrigin(origin) : "";
 }
 
-export function resolveOAuthRedirectUri(_req?: Pick<Request, "protocol" | "get" | "hostname" | "headers">) {
-  return configuredRedirectUri();
+export function isAllowedOAuthRedirectUri(uri: string) {
+  return allowedOAuthRedirectUris().has(uri.trim().replace(/\/$/, ""));
+}
+
+export function resolveOAuthRedirectUri(req?: Pick<Request, "protocol" | "get" | "hostname" | "headers">) {
+  const fallback = configuredRedirectUri();
+  if (!req) return fallback;
+  const incoming = requestOAuthCallbackUri(req);
+  if (incoming && isAllowedOAuthRedirectUri(incoming)) return incoming;
+  return fallback;
 }
 
 export function oauthStartBounceUrl(req: Pick<Request, "protocol" | "get" | "hostname" | "headers">, redirectUri: string) {
@@ -79,8 +87,4 @@ export function oauthStartBounceUrl(req: Pick<Request, "protocol" | "get" | "hos
   const targetOrigin = originOf(redirectUri);
   if (!incomingOrigin || !targetOrigin || incomingOrigin === targetOrigin) return null;
   return `${targetOrigin}${GOOGLE_OAUTH_START_PATH}`;
-}
-
-export function isAllowedOAuthRedirectUri(uri: string) {
-  return allowedOAuthRedirectUris().has(uri.trim().replace(/\/$/, ""));
 }

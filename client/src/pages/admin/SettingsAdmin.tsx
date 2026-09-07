@@ -11,6 +11,7 @@ const cards = [
   { href: "/admin/frentes", icon: BookOpenText, title: "Frentes editoriais", text: "Atalho por tipo: história, cobertura, documentário, projeto e fotografia.", action: "Abrir frentes", principalOnly: true },
   { href: "/admin/candidaturas", icon: UserRoundCheck, title: "Candidaturas públicas", text: "Pedidos de Ser parceiro. Aprovar não cria login.", action: "Ver pedidos", principalOnly: true },
   { href: "/admin/colaboradores", icon: UserCog, title: "Colaboradores", text: "Convites, pulso de produção e termo via gov.br.", action: "Gerir acessos", principalOnly: true },
+  { href: "/admin/denuncias", icon: ShieldCheck, title: "Denúncias e evidências", text: "Casos, quarentena, preservação e pacote técnico. Políticas de retenção exigem validação jurídica.", action: "Abrir denúncias", principalOnly: true },
   { href: "/admin/auditoria", icon: ShieldCheck, title: "Auditoria", text: "Logins, permissões, publicação e políticas.", action: "Abrir auditoria", principalOnly: true },
   { href: "/admin/politicas-comerciais", icon: ShieldCheck, title: "Políticas e receitas", text: "Percentuais da Ojú, avisos de repasse e receitas documentais.", action: "Abrir políticas", principalOnly: true },
   { href: "/admin/contratos", icon: FileSignature, title: "Contratos", text: "Documentos comerciais já existentes.", action: "Abrir contratos" },

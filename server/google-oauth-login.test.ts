@@ -14,6 +14,13 @@ describe("login Google OAuth do Super Admin", () => {
     expect(oauth).not.toContain("/api/oauth/callback");
     expect(oauth).toContain("resolveOAuthRedirectUri");
     expect(oauth).toContain("oauthStartBounceUrl");
+    expect(oauth).toContain("isAllowedOAuthRedirectUri(decoded.redirectUri)");
+    expect(oauth).toContain("redirect_uri: redirectUri");
+  });
+
+  it("não torna GOOGLE_OAUTH_REDIRECT_URIS obrigatória para considerar o OAuth configurado", () => {
+    expect(env).toContain("GOOGLE_OAUTH_REDIRECT_URI");
+    expect(env).not.toContain("GOOGLE_OAUTH_REDIRECT_URIS");
   });
 
   it("não expõe o segredo Google nem monta a URL no navegador", () => {
