@@ -12,7 +12,7 @@ describe("navegação pública cinematográfica", () => {
     ["Olhar", "Chão", "Chamar a Ojú"].forEach(label => expect(architecture).toContain(`label: "${label}"`));
     expect(portal).toContain("Chamar a Ojú");
     expect(header).toContain("item.active !== false");
-    ["/historias", "/coberturas", "/documentarios", "/projetos", "/territorios", "/fotografos", "/instituicoes", "/agenda", "/memorias", "/acervo"].forEach(path => expect(router).toContain(`path={"${path}"}`));
+    ["/historias", "/coberturas", "/documentarios", "/projetos", "/territorios", "/fotografos", "/instituicoes", "/agenda", "/memorias", "/vozes-da-rede", "/acervo"].forEach(path => expect(router).toContain(`path={"${path}"}`));
     expect(router).toContain('path={"/admin/fotografos"}'); expect(router).toContain('path={"/admin/territorios"}');
   });
 });

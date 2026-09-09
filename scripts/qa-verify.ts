@@ -5,6 +5,7 @@ import { parseMysqlUrl } from "../e2e/lib/qaTarget";
 const PRODUCT_TABLES = [
   "users",
   "partners",
+  "partnerMembers",
   "professionalProfiles",
   "commercialRequests",
   "networkOpportunities",
@@ -20,6 +21,7 @@ const PRODUCT_TABLES = [
   "communityCareRequests",
   "revenueLeads",
   "termsOfUseAcceptances",
+  "networkVoices",
 ];
 
 const REQUIRED_TABLES = [
@@ -57,8 +59,8 @@ try {
   const [migrationRows] = await connection.query<{ n: number }[]>("SELECT COUNT(*) AS n FROM `__drizzle_migrations`");
   const migrationCount = Number((migrationRows as Array<{ n: number }>)[0]?.n ?? 0);
   console.log(`__drizzle_migrations: ${migrationCount}`);
-  if (migrationCount < 56) {
-    console.error(`ABORTADO: esperado journal 0000–0055 (56 entradas). Encontrado: ${migrationCount}.`);
+  if (migrationCount < 57) {
+    console.error(`ABORTADO: esperado journal 0000–0056 (57 entradas). Encontrado: ${migrationCount}.`);
     process.exit(1);
   }
 

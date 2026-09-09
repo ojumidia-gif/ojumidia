@@ -12,6 +12,7 @@ describe("rotas administrativas restritas ao Super Admin", () => {
     expect(labels).toContain("/admin/midias");
     expect(labels).toContain("/admin/miniclipes");
     expect(labels).toContain("/admin/equipes");
+    expect(labels).toContain("/admin/vozes");
     expect(isPrincipalOnlyAdminPath("/admin/equipes")).toBe(false);
     expect(labels).toContain("/admin/solicitacoes");
     expect(labels).toContain("/admin/oportunidades");
@@ -55,6 +56,7 @@ describe("rotas administrativas restritas ao Super Admin", () => {
     expect(hrefs).toContain("/admin/midias");
     expect(hrefs).toContain("/admin/miniclipes");
     expect(hrefs).toContain("/admin/comunidade");
+    expect(hrefs).toContain("/admin/vozes");
     expect(hrefs).toContain("/admin/oportunidades");
     expect(hrefs).toContain("/admin/producoes");
     expect(hrefs).toContain("/admin/notificacoes-rede");

@@ -27,7 +27,7 @@
     "qa:verify": "tsx scripts/qa-verify.ts",
     "qa:chrome": "tsx scripts/qa-chrome.ts",
     "test:e2e:qa": "playwright test --config playwright.qa.config.ts --project=infra --project=super-admin",
-    "test:e2e:qa:all": "playwright test --config playwright.qa.config.ts --project=infra --project=journeys-visitor --project=journeys-security --project=super-admin --project=journeys-admin --project=rede-journey --project=journeys-identity --project=journeys-commercial",
+    "test:e2e:qa:all": "playwright test --config playwright.qa.config.ts --project=infra --project=journeys-visitor --project=journeys-security --project=super-admin --project=journeys-admin --project=rede-journey --project=journeys-identity --project=journeys-commercial --project=journeys-voices",
     "test:e2e:qa:fase2": "playwright test --config playwright.qa.config.ts --project=rede-journey",
     "test:e2e:auth": "playwright test --headed --config playwright.qa.config.ts --project=auth-capture",
     "db:generate": "drizzle-kit generate",

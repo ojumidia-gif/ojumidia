@@ -21,6 +21,7 @@ export const ALLOWED_PUBLIC_HREFS = [
   "/instituicoes",
   "/agenda",
   "/memorias",
+  "/vozes-da-rede",
   "/cuidado-e-consentimento",
   "/acompanhar-acolhimento",
   "/conheca-a-oju",

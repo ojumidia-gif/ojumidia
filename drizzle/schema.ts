@@ -1260,6 +1260,45 @@ export const oralMemories = mysqlTable("oralMemories", {
   index("oral_memory_partner_idx").on(table.partnerId, table.status),
 ]);
 
+export const networkVoiceStatuses = ["Aguardando análise", "Ajuste solicitado", "Aprovado", "Publicado", "Rejeitado", "Retirado"] as const;
+export const networkVoiceRelations = ["Casa", "Profissional", "Pessoa retratada", "Parceiro", "Outro"] as const;
+export const networkVoiceCurationScopes = ["Nenhum", "Territorial", "Nacional"] as const;
+
+/** Vozes da Rede Ojú: depoimento documental. Não é avaliação, ranking nem feed. */
+export const networkVoices = mysqlTable("networkVoices", {
+  id: int("id").autoincrement().primaryKey(),
+  body: text("body").notNull(),
+  speakerName: varchar("speakerName", { length: 240 }),
+  speakerNameVisibility: mysqlEnum("speakerNameVisibility", ["Nome", "Pseudônimo", "Não divulgar"]).default("Não divulgar").notNull(),
+  relationKind: mysqlEnum("relationKind", networkVoiceRelations).default("Outro").notNull(),
+  contextNote: varchar("contextNote", { length: 420 }),
+  status: mysqlEnum("status", networkVoiceStatuses).default("Aguardando análise").notNull(),
+  curationScope: mysqlEnum("curationScope", networkVoiceCurationScopes).default("Nenhum").notNull(),
+  curationDisplayOrder: int("curationDisplayOrder").default(0).notNull(),
+  adjustmentNote: text("adjustmentNote"),
+  authorEmail: varchar("authorEmail", { length: 320 }),
+  publicationId: int("publicationId"),
+  productionId: int("productionId"),
+  professionalProfileId: int("professionalProfileId"),
+  institutionId: int("institutionId"),
+  partnerId: int("partnerId"),
+  territoryId: int("territoryId"),
+  publishedAt: timestamp("publishedAt"),
+  unpublishedAt: timestamp("unpublishedAt"),
+  reviewedBy: int("reviewedBy"),
+  reviewedAt: timestamp("reviewedAt"),
+  managedByUserId: int("managedByUserId"),
+  createdBy: int("createdBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("network_voice_status_idx").on(table.status, table.curationScope),
+  index("network_voice_partner_idx").on(table.partnerId, table.status),
+  index("network_voice_territory_idx").on(table.territoryId, table.status),
+  index("network_voice_publication_idx").on(table.publicationId),
+  index("network_voice_production_idx").on(table.productionId),
+]);
+
 export const careRequestStatuses = ["Recebida", "Em acolhimento", "Encaminhada", "Arquivada"] as const;
 export const communityCareRequests = mysqlTable("communityCareRequests", {
   id: int("id").autoincrement().primaryKey(),

@@ -17,6 +17,7 @@ export const LEDGER_KINDS = [
   "careRequest",
   "revenueLead",
   "commercialPolicy",
+  "networkVoice",
   "other",
 ] as const;
 
@@ -53,6 +54,7 @@ export const CLEANUP_KIND_ORDER: LedgerKind[] = [
   "production",
   "opportunity",
   "publication",
+  "networkVoice",
   "commercialRequest",
   "careRequest",
   "revenueLead",

@@ -1,4 +1,4 @@
-import { Bell, BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandshake, Home, Image, LifeBuoy, ListFilter, MapPinned, Route, ScrollText, Settings, ShieldAlert, Sparkles, Trash2, UserPlus, Users, Wallet } from "lucide-react";
+import { Bell, BookOpenText, BriefcaseBusiness, Camera, FilePenLine, Film, HeartHandshake, Home, Image, LifeBuoy, ListFilter, MapPinned, Mic2, Route, ScrollText, Settings, ShieldAlert, Sparkles, Trash2, UserPlus, Users, Wallet } from "lucide-react";
 
 export type AdminNavItem = {
   label: string;
@@ -41,6 +41,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Acervo", partnerLabel: "Fotos", href: "/admin/midias", icon: Image },
       { label: "Miniclipes", href: "/admin/miniclipes", icon: Film },
       { label: "Equipes e créditos", partnerLabel: "Créditos", href: "/admin/equipes", icon: Users },
+      { label: "Vozes da Rede", partnerLabel: "Depoimentos", href: "/admin/vozes", icon: Mic2 },
       { label: "Lixeira de mídia", href: "/admin/lixeira-midias", icon: Trash2, principalOnly: true },
       { label: "Curadoria nacional", href: "/admin/destaques", icon: Sparkles, principalOnly: true },
       { label: "Lixeira editorial", href: "/admin/lixeira-editorial", icon: Trash2, principalOnly: true },

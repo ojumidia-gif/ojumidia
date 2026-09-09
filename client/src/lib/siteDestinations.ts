@@ -110,6 +110,16 @@ export const siteDestinations = [
     steps: ["Título e arquivo.", "Consentimento da casa.", "Publicar no site."],
   },
   {
+    id: "vozes-da-rede",
+    label: "Vozes da Rede",
+    publicHref: "/vozes-da-rede",
+    adminHref: "/admin/vozes",
+    action: "link" as const,
+    contentKind: null,
+    how: "Depoimento entra em análise. Publicar não é curadoria. Destaque é decisão editorial humana.",
+    steps: ["Envio.", "Análise.", "Publicar. Curadoria à parte."],
+  },
+  {
     id: "acervo",
     label: "Acervo",
     publicHref: "/acervo",

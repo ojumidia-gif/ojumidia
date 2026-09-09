@@ -10,28 +10,38 @@ export const ojuMethod = [
   {
     order: "01",
     title: "Escuta",
-    description: "A conversa começa pela história, pelo território e pelos limites do que pode ou não ser registrado.",
+    description: "A conversa começa pela pessoa, pelo território e pelos limites do que pode ou não ser registrado.",
   },
   {
     order: "02",
     title: "Pactuação",
-    description: "Antes da produção, alinhamos presença, formato, pessoas envolvidas, prioridades e autorizações necessárias.",
+    description: "Antes da câmera, alinhamos presença, finalidade da imagem, pessoas envolvidas e o uso autorizado do registro.",
   },
   {
     order: "03",
     title: "Presença",
-    description: "A equipe acompanha com discrição e atenção. A câmera não conduz o momento: ela aprende a estar nele.",
+    description: "A equipe acompanha a casa, o evento e o contexto com discrição. A câmera não conduz o momento: ela aprende a estar nele.",
   },
   {
     order: "04",
-    title: "Montagem",
-    description: "Fotografias, sons e palavras são organizados com cuidado para preservar relações, sentidos e créditos.",
+    title: "Autoria",
+    description: "O olhar de quem fotografou permanece identificável. Crédito, identificação do profissional e reconhecimento da produção fazem parte da memória do registro.",
   },
   {
     order: "05",
     title: "Memória autorizada",
-    description: "A entrega pertence a quem contratou. Qualquer entrada no acervo público depende de autorização editorial expressa.",
+    description: "Publicar, contextualizar ou licenciar exige autorização. Remover crédito ou identificação não é só estética: apaga parte de quem realizou aquele registro.",
   },
+] as const;
+
+export const ojuMethodCare = [
+  "Cuidado com a pessoa fotografada.",
+  "Cuidado com o território, a casa, a comunidade, o evento e o contexto.",
+  "Cuidado com a imagem e com a finalidade do registro.",
+  "Cuidado com o profissional que realizou o olhar fotográfico.",
+  "Respeito à autoria, ao crédito e à identificação de quem produziu a imagem.",
+  "Respeito à marca e à identidade visual do profissional como identificação do olhar — sem apagar a produção.",
+  "Responsabilidade no uso, na publicação, no licenciamento e na contextualização da fotografia.",
 ] as const;
 
 export const ojuServices = [

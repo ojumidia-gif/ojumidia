@@ -11,5 +11,7 @@ describe("conteúdo institucional administrável", () => {
     expect(services).toContain('usePortalContent("Serviços")');
     expect(home).toContain('usePortalContent("Home")');
     expect(method).toContain("xl:grid-cols-5");
+    expect(method).toContain("Ler o Método Ojú");
+    expect(method).toContain("Dialog");
   });
 });

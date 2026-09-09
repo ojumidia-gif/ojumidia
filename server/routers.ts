@@ -21,6 +21,7 @@ import { networkNotificationsRouter } from "./routers/networkNotifications";
 import { networkDirectoryRouter } from "./routers/networkDirectory";
 import { legalRouter } from "./routers/legal";
 import { governanceRouter } from "./routers/governance";
+import { networkVoicesRouter } from "./routers/networkVoices";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -54,6 +55,7 @@ export const appRouter = router({
   networkNotifications: networkNotificationsRouter,
   networkDirectory: networkDirectoryRouter,
   governance: governanceRouter,
+  networkVoices: networkVoicesRouter,
 });
 
 export type AppRouter = typeof appRouter;

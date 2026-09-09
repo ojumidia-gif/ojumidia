@@ -87,6 +87,8 @@ import MiniclipWatch from "./pages/MiniclipWatch";
 import LegalDocument from "./pages/LegalDocument";
 import BePartner from "./pages/BePartner";
 import JoinRequestsAdmin from "./pages/admin/JoinRequestsAdmin";
+import NetworkVoicesPublic from "./pages/NetworkVoicesPublic";
+import NetworkVoicesAdmin from "./pages/admin/NetworkVoicesAdmin";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -128,6 +130,7 @@ function Router() {
       <Route path={"/instituicoes"} component={InstitutionExplorer} />
       <Route path={"/agenda"} component={() => <CommunityDirectory view="agenda" />} />
       <Route path={"/memorias"} component={OralMemorySearch} />
+      <Route path={"/vozes-da-rede"} component={NetworkVoicesPublic} />
       <Route path={"/cuidado-e-consentimento"} component={CareConsent} />
       <Route path={"/acompanhar-acolhimento"} component={CareTracking} />
       <Route path={"/conheca-a-oju"} component={AboutOju} />
@@ -180,6 +183,7 @@ function Router() {
       <Route path={"/admin/retencao"} component={RetentionAdmin} />
       <Route path={"/admin/pendencias"} component={OperationsCenterAdmin} />
       <Route path={"/admin/auditoria"} component={AuditAdmin} />
+      <Route path={"/admin/vozes"} component={NetworkVoicesAdmin} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

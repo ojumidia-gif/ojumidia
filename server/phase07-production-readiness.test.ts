@@ -25,8 +25,11 @@ describe("Fase 7 — prontidão operacional", () => {
     expect(journal).toContain('"tag": "0055_terms_of_use_and_consent_evidence"');
     expect(journal.indexOf("0054_join_request_practice_varchar")).toBeLessThan(journal.indexOf("0055_terms_of_use_and_consent_evidence"));
     expect(sqlFiles).toContain("0048_coverage_offer_declines.sql");
+    expect(journal).toContain('"tag": "0056_network_voices"');
+    expect(journal.indexOf("0055_terms_of_use_and_consent_evidence")).toBeLessThan(journal.indexOf("0056_network_voices"));
     expect(sqlFiles).toContain("0054_join_request_practice_varchar.sql");
     expect(sqlFiles).toContain("0055_terms_of_use_and_consent_evidence.sql");
+    expect(sqlFiles).toContain("0056_network_voices.sql");
   });
 
   it("cadeia 0049→0053 é ordenada, com Opportunity única por Production e sem gateway SDK", () => {
@@ -59,6 +62,7 @@ describe("Fase 7 — prontidão operacional", () => {
     expect(robots).toContain("Disallow: /admin");
     expect(robots).toContain("Disallow: /api/");
     expect(sitemap).toContain("https://ojumidia.com.br/rede");
+    expect(sitemap).toContain("/vozes-da-rede");
     expect(sitemap).not.toContain("/admin");
     expect(sitemap).not.toContain("/api/");
     expect(app).toContain('path={"/rede/parceiros/:slug"}');

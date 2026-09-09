@@ -77,5 +77,10 @@ export default defineConfig({
       testMatch: ["**/journeys/commercial/**/*.spec.ts"],
       timeout: 420_000,
     },
+    {
+      name: "journeys-voices",
+      testMatch: ["**/journeys/voices/**/*.spec.ts"],
+      timeout: 180_000,
+    },
   ],
 });
