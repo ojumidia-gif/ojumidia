@@ -22,9 +22,11 @@ describe("Fase 7 — prontidão operacional", () => {
     expect(journal).toContain('"tag": "0052_network_operations"');
     expect(journal).toContain('"tag": "0053_network_payments_directory"');
     expect(journal.indexOf("0048_coverage_offer_declines")).toBeLessThan(journal.indexOf("0049_professional_network"));
-    expect(journal.indexOf("0052_network_operations")).toBeLessThan(journal.indexOf("0053_network_payments_directory"));
+    expect(journal).toContain('"tag": "0055_terms_of_use_and_consent_evidence"');
+    expect(journal.indexOf("0054_join_request_practice_varchar")).toBeLessThan(journal.indexOf("0055_terms_of_use_and_consent_evidence"));
     expect(sqlFiles).toContain("0048_coverage_offer_declines.sql");
-    expect(sqlFiles).toContain("0053_network_payments_directory.sql");
+    expect(sqlFiles).toContain("0054_join_request_practice_varchar.sql");
+    expect(sqlFiles).toContain("0055_terms_of_use_and_consent_evidence.sql");
   });
 
   it("cadeia 0049→0053 é ordenada, com Opportunity única por Production e sem gateway SDK", () => {

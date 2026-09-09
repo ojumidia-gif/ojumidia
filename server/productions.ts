@@ -330,6 +330,51 @@ export async function attachProductionMedia(db: Db, actor: Actor, input: { produ
   return { success: true as const, publicationAllowed: media.publicationAllowed };
 }
 
+export async function registerOperationalProductionMedia(db: Db, actor: Actor, input: {
+  productionId: number;
+  mediaType: "foto" | "vídeo";
+  assetUrl: string;
+  storageKey?: string;
+  filename?: string;
+  origin: string;
+  credit: string;
+  authorization: "Cessão" | "Licença" | "Domínio público" | "Autoral própria" | "Pendente";
+  purpose: string;
+  durationSeconds?: number;
+  uploadId?: string;
+}) {
+  const production = await loadProduction(db, input.productionId);
+  await assertProductionScope(db, actor, production);
+  const inserted = await db.insert(mediaAssets).values({
+    mediaType: input.mediaType,
+    assetUrl: input.assetUrl,
+    storageKey: input.storageKey,
+    filename: input.filename,
+    origin: input.origin,
+    credit: input.credit,
+    authorization: input.authorization,
+    purpose: input.purpose,
+    publicationAllowed: false,
+    durationSeconds: input.durationSeconds,
+    partnerId: production.partnerId,
+    territoryId: production.territoryId,
+    uploadId: input.uploadId ?? null,
+    createdBy: actor.id,
+  });
+  const mediaId = Number(inserted[0].insertId);
+  await recordAuditEvent(db, {
+    actorId: actor.id,
+    partnerId: production.partnerId,
+    territoryId: production.territoryId,
+    resourceType: "media",
+    resourceId: mediaId,
+    action: "media-registered",
+    nextState: { productionId: production.id, publicationAllowed: false, authorization: input.authorization },
+    detail: "Mídia operacional da produção. publicationAllowed e o enum de autorização não são assinatura formal nem gov.br.",
+  });
+  return { ...await attachProductionMedia(db, actor, { productionId: production.id, mediaId, layer: "Operacional" }), mediaId };
+}
+
 export async function detachProductionMedia(db: Db, actor: Actor, input: { productionId: number; mediaId: number }) {
   const production = await loadProduction(db, input.productionId);
   await assertProductionScope(db, actor, production);

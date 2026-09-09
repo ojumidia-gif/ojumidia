@@ -62,7 +62,7 @@ async function synchronizeGrantedAccountRole(db: NonNullable<Awaited<ReturnType<
   const operable = account ? isAccountOperable(account.accountStatus) : true;
   const isActive = operable && grant.status === "Autorizado" && (grant.role !== "administrador" || Boolean(signedTerm));
   await db.update(users).set({ role: isActive ? grant.role : (account?.role === "administrador principal" ? account.role : "criador"), adminAccess: isActive }).where(eq(users.id, grant.userId));
-  if (isActive && grant.partnerId && grant.territoryId) {
+  if (operable && grant.status === "Autorizado" && grant.partnerId && grant.territoryId) {
     try {
       await syncPartnerMemberFromGrant(db, { userId: grant.userId, partnerId: grant.partnerId, territoryId: grant.territoryId, createdBy: grant.createdBy });
     } catch (error) {
@@ -259,8 +259,8 @@ export const collaboratorsRouter = router({
     });
     await linkExecutorToProfessionalProfile(db, { email, profileId: profile.profileId, userId: account?.id ?? null });
     await db.update(adminJoinRequests).set({ status: "Aprovada", reviewedBy: ctx.user.id, reviewedAt: new Date() }).where(eq(adminJoinRequests.id, request.id));
-    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId, territoryId, resourceType: "collaborator-grant", resourceId: grantId, action: "collaborator-authorized", previousState: existing ? { role: existing.role, status: existing.status } : null, nextState: { email, role: "administrador", status: "Autorizado", partnerId, territoryId, joinRequestId: request.id, professionalProfileId: profile.profileId, specialties: specialtyIds, networkBond }, detail: "Super Admin habilitou candidatura. Especialidade gravada no perfil profissional; o papel de segurança continua no grant, não na profissão." });
-    return { id: grantId, partnerId, territoryId, city: resolved.name, requiresResponsibilityTerm: true, professionalProfileId: profile.profileId };
+    await recordAuditEvent(db, { actorId: ctx.user.id, partnerId, territoryId, resourceType: "collaborator-grant", resourceId: grantId, action: "collaborator-authorized", previousState: existing ? { role: existing.role, status: existing.status } : null, nextState: { email, role: "administrador", status: "Autorizado", partnerId, territoryId, joinRequestId: request.id, professionalProfileId: profile.profileId, specialties: specialtyIds, networkBond, cmsAccessRequiresResponsibilityTerm: true }, detail: "Super Admin habilitou candidatura da Rede. OJU-AR-1.0 continua sendo termo de responsabilidade formal para o Centro Administrativo, não chave de convite/Production." });
+    return { id: grantId, partnerId, territoryId, city: resolved.name, requiresResponsibilityTerm: true, cmsAccessRequiresResponsibilityTerm: true, professionalProfileId: profile.profileId };
   }),
   update: protectedProcedure.input(z.object({
     id: z.number().int().positive(),

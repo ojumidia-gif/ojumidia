@@ -30,6 +30,26 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const termsOfUseAcceptanceStatuses = ["vigente", "substituido"] as const;
+export const consentEvidenceKinds = ["staff_attestation", "subject_signature"] as const;
+
+export const termsOfUseAcceptances = mysqlTable("termsOfUseAcceptances", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  email: varchar("email", { length: 320 }).notNull(),
+  documentCode: varchar("documentCode", { length: 80 }).default("OJU-TU").notNull(),
+  documentVersion: varchar("documentVersion", { length: 80 }).notNull(),
+  context: varchar("context", { length: 80 }).notNull(),
+  status: mysqlEnum("status", termsOfUseAcceptanceStatuses).default("vigente").notNull(),
+  acceptedAt: timestamp("acceptedAt").defaultNow().notNull(),
+  requestIp: varchar("requestIp", { length: 64 }),
+  userAgent: varchar("userAgent", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("terms_of_use_user_version_idx").on(table.userId, table.documentCode, table.documentVersion),
+  index("terms_of_use_email_idx").on(table.email, table.documentCode),
+]);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
@@ -1116,6 +1136,8 @@ export const institutions = mysqlTable("institutions", {
   consentStatus: mysqlEnum("consentStatus", consentStatuses).default("Pendente").notNull(),
   consentedAt: timestamp("consentedAt"),
   consentNote: text("consentNote"),
+  consentEvidenceKind: mysqlEnum("consentEvidenceKind", consentEvidenceKinds).default("staff_attestation").notNull(),
+  consentSubjectName: varchar("consentSubjectName", { length: 240 }),
   managedByUserId: int("managedByUserId"),
   partnerId: int("partnerId"),
   deletedAt: timestamp("deletedAt"),
@@ -1178,6 +1200,8 @@ export const communityEvents = mysqlTable("communityEvents", {
   consentStatus: mysqlEnum("consentStatus", consentStatuses).default("Pendente").notNull(),
   consentedAt: timestamp("consentedAt"),
   consentNote: text("consentNote"),
+  consentEvidenceKind: mysqlEnum("consentEvidenceKind", consentEvidenceKinds).default("staff_attestation").notNull(),
+  consentSubjectName: varchar("consentSubjectName", { length: 240 }),
   managedByUserId: int("managedByUserId"),
   partnerId: int("partnerId"),
   deletedAt: timestamp("deletedAt"),
@@ -1218,6 +1242,8 @@ export const oralMemories = mysqlTable("oralMemories", {
   consentStatus: mysqlEnum("consentStatus", consentStatuses).default("Pendente").notNull(),
   consentedAt: timestamp("consentedAt"),
   consentNote: text("consentNote"),
+  consentEvidenceKind: mysqlEnum("consentEvidenceKind", consentEvidenceKinds).default("staff_attestation").notNull(),
+  consentSubjectName: varchar("consentSubjectName", { length: 240 }),
   managedByUserId: int("managedByUserId"),
   partnerId: int("partnerId"),
   deletedAt: timestamp("deletedAt"),

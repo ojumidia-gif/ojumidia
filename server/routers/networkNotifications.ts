@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
-import { protectedProcedure, router } from "../_core/trpc";
+import { authenticatedProcedure, router } from "../_core/trpc";
 import {
   getMyNotificationPreferences,
   isMissingNotificationSchema,
@@ -17,7 +17,7 @@ async function requireDb() {
 }
 
 export const networkNotificationsRouter = router({
-  mine: protectedProcedure.query(async ({ ctx }) => {
+  mine: authenticatedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
     try {
       return await listMyNetworkNotifications(db, ctx.user);
@@ -26,15 +26,15 @@ export const networkNotificationsRouter = router({
       throw error;
     }
   }),
-  markRead: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+  markRead: authenticatedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
     return markNetworkNotificationRead(db, ctx.user, input.id);
   }),
-  preferences: protectedProcedure.query(async ({ ctx }) => {
+  preferences: authenticatedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
     return getMyNotificationPreferences(db, ctx.user);
   }),
-  savePreferences: protectedProcedure.input(z.object({
+  savePreferences: authenticatedProcedure.input(z.object({
     inApp: z.boolean(),
     emailTransactional: z.boolean(),
   })).mutation(async ({ ctx, input }) => {

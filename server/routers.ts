@@ -19,6 +19,7 @@ import { opportunitiesRouter } from "./routers/opportunities";
 import { productionsRouter } from "./routers/productions";
 import { networkNotificationsRouter } from "./routers/networkNotifications";
 import { networkDirectoryRouter } from "./routers/networkDirectory";
+import { legalRouter } from "./routers/legal";
 import { governanceRouter } from "./routers/governance";
 
 export const appRouter = router({
@@ -34,6 +35,7 @@ export const appRouter = router({
       } as const;
     }),
   }),
+  legal: legalRouter,
   editorial: editorialRouter,
   media: mediaRouter,
   commercial: commercialRouter,

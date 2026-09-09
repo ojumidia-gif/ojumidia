@@ -13,7 +13,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { MAX_MINICLIP_DURATION_SECONDS } from "@shared/const";
-import { describeStorageConfiguration, hasStorageConfiguration, storagePut } from "../storage";
+import { describeStorageConfiguration, getLocalStorageDir, hasStorageConfiguration, storagePut } from "../storage";
 import { sdk } from "./sdk";
 import { openEditorialEventStream } from "../editorialEvents";
 import { registerLocalDevAuthRoutes } from "./localDevAuth";
@@ -237,7 +237,9 @@ async function startServer() {
     const storageKind = describeStorageConfiguration();
     console.info(`[Runtime] Ojú Mídia iniciado em modo ${runtime}; porta ${port}; login ${authStatus.loginMode}; storage ${storageKind}.`);
     if (!authStatus.googleOAuth) console.info(`[OAuth] ${authStatus.message}`);
-    if (storageKind === "local-development") console.info("[Storage] Arquivos deste ambiente vão para .local-storage. Isso não é persistência de produção.");
+    if (storageKind === "local-development") {
+      console.info(`[Storage] Arquivos deste ambiente vão para ${getLocalStorageDir()}. Isso não é persistência de produção.`);
+    }
     if (storageKind === "missing") console.warn("[Storage] Nenhum storage configurado. Em produção use Tigris (S3_*). Em desenvolvimento, .local-storage entra automaticamente.");
     const maintenanceMs = 15 * 60 * 1000;
     setInterval(() => {

@@ -17,7 +17,7 @@ const teamRoles = {
   editor: { label: "Editor da Equipe Ojú", detail: "Revisa texto e organização. Não publica no site." },
   aprovador: { label: "Aprovador da Equipe Ojú", detail: "Libera rascunho para aprovado. Ainda não coloca no ar." },
 } as const;
-const partnerRole = { label: "Criador parceiro", detail: "Vínculo de Rede. Especialidades ficam no perfil profissional. O papel de segurança (administrador) continua no grant e no termo gov.br." };
+const partnerRole = { label: "Criador parceiro", detail: "Vínculo de Rede. Especialidades ficam no perfil. OJU-AR-1.0 (gov.br) é termo de responsabilidade formal para o Centro Administrativo, não para aceitar convite nem operar Production própria." };
 
 type TeamRole = keyof typeof teamRoles;
 type Role = TeamRole | "administrador";
@@ -117,7 +117,7 @@ export default function CollaboratorsAdmin() {
             <label className="grid gap-2 text-sm font-medium">Nome de referência<Input name="displayName" defaultValue={candidate.name} /></label>
             <label className="grid gap-2 text-sm font-medium">E-mail Google<Input required name="email" type="email" defaultValue={candidate.email} key={candidate.email} readOnly /></label>
             <CityOfOperationSelect required value={city} onChange={setCity} hint="Todas as cidades do Brasil. Se faltar na lista, use Outro." selectClassName="h-10 rounded border bg-white px-3" inputClassName="h-10 rounded border bg-white px-3" />
-            <section className="rounded-xl border border-[#d49b4c]/40 bg-[#fff6e8] p-4 text-sm leading-6 text-[#6b4a2b]"><b>{partnerRole.label}:</b> {partnerRole.detail} Só publica ou aceita pedido depois do termo gov.br anexado.</section>
+            <section className="rounded-xl border border-[#d49b4c]/40 bg-[#fff6e8] p-4 text-sm leading-6 text-[#6b4a2b]"><b>{partnerRole.label}:</b> {partnerRole.detail} O anexo do PDF gov.br libera o Centro Administrativo deste grant, não o aceite de convite nem a Production própria.</section>
           </>
         ) : (
           <>

@@ -8,6 +8,7 @@ describe("frentes públicas editoriais", () => {
     const header = readFileSync(resolve(process.cwd(), "client/src/components/PublicHeader.tsx"), "utf8");
     ["/coberturas", "/documentarios", "/projetos"].forEach(route => expect(app).toContain(`path={"${route}"}`));
     expect(header).toContain('usePortalContent("Global")');
+    expect(readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8")).toContain('aria-label={action}');
   });
 
   it("mantém a página de território por slug em apresentação documental própria", () => {

@@ -13,6 +13,8 @@ import {
 } from "../joinRequestsTable";
 import { decodeSpecialties, bondLabel, encodeSpecialties, specialtyIdsOf, resolveNetworkBond, networkBondNowIds } from "@shared/professionalSpecialties";
 import { upsertProfessionalProfile } from "../professionalNetwork";
+import { TERMS_OF_USE_VERSION } from "@shared/legalVersions";
+import { recordTermsOfUseAcceptance, requestMeta } from "../termsOfUse";
 import { recordAuditEvent } from "../partnerScope";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
@@ -48,7 +50,13 @@ async function saveJoinRequest(input: {
   mediaOutletName?: string | null;
   mediaOutletUrl?: string | null;
   networkBond?: string | null;
+  termsDocumentVersion: string;
+  requestIp?: string | null;
+  userAgent?: string | null;
 }) {
+  if (input.termsDocumentVersion !== TERMS_OF_USE_VERSION) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Aceite a versão vigente dos Termos de Uso para enviar o pedido." });
+  }
   const db = await requireDb();
   const email = publicJoinEmail(input.email);
   const specialtyIds = specialtyIdsOf(input.practices);
@@ -72,6 +80,12 @@ async function saveJoinRequest(input: {
     mediaOutletName: input.mediaOutletName?.trim() || null,
     mediaOutletUrl: input.mediaOutletUrl?.trim() || null,
     message: input.message,
+  });
+  await recordTermsOfUseAcceptance(db, {
+    email,
+    context: "join-request",
+    requestIp: input.requestIp,
+    userAgent: input.userAgent,
   });
   await upsertProfessionalProfile(db, {
     email,
@@ -98,15 +112,16 @@ export const joinRequestsRouter = router({
     mediaOutletUrl: z.string().trim().max(320).nullable().optional(),
     networkBond: z.enum(networkBondNowIds).optional(),
     message: z.string().trim().min(10).max(4000),
-  })).mutation(async ({ input }) => {
+    termsDocumentVersion: z.literal(TERMS_OF_USE_VERSION),
+  })).mutation(async ({ ctx, input }) => {
     try {
-      return await saveJoinRequest(input);
+      return await saveJoinRequest({ ...input, ...requestMeta(ctx.req) });
     } catch (error) {
       if (error instanceof TRPCError) throw error;
       if (shouldRetryJoinRequestSetup(error)) {
         resetAdminJoinRequestsTableCache();
         try {
-          return await saveJoinRequest(input);
+          return await saveJoinRequest({ ...input, ...requestMeta(ctx.req) });
         } catch (retryError) {
           hideJoinRequestSql(retryError);
         }

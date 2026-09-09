@@ -139,6 +139,15 @@ describe("OAuth redirect multi-domínio", () => {
     });
   });
 
+  it("em 127.0.0.1:3100 não faz bounce para o mesmo host sem porta", () => {
+    withOAuthEnv({ redirect: "http://127.0.0.1:3100/api/auth/google/callback", extras: undefined }, () => {
+      const req = fakeReq("127.0.0.1:3100", "http");
+      const uri = resolveOAuthRedirectUri(req);
+      expect(uri).toBe("http://127.0.0.1:3100/api/auth/google/callback");
+      expect(oauthStartBounceUrl(req, uri)).toBeNull();
+    });
+  });
+
   it("rejeita callback malicioso fora da allowlist", () => {
     withOAuthEnv({ extras: EXTRAS }, () => {
       expect(isAllowedOAuthRedirectUri("https://evil.example/api/auth/google/callback")).toBe(false);

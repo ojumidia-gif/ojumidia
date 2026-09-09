@@ -19,6 +19,11 @@ export function sortHomeCurated<T extends { homePlacement: string; homeOrder: nu
   return [...items].sort((a, b) => (homePlacementRank[a.homePlacement] ?? 3) - (homePlacementRank[b.homePlacement] ?? 3) || a.homeOrder - b.homeOrder || Number(b.manualFeatured) - Number(a.manualFeatured) || b.relevance - a.relevance);
 }
 
+export function isHomeHighlightUnexpired(highlightExpiresAt: Date | string | null | undefined, now = new Date()) {
+  if (!highlightExpiresAt) return true;
+  return new Date(highlightExpiresAt) > now;
+}
+
 export const adminListInput = {
   limitMax: 100,
   defaultLimit: 40,

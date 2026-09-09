@@ -74,7 +74,7 @@ function parseObject(value: string | null) {
 
 export function usePortalContent(page: PortalPage) {
   const utils = trpc.useUtils();
-  const query = trpc.portalContent.publicByPage.useQuery({ page }, { enabled: !isStaticFirebasePreview, refetchInterval: 30000 });
+  const query = trpc.portalContent.publicByPage.useQuery({ page }, { enabled: !isStaticFirebasePreview, refetchInterval: 30000, staleTime: 15_000, placeholderData: previous => previous });
   useEditorialLive(() => { utils.portalContent.publicByPage.invalidate({ page }); });
   const byKey = useMemo(() => new Map((query.data || []).map(item => [item.sectionKey, item])), [query.data]);
   return {

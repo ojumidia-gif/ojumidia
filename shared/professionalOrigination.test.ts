@@ -13,6 +13,7 @@ import {
   professionalMayCreateOpportunity,
   professionalMayMutateCommercialPolicy,
   professionalMayMutateSettlement,
+  isOwnProfessionalOrigination,
   professionalOwnsOrigin,
   profileAcceptsPublicServiceRequests,
   salesVolumeChangesDirectoryRank,
@@ -29,6 +30,8 @@ describe("Autonomia comercial e originação territorial", () => {
     const origin = { v: 1 as const, kind: "profissional" as const, originatedByProfessionalProfileId: 7, requestedProfessionalProfileId: 7, createdByUserId: 3 };
     expect(professionalOwnsOrigin(origin, 7)).toBe(true);
     expect(professionalOwnsOrigin(origin, 8)).toBe(false);
+    expect(isOwnProfessionalOrigination(origin, 7)).toBe(true);
+    expect(isOwnProfessionalOrigination({ ...origin, kind: "visitante-profissional", originatedByProfessionalProfileId: null, requestedProfessionalProfileId: 7 }, 7)).toBe(false);
     expect(professionalMayCreateOpportunity("criador")).toBe(false);
     expect(professionalMayCreateOpportunity("administrador")).toBe(true);
     expect(specialtyGrantsPrivilege("fotografo", "administrador")).toBe(false);
@@ -79,6 +82,7 @@ describe("Autonomia comercial e originação territorial", () => {
 
   it("15–16 território no backend; especialidade não é RBAC", () => {
     expect(source("server/professionalOrigination.ts")).toContain("territoryId: profile.territoryId");
+    expect(source("server/professionalOrigination.ts")).toContain("isOwnProfessionalOrigination");
     expect(source("server/opportunities.ts")).toContain("assertPartnerScope");
     expect(specialtyGrantsPrivilege("videomaker", "administrador principal")).toBe(false);
   });

@@ -39,6 +39,8 @@ import PhotographerProfile from "./pages/PhotographerProfile";
 import NetworkPublic from "./pages/NetworkPublic";
 import NetworkProfessionalPublic from "./pages/NetworkProfessionalPublic";
 import NetworkOriginate from "./pages/NetworkOriginate";
+import NetworkInvites from "./pages/NetworkInvites";
+import NetworkProductions from "./pages/NetworkProductions";
 import NetworkHousePublic from "./pages/NetworkHousePublic";
 import NetworkProjectPublic from "./pages/NetworkProjectPublic";
 import NetworkPartnerPublic from "./pages/NetworkPartnerPublic";
@@ -106,6 +108,8 @@ function Router() {
       <Route path={"/rede/profissionais"} component={NetworkPublic} />
       <Route path={"/rede/profissionais/:slug"} component={NetworkProfessionalPublic} />
       <Route path={"/rede/originar"} component={NetworkOriginate} />
+      <Route path={"/rede/convites"} component={NetworkInvites} />
+      <Route path={"/rede/producoes"} component={NetworkProductions} />
       <Route path={"/rede/casas/:slug"} component={NetworkHousePublic} />
       <Route path={"/rede/instituicoes/:slug"} component={NetworkHousePublic} />
       <Route path={"/rede/projetos/:slug"} component={NetworkProjectPublic} />

@@ -18,7 +18,7 @@ describe("perfil profissional da Rede", () => {
     expect(source("drizzle/0050_network_opportunities.sql")).toContain("CREATE TABLE IF NOT EXISTS `networkOpportunities`");
     expect(source("server/routers/joinRequests.ts")).not.toContain("ensureProfessionalNetworkTables");
     expect(source("drizzle/0049_professional_network.sql")).toContain("CREATE TABLE IF NOT EXISTS `professionalProfiles`");
-    expect(source("server/routers/collaborators.ts")).toContain("Especialidade gravada no perfil profissional");
+    expect(source("server/routers/collaborators.ts")).toContain("Especialidade não é papel de acesso.");
     expect(source("server/routers/collaborators.ts")).toContain('role: "administrador" as const');
     expect(source("drizzle/schema.ts")).toContain("territoryId: int(\"territoryId\")");
     expect(source("drizzle/0049_professional_network.sql")).toContain("`territoryId` int");

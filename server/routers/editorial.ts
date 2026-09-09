@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, isNotNull, isNull, like, lte, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { commercialEditorialAuthorizations, editorialActivities, highlightSuggestions, mediaAssets, networkExecutors, publicationMedia, publicationRelations, publicationTaxonomies, publications, taxonomies, taxonomyMedia, teams, users } from "../../drizzle/schema";
 import { canAdvanceStatus, canEditPublication, canPublishDirect, nextEditorialStatus, type ContentStatus, type EditorialRole } from "../editorialPolicy";
@@ -10,8 +10,8 @@ import { canUseCommercialLocation, canUseCommercialMedia, canUseCommercialNarrat
 import { activePartnerMemberships, assertPartnerScope, canAccessCentralPublication, canAccessOwnOperatorRecord, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 import { editorialTrashDeadline, isEditorialTrashExpired, permanentlyPurgePublication } from "../editorialTrash";
 import { confirmPhrasesMatch } from "@shared/confirmPhrase";
-import { isHomeCurated, sortHomeCurated } from "../editorialScale";
-import { publicationEligibleForPortal } from "@shared/territorialVisibility";
+import { isHomeCurated, isHomeHighlightUnexpired, sortHomeCurated } from "../editorialScale";
+import { decideExecutorPhotographerPage, publicationEligibleForPortal } from "@shared/territorialVisibility";
 import { groupDuplicateTeamIds, pickReusableTeam } from "@shared/teamCredits";
 import { MAX_MINICLIPS, MAX_PHOTOS } from "@shared/const";
 import { resolveCityOfOperation, type CitySelection } from "@shared/brazilPlaces";
@@ -153,6 +153,12 @@ export function balanceFeaturedPublications<T extends { contentKind: string }>(o
   const remaining: T[] = [];
   for (const publication of orderedPublications) (firstOfEachKind.some(item => item.contentKind === publication.contentKind) ? remaining : firstOfEachKind).push(publication);
   return [...firstOfEachKind, ...remaining].slice(0, maximum);
+}
+
+export function portalAuthorizedSearchPage<T>(permitted: T[], offset: number, limit: number) {
+  const total = permitted.length;
+  const page = permitted.slice(offset, offset + limit);
+  return { page, total, hasMore: offset + page.length < total };
 }
 
 export function toPortalPublication<T extends typeof publications.$inferSelect>(publication: T, authorization: CommercialEditorialAuthorization | null) {
@@ -302,17 +308,16 @@ export const editorialRouter = router({
     if (input.startDate) conditions.push(gte(publications.publishedAt, input.startDate));
     if (input.endDate) conditions.push(lte(publications.publishedAt, input.endDate));
     const whereClause = and(...conditions);
-    const totalRow = await db.select({ value: count() }).from(publications).where(whereClause);
-    const total = Number(totalRow[0]?.value || 0);
-    const records = await db.select().from(publications).where(whereClause).orderBy(desc(publications.publishedAt), desc(publications.createdAt)).limit(input.limit).offset(input.offset);
+    const records = await db.select().from(publications).where(whereClause).orderBy(desc(publications.publishedAt), desc(publications.createdAt));
     const permitted = await portalAuthorizedPublications(db, records);
-    const publicationIds = permitted.map(item => item.publication.id);
+    const { page, total, hasMore } = portalAuthorizedSearchPage(permitted, input.offset, input.limit);
+    const publicationIds = page.map(item => item.publication.id);
     const firstCoverByPublication = await portalCoversByPublicationId(db, publicationIds);
-    const items = permitted.map(({ publication, authorization }) => {
+    const items = page.map(({ publication, authorization }) => {
       const cover = firstCoverByPublication.get(publication.id);
       return { ...toPortalPublication(publication, authorization), coverUrl: cover?.assetUrl ?? null, coverType: cover?.mediaType ?? null, coverCredit: cover?.credit ?? null };
     });
-    return { items, total, hasMore: input.offset + records.length < total };
+    return { items, total, hasMore };
   }),
 
   featured: publicProcedure.input(z.object({ territoryId: z.number().int().positive().optional() })).query(async ({ input }) => {
@@ -322,17 +327,19 @@ export const editorialRouter = router({
     const geographicIds = geographicTaxonomies.map(item => item.id);
     const geographicLinks = geographicIds.length ? await db.select().from(publicationTaxonomies).where(inArray(publicationTaxonomies.taxonomyId, geographicIds)) : [];
     const geographicPublicationIds = new Set(geographicLinks.map(link => link.publicationId));
+    const now = new Date();
     const conditions = [
       eq(publications.status, "Publicada"),
       eq(publications.isPublic, true),
       isNull(publications.deletedAt),
       isNull(publications.quarantinedAt),
       or(ne(publications.homePlacement, "Nenhum"), eq(publications.manualFeatured, true))!,
+      or(isNull(publications.highlightExpiresAt), gt(publications.highlightExpiresAt, now))!,
     ];
-    const records = await db.select().from(publications).where(and(...conditions)).orderBy(desc(publications.manualFeatured), desc(publications.relevance), publications.sponsored, desc(publications.publishedAt)).limit(40);
+    const records = await db.select().from(publications).where(and(...conditions)).orderBy(desc(publications.manualFeatured), desc(publications.relevance), publications.homeOrder, desc(publications.publishedAt)).limit(40);
     const permitted = await portalAuthorizedPublications(db, records);
     const authorizationByPublicationId = new Map(permitted.map(item => [item.publication.id, item.authorization]));
-    const curated = sortHomeCurated(permitted.map(item => item.publication).filter(isHomeCurated));
+    const curated = sortHomeCurated(permitted.map(item => item.publication).filter(item => isHomeCurated(item) && isHomeHighlightUnexpired(item.highlightExpiresAt, now)));
     const territoryPrioritized = curated.sort((a, b) => (territoryIds?.length ? Number(territoryIds.includes(b.id)) - Number(territoryIds.includes(a.id)) : 0) || Number(geographicPublicationIds.has(b.id)) - Number(geographicPublicationIds.has(a.id)));
     const selected = balanceFeaturedPublications(territoryPrioritized);
     const selectedIds = selected.map(item => item.id);
@@ -356,7 +363,7 @@ export const editorialRouter = router({
         coverType: cover?.mediaType ?? null,
         coverCredit: cover?.credit ?? null,
         photographerName: photographer?.displayName ?? cover?.credit ?? null,
-        photographerSlug: photographer?.publicVisible ? photographer.publicSlug : null,
+        photographerSlug: photographer && decideExecutorPhotographerPage({ publicVisible: photographer.publicVisible, publicSlug: photographer.publicSlug }).allowed ? photographer.publicSlug : null,
         territoryName: territoryNameByPublication.get(publication.id) ?? null,
       };
     });
@@ -927,25 +934,25 @@ export const editorialRouter = router({
     const limit = input?.limit ?? 24;
     const offset = input?.offset ?? 0;
     const whereClause = and(eq(networkExecutors.status, "Ativo"), eq(networkExecutors.publicVisible, true), isNotNull(networkExecutors.publicSlug));
-    const totalRow = await db.select({ value: count() }).from(networkExecutors).where(whereClause);
-    const total = Number(totalRow[0]?.value || 0);
-    const items = await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, slug: networkExecutors.publicSlug, profileNote: networkExecutors.profileNote, specialty: networkExecutors.specialty, territoryId: networkExecutors.territoryId, instagramHandle: networkExecutors.instagramHandle }).from(networkExecutors).where(whereClause).orderBy(networkExecutors.displayName).limit(limit).offset(offset);
-    return { items, total, hasMore: offset + items.length < total };
+    const rows = await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, slug: networkExecutors.publicSlug, profileNote: networkExecutors.profileNote, specialty: networkExecutors.specialty, territoryId: networkExecutors.territoryId, instagramHandle: networkExecutors.instagramHandle }).from(networkExecutors).where(whereClause).orderBy(networkExecutors.displayName);
+    const eligible = rows.filter(item => decideExecutorPhotographerPage({ publicVisible: true, publicSlug: item.slug }).allowed);
+    const { page, total, hasMore } = portalAuthorizedSearchPage(eligible, offset, limit);
+    return { items: page, total, hasMore };
   }),
 
   photographerBySlug: publicProcedure.input(z.object({ slug: z.string().min(1), limit: z.number().int().min(1).max(24).default(12), offset: z.number().int().min(0).default(0) })).query(async ({ input }) => {
     const db = await requireDb();
     const photographer = (await db.select({ id: networkExecutors.id, displayName: networkExecutors.displayName, slug: networkExecutors.publicSlug, profileNote: networkExecutors.profileNote, specialty: networkExecutors.specialty, territoryId: networkExecutors.territoryId, instagramHandle: networkExecutors.instagramHandle }).from(networkExecutors).where(and(eq(networkExecutors.publicSlug, input.slug), eq(networkExecutors.publicVisible, true), eq(networkExecutors.status, "Ativo"))).limit(1))[0];
-    if (!photographer) return null;
+    if (!photographer || !decideExecutorPhotographerPage({ publicVisible: true, publicSlug: photographer.slug }).allowed) return null;
     const credited = await db.select({ publicationId: publicationMedia.publicationId }).from(publicationMedia).innerJoin(mediaAssets, eq(publicationMedia.mediaId, mediaAssets.id)).where(and(eq(mediaAssets.photographerId, photographer.id), isNull(mediaAssets.deletedAt)));
     const publicationIds = Array.from(new Set(credited.map(item => item.publicationId)));
     if (!publicationIds.length) return { photographer, items: [], total: 0, hasMore: false };
     const whereClause = and(inArray(publications.id, publicationIds), eq(publications.status, "Publicada"), eq(publications.isPublic, true), isNull(publications.deletedAt), isNull(publications.quarantinedAt));
-    const totalRow = await db.select({ value: count() }).from(publications).where(whereClause);
-    const total = Number(totalRow[0]?.value || 0);
-    const records = await db.select().from(publications).where(whereClause).orderBy(desc(publications.publishedAt)).limit(input.limit).offset(input.offset);
-    const items = (await portalAuthorizedPublications(db, records)).map(({ publication, authorization }) => toPortalPublication(publication, authorization));
-    return { photographer, items, total, hasMore: input.offset + records.length < total };
+    const records = await db.select().from(publications).where(whereClause).orderBy(desc(publications.publishedAt));
+    const permitted = await portalAuthorizedPublications(db, records);
+    const { page, total, hasMore } = portalAuthorizedSearchPage(permitted, input.offset, input.limit);
+    const items = page.map(({ publication, authorization }) => toPortalPublication(publication, authorization));
+    return { photographer, items, total, hasMore };
   }),
 
   teams: protectedProcedure.query(async ({ ctx }) => {

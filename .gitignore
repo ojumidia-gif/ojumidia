@@ -126,3 +126,17 @@ template.json
 
 
 secrets*.txt
+
+# Playwright E2E (reports, traces, future storageState — never commit)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+e2e/.auth/*
+!e2e/.auth/.gitkeep
+
+# QA isolado (nunca commitar senhas nem bytes de teste)
+.env.qa
+.qa-storage/
+.qa-chrome-profile/
+.qa-chrome-profile-participant/

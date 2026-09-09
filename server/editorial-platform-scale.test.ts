@@ -19,6 +19,12 @@ describe("curadoria da Home e escopo territorial", () => {
     expect(ordered[0].homePlacement).toBe("Destaque principal");
   });
 
+  it("não usa pagamento como chave de ordenação da Home", () => {
+    const paid = { homePlacement: "Recomendado" as const, homeOrder: 5, manualFeatured: false, relevance: 40, sponsored: true };
+    const unpaid = { homePlacement: "Recomendado" as const, homeOrder: 4, manualFeatured: false, relevance: 40, sponsored: false };
+    expect(sortHomeCurated([paid, unpaid])[0]).toBe(unpaid);
+  });
+
   it("isola publicações cujo território não está autorizado", () => {
     const allowed = publicationIdsFullyInTerritoryScope({
       publicationIds: [1, 2, 3],

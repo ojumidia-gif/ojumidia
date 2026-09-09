@@ -78,6 +78,7 @@ describe("Fase 3 — oportunidades territoriais", () => {
     });
     expect(ok.ok).toBe(true);
     expect(canAcceptInvite({ opportunityStatus: "Aberta", inviteStatus: "Pendente", inviteProfileId: 7, actorProfileId: 8 }).code).toBe("WRONG_RECIPIENT");
+    expect(canAcceptInvite({ opportunityStatus: "Aberta", inviteStatus: "Pendente", inviteProfileId: 7, actorProfileId: 1 }).code).toBe("WRONG_RECIPIENT");
     expect(canAcceptInvite({ opportunityStatus: "Aceita", inviteStatus: "Pendente", inviteProfileId: 7, actorProfileId: 7 }).code).toBe("ALREADY_ACCEPTED");
     expect(canAcceptInvite({ opportunityStatus: "Cancelada", inviteStatus: "Pendente", inviteProfileId: 7, actorProfileId: 7 }).code).toBe("CANCELLED");
     expect(canAcceptInvite({

@@ -2,10 +2,10 @@ import { TRPCError } from "@trpc/server";
 import { desc, eq, like } from "drizzle-orm";
 import { commercialActivities, commercialRequests, professionalProfiles, taxonomies } from "../drizzle/schema";
 import {
+  isOwnProfessionalOrigination,
   needsFromWorkType,
   parseOriginFromNotes,
   professionalCanOriginateLead,
-  professionalOwnsOrigin,
   profileAcceptsPublicServiceRequests,
   stampOriginOnNotes,
   stripOriginFromNotes,
@@ -184,20 +184,60 @@ export async function submitProfessionalOrigination(db: Db, actor: Actor, input:
 
 export async function listMyOriginationLeads(db: Db, actor: Actor) {
   const profile = await professionalProfileForUser(db, actor.id);
-  if (!profile) return { profile: null, items: [] as Array<{ id: number; eventType: string; status: string; createdAt: Date; originKind: string }> };
+  if (!profile) {
+    return {
+      profile: null,
+      items: [] as Array<{
+        id: number;
+        eventType: string;
+        status: string;
+        createdAt: Date;
+        originKind: string;
+        originatedByProfessionalProfileId: number | null;
+        createdByUserId: number | null;
+        territoryId: number | null;
+        managedByUserId: number | null;
+      }>,
+    };
+  }
+  const territory = profile.territoryId
+    ? (await db.select({ name: taxonomies.name }).from(taxonomies).where(eq(taxonomies.id, profile.territoryId)).limit(1))[0]
+    : null;
   const rows = await db.select({
     id: commercialRequests.id,
     eventType: commercialRequests.eventType,
     status: commercialRequests.status,
     notes: commercialRequests.notes,
     createdAt: commercialRequests.createdAt,
+    territoryId: commercialRequests.territoryId,
+    managedByUserId: commercialRequests.managedByUserId,
   }).from(commercialRequests).where(like(commercialRequests.notes, "%OJU_ORIGIN_V1:%")).orderBy(desc(commercialRequests.createdAt));
   const items = rows.flatMap(row => {
     const origin = parseOriginFromNotes(row.notes);
-    if (!professionalOwnsOrigin(origin, profile.id)) return [];
-    return [{ id: row.id, eventType: row.eventType, status: row.status, createdAt: row.createdAt, originKind: origin!.kind }];
+    if (!isOwnProfessionalOrigination(origin, profile.id)) return [];
+    return [{
+      id: row.id,
+      eventType: row.eventType,
+      status: row.status,
+      createdAt: row.createdAt,
+      originKind: origin!.kind,
+      originatedByProfessionalProfileId: origin!.originatedByProfessionalProfileId,
+      createdByUserId: origin!.createdByUserId,
+      territoryId: row.territoryId,
+      managedByUserId: row.managedByUserId,
+    }];
   });
-  return { profile: { id: profile.id, displayName: profile.displayName }, items };
+  return {
+    profile: {
+      id: profile.id,
+      displayName: profile.displayName,
+      territoryId: profile.territoryId,
+      partnerId: profile.partnerId,
+      territoryName: territory?.name ?? null,
+      userId: profile.userId,
+    },
+    items,
+  };
 }
 
 export function briefingWithoutOrigin(objective: string | null, notes: string | null) {

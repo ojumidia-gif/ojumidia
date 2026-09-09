@@ -31,7 +31,7 @@ import {
 } from "@shared/networkOpportunities";
 import { decodeSpecialties } from "@shared/professionalSpecialties";
 import { assertPartnerScope, partnerTerritoryIds, recordAuditEvent } from "./partnerScope";
-import { professionalProfileForUser } from "./professionalNetwork";
+import { professionalProfileForUser, attachProfessionalProfileUser } from "./professionalNetwork";
 import { createNetworkNotification } from "./networkNotifications";
 import { createProductionFromAcceptedOpportunity } from "./productions";
 import { briefingWithoutOrigin, parseOriginFromNotes } from "./professionalOrigination";
@@ -39,7 +39,7 @@ import { activeCommercialPolicy } from "./financialGovernance";
 import type { getDb } from "./db";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
-type Actor = { id: number; role: string };
+type Actor = { id: number; role: string; email?: string | null };
 
 export function isMissingOpportunitySchema(error: unknown) {
   const text = error instanceof Error ? `${error.message} ${error}` : String(error);
@@ -406,7 +406,11 @@ export async function inviteToOpportunity(db: Db, actor: Actor, input: { opportu
 }
 
 export async function acceptOpportunityInvite(db: Db, actor: Actor, inviteId: number) {
-  const profile = await professionalProfileForUser(db, actor.id);
+  let profile = await professionalProfileForUser(db, actor.id);
+  if (!profile && actor.email) {
+    await attachProfessionalProfileUser(db, { email: actor.email, userId: actor.id });
+    profile = await professionalProfileForUser(db, actor.id);
+  }
   if (!profile) throw new TRPCError({ code: "FORBIDDEN", message: "Aceite exige perfil profissional ativo. Especialidade não cria permissão administrativa." });
   const invite = (await db.select().from(networkOpportunityInvites).where(eq(networkOpportunityInvites.id, inviteId)).limit(1))[0];
   if (!invite) throw new TRPCError({ code: "NOT_FOUND", message: "Convite não encontrado." });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { searchInput } from "./editorial";
+import { portalAuthorizedSearchPage, searchInput } from "./editorial";
 
 describe("busca editorial avançada", () => {
   it("aceita a combinação de tema, território, tipo, período e palavra-chave", () => {
@@ -12,5 +12,9 @@ describe("busca editorial avançada", () => {
       endDate: new Date("2026-12-31T23:59:59Z"),
     });
     expect(result.success).toBe(true);
+  });
+
+  it("pagina somente o conjunto já autorizado ao visitante", () => {
+    expect(portalAuthorizedSearchPage([{ id: 1 }], 0, 24)).toEqual({ page: [{ id: 1 }], total: 1, hasMore: false });
   });
 });

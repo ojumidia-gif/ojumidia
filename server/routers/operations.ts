@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, isNotNull, isNull, lte, notInArray, or } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -28,6 +29,10 @@ import { EDITORIAL_TRASH_RETENTION_MS } from "../editorialTrash";
 import { activePartnerMemberships, partnerTerritoryIds } from "../partnerScope";
 import { protectedProcedure, router } from "../_core/trpc";
 import { routineAuditActions } from "@shared/auditView";
+
+function requirePrincipal(role: string) {
+  if (role !== "administrador principal") throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin consulta o registro administrativo." });
+}
 
 type Priority = "Crítica" | "Atenção" | "Acompanhamento";
 type PendingItem = {
@@ -175,7 +180,7 @@ export const operationsRouter = router({
     offset: z.number().int().min(0).default(0),
     view: z.enum(["operacao", "completa"]).default("operacao"),
   }).optional()).query(async ({ ctx, input }) => {
-    if (ctx.user.role !== "administrador principal") throw new Error("Somente o Super Admin consulta o registro administrativo.");
+    requirePrincipal(ctx.user.role);
     const db = await requireDb();
     const view = input?.view ?? "operacao";
     const limit = input?.limit ?? 40;

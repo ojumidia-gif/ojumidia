@@ -1,7 +1,7 @@
 # Arquitetura de visibilidade territorial da Rede Ojú
 
-**Fase:** auditoria + contrato de domínio + centralização controlada.  
-**Escopo negativo:** sem deploy, sem push, sem Aiven, sem migrations, sem tabelas novas, sem ranking, sem marketplace.
+**Fase:** Missão 6 — contrato vivo + auditoria forense. Inventário completo, estado atual vs alvo e Missão 6.1: `docs/ESPECIFICACAO_MOTOR_VISIBILIDADE_OJU.md`.  
+**Escopo negativo:** sem deploy, sem push, sem Aiven, sem migrations, sem tabelas novas, sem ranking, sem marketplace, sem `VisibilityEngine` monolítico.
 
 > Visibilidade não é curadoria.  
 > Curadoria não é pagamento.  
@@ -93,7 +93,7 @@ Não é `ORDER BY created_at` da Rede. Não é diretório. Não é oportunidade.
 - Pedidos: `commercialRequests`.
 - Oportunidades da Rede: privadas (admin). Origem operacional: Comercial / Mesa / Manual. `createdBy` = ator do sistema, **não** originador territorial.
 - Profissional **não** vende pelo diretório. Não há preço, estrelas nem “comprar agora” nas páginas públicas da Rede.
-- Visibilidade institucional de **serviço comunitário** é produto identificado (`visibilityPlan` no explorer). **Conflito:** `community.publicInstitutions` ordena quem tem plano **antes** dos demais (`Number(Boolean(visibilityPlan))`) e ainda `updatedAt DESC`. Isso **não** é a regra da Rede (`/rede` alfabético). Documentado; não alterado nesta fase para não mudar o explorer sem decisão editorial.
+- Visibilidade institucional de **serviço comunitário** é produto identificado (`visibilityPlan` no explorer). **Missão 6.1:** `publicInstitutions` e `publicInstitutionMap` usam o mesmo predicado `decideCommunityHouseDirectory`; a ordem pública não privilegia plano pago (`visibilityPlan` permanece rótulo).
 
 Percentuais: snapshot de `commercialPolicies` na oportunidade. Nada hardcoded como “modelo definitivo”.
 
@@ -217,7 +217,6 @@ Não é um monólito: queries continuam nos routers; o módulo só **avalia**.
 
 - Caps de **publicação** (`recordPhotoCap` / `canAttachWithinMediaLimit`) vs caps de **produção** (`productionMediaWithinLimit`): mesma janela numérica, códigos distintos por unidade.
 - `/fotografos` vs `/rede/profissionais`.
-- `publicInstitutions` ordenação comercial (conflito).
 - Perfil público da Rede **colapsa** mídias de várias produções numa única janela 5+1 na **exibição** (`getPublicProfessionalBySlug`) — atenção, não regra de upload. Upload continua por produção.
 - `relevance` na ordenação da Home.
 - Matching de oportunidades (`server/opportunities.ts`).
@@ -226,7 +225,7 @@ Não é um monólito: queries continuam nos routers; o módulo só **avalia**.
 ## 19. Riscos
 
 1. Duas identidades públicas de profissional (executor vs perfil Rede) podem divergir.
-2. `publicInstitutions` privilegia plano pago na ordem — tensiona “pagamento não compra ranking”.
+2. `publicInstitutions` privilegia plano pago na ordem — tensiona “pagamento não compra ranking”. **Corrigido na Missão 6.1** (predicado + ordem alfabética; selo permanece).
 3. Sem contexto de visitante, diversidade territorial da Home depende só da curadoria humana.
 4. Originação territorial ainda não é rastreável de forma fiel.
 5. Exibição 5+1 no perfil público pode esconder produções adicionais (concentração de atenção misturada à janela).
@@ -236,7 +235,7 @@ Não é um monólito: queries continuam nos routers; o módulo só **avalia**.
 ## 20. Próximos passos (não esta fase)
 
 1. Decidir unificação gradual `/fotografos` → perfil Rede **ou** papéis documentados distintos.
-2. Corrigir ordenação de `publicInstitutions` (alfabética + selo “visibilidade contratada”) após OK editorial.
+2. Hierarquia territorial e contexto declarado do visitante (nunca GPS silencioso).
 3. Documentar migration futura de originação (`originatedByProfessionalProfileId` + `originKind`) **sem** aplicá-la agora.
 4. Separar janela de **exibição** do perfil (diversidade de produções) da janela de **anexo**.
 5. Motor de diversidade territorial na Home **depois** de dados reais de curadoria.
@@ -251,6 +250,25 @@ O profissional **não pode hoje:** originar oportunidade com autoria persistida;
 
 **Para vender serviços sem virar marketplace:** preservar Rede como presença; pedidos e propostas no fluxo autenticado/admin; originação rastreada; comercial com política versionada; visibilidade editorial intocada por volume de venda.
 
+## 21. Estado atual vs estado alvo (Missão 6)
+
+| Dimensão | Estado atual (código) | Estado alvo (10.000 participantes) |
+| --- | --- | --- |
+| Home | Curadoria humana + `sortHomeCurated` + equilíbrio por `contentKind` (máx. 6; UI 4). Sem território do visitante. | Mesma autoridade humana + piso territorial + teto por profissional/casa + comercial só em superfície identificada |
+| Diretório Rede | Alfa, predicados, load-all-then-slice | SQL paginado, predicado único, sem score |
+| Instituições | Explorer usa predicado; `publicInstitutions` ranqueia plano; mapa sem gate de serviço | Uma procedure, alfa ou recência **sem** pagamento na ordem |
+| Visitante | Sem contexto territorial persistido; GPS só pan do mapa | Contexto **opt-in declarado**, nunca GPS silencioso |
+| Frequência | `exposureCooldownUntil: null` | Política por publicação×ciclo, teto profissional, piso território |
+| Profissionais | Duas fontes (`professionalProfiles` vs `networkExecutors`) | Papéis explícitos ou unificação gradual (produto) |
+| Originação | Notes `OJU_ORIGIN_V1`; sem coluna | Coluna futura; **nunca** boost de visibilidade |
+| Escala | Queries em memória no diretório | Selectors + cache de Home curada; sem ranking pré-calculado |
+
+## 22. Missão 6.1
+
+**Encerrada no código:** `sponsored` fora do ORDER BY da Home; `highlightExpiresAt` filtrado na query featured; `publicInstitutions`/`publicInstitutionMap` no predicado de casa; `/fotografos` chama `decideExecutorPhotographerPage`; total/hasMore da busca após autorização comercial.
+
+**Fora desta frente (produto/jurídico):** diversidade territorial automática; frequency persistido; geocontexto; unificação `/fotografos` vs Rede; hero comercial substituindo fundo vivo; colapso 5+1 na exibição do perfil; licenciamento com procedure CMS em rota pública.
+
 ---
 
-*Nenhuma tabela nova foi criada. Schema 0048–0053 permanece a estrutura oficial.*
+*Nenhuma tabela nova nesta missão. Journal do repo inclui 0054–0055 (QA). Aiven/Beta permanece 0053.*

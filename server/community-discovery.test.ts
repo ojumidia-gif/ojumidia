@@ -26,6 +26,7 @@ describe("descoberta comunitária com privacidade", () => {
   it("inclui no mapa apenas instituições com localização pública e coordenadas autorizadas", () => {
     expect(router).toContain('eq(institutions.locationVisibility, "Pública")');
     expect(router).toContain("isNotNull(institutions.latitude)");
+    expect(router).toContain("communityHouseIsPubliclyListed(row, byInstitution.has(row.id))");
     expect(map).toContain("publicDirectory.useQuery");
     expect(map).toContain("Registros com localização aproximada ou não divulgada continuam protegidos");
   });

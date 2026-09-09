@@ -1,6 +1,7 @@
 import { OJU_CONTACT_EMAIL, OJU_WHATSAPP_LABEL } from "./publicNav";
 
 export const LEGAL_UPDATED_AT = "6 de setembro de 2026";
+export { TERMS_OF_USE_VERSION } from "@shared/legalVersions";
 
 export const requiredLegalLinks = [
   { label: "Termos de uso", href: "/termos-de-uso" },
@@ -68,9 +69,9 @@ export const legalDocuments: Record<LegalKind, LegalDocument> = {
       {
         title: "Parceiros Ojú e Equipe Ojú",
         paragraphs: [
-          "Quem opera conteúdo no território o faz como Parceiro Ojú, com acesso de criador parceiro: cria, edita e publica somente o que é seu. Ninguém altera o conteúdo de outro parceiro.",
+          "Quem opera conteúdo no território o faz como Parceiro Ojú. Participação na Rede (perfil, convites e produções próprias) exige conta autenticada e aceite destes Termos. Isso não concede, sozinho, o Centro Administrativo.",
           "A Equipe Ojú cuida do portal, da Home nacional, do catálogo compartilhado e das lixeiras internas. Pedido em Ser parceiro não cria login sozinho.",
-          "Acesso de criador parceiro, quando exigido, passa por termo de responsabilidade assinado via gov.br. Sessões, auditoria e documentos privados seguem as regras internas da Ojú.",
+          "O termo de responsabilidade OJU-AR-1.0, quando exigido, é um documento formal assinado via gov.br para a responsabilidade de criador parceiro no Centro Administrativo. Não é chave universal da Rede, não substitui estes Termos nem a autorização editorial comercial (OJU-AE-1.0).",
         ],
       },
       {

@@ -93,6 +93,11 @@ export function professionalOwnsOrigin(origin: CommercialOriginRecord | null, pr
   return origin.originatedByProfessionalProfileId === profileId || origin.requestedProfessionalProfileId === profileId;
 }
 
+/** Originação do profissional ≠ pedido de visitante dirigido ao perfil. */
+export function isOwnProfessionalOrigination(origin: CommercialOriginRecord | null, profileId: number) {
+  return Boolean(origin && origin.kind === "profissional" && origin.originatedByProfessionalProfileId === profileId);
+}
+
 export function needsFromWorkType(workType: string) {
   return {
     needsPhotography: workType === "Fotografia" || workType === "Cobertura",

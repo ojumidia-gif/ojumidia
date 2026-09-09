@@ -18,10 +18,14 @@ const FALLBACK_HERO_VIDEO = "/oju-assets/orixas-transicao-ritual-cinematografica
 
 function FrontCard({ label, title, action, href }: { label: string; title: string; action: string; href: string }) {
   return (
-    <Link href={href} className="group relative min-h-36 overflow-hidden border border-oju-terra/12 bg-oju-paz-claro p-5 text-oju-terra transition hover:border-oju-dourado/50">
+    <Link
+      href={href}
+      aria-label={action}
+      className="group relative z-[1] min-h-36 overflow-hidden border border-oju-terra/12 bg-oju-paz-claro p-5 text-oju-terra scroll-mt-8 hover:border-oju-dourado/50"
+    >
       <p className="editorial-kicker">{label}</p>
       <h3 className="mt-3 max-w-none font-serif text-2xl leading-[1.05] sm:max-w-[15rem]">{title}</h3>
-      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-oju-verde">{action} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-oju-verde">{action} <ArrowRight className="h-4 w-4 group-hover:translate-x-1" /></span>
     </Link>
   );
 }

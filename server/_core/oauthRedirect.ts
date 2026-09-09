@@ -8,10 +8,6 @@ function parseCsv(value: string | undefined) {
   return (value ?? "").split(",").map(entry => entry.trim()).filter(Boolean);
 }
 
-function normalizeHost(host: string) {
-  return host.trim().toLowerCase().replace(/\.$/, "").replace(/:\d+$/, "");
-}
-
 function originOf(url: string) {
   try {
     return new URL(url).origin;
@@ -26,6 +22,16 @@ function callbackUriForOrigin(origin: string) {
 
 function configuredRedirectUri() {
   return (process.env.GOOGLE_OAUTH_REDIRECT_URI ?? ENV.googleOAuthRedirectUri).trim().replace(/\/$/, "");
+}
+
+function hostHeader(req: Pick<Request, "get" | "hostname" | "headers">) {
+  const forwardedHost = req.headers["x-forwarded-host"];
+  const raw = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost || req.get("host") || req.hostname;
+  return String(raw || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase()
+    .replace(/\.$/, "");
 }
 
 export function allowedOAuthRedirectUris(
@@ -59,9 +65,7 @@ export function requestPublicOrigin(req: Pick<Request, "protocol" | "get" | "hos
   const proto = protoList.map(item => item.trim().toLowerCase()).includes("https") || req.protocol === "https"
     ? "https"
     : "http";
-  const forwardedHost = req.headers["x-forwarded-host"];
-  const hostHeader = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost || req.get("host") || req.hostname;
-  const host = normalizeHost(String(hostHeader || "").split(",")[0] || "");
+  const host = hostHeader(req);
   return host ? `${proto}://${host}` : "";
 }
 

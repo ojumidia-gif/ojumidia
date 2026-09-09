@@ -3,6 +3,7 @@ import { collaboratorAccessGrants, users } from "../drizzle/schema";
 import { getDb } from "./db";
 import { recordAuditEvent, syncPartnerMemberFromGrant } from "./partnerScope";
 import { attachProfessionalProfileUser } from "./professionalNetwork";
+import { bindTermsAcceptancesToUser } from "./termsOfUse";
 
 export async function applyLoginSideEffects(input: {
   openId: string;
@@ -17,7 +18,7 @@ export async function applyLoginSideEffects(input: {
   const grant = account?.email
     ? (await db.select().from(collaboratorAccessGrants).where(eq(collaboratorAccessGrants.email, account.email.trim().toLowerCase())).limit(1))[0]
     : undefined;
-  if (input.outcome === "success" && account && grant?.partnerId && grant.territoryId && grant.status === "Autorizado" && account.adminAccess) {
+  if (input.outcome === "success" && account && grant?.partnerId && grant.territoryId && grant.status === "Autorizado") {
     try {
       await syncPartnerMemberFromGrant(db, { userId: account.id, partnerId: grant.partnerId, territoryId: grant.territoryId, createdBy: grant.createdBy });
     } catch (error) {
@@ -29,6 +30,11 @@ export async function applyLoginSideEffects(input: {
       await attachProfessionalProfileUser(db, { email: account.email, userId: account.id });
     } catch (error) {
       console.warn("[Auth] Perfil profissional não pôde ser ligado no login:", error);
+    }
+    try {
+      await bindTermsAcceptancesToUser(db, { userId: account.id, email: account.email });
+    } catch (error) {
+      console.warn("[Auth] Aceite dos Termos de Uso não pôde ser vinculado no login:", error);
     }
   }
   await recordAuditEvent(db, {

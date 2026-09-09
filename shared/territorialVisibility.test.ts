@@ -142,6 +142,7 @@ describe("Motor de visibilidade territorial — contrato sobre regras existentes
   it("preserva as duas superfícies públicas de profissional sem fundi-las", () => {
     expect(decideExecutorPhotographerPage({ publicVisible: true, publicSlug: "ana" }).allowed).toBe(true);
     expect(source("server/routers/editorial.ts")).toContain("publicPhotographers");
+    expect(source("server/routers/editorial.ts")).toContain("decideExecutorPhotographerPage");
     expect(source("server/networkDirectory.ts")).toContain("professionalProfiles");
   });
 });

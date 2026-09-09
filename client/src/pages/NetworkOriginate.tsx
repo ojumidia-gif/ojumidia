@@ -60,6 +60,13 @@ export default function NetworkOriginate() {
         {mine.data?.profile ? (
           <>
             <p className="mt-8 text-sm font-semibold">{mine.data.profile.displayName}</p>
+            {mine.data.profile.territoryName || mine.data.profile.territoryId ? (
+              <p className="mt-2 text-sm text-oju-terra-suave">
+                Território do perfil: {mine.data.profile.territoryName || `id ${mine.data.profile.territoryId}`}. A originação usa este território; não há escolha de cidade alheia neste formulário.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-oju-terra-suave">Perfil sem território definido — a API recusa originação até o território estar no perfil.</p>
+            )}
             <form className="mt-6 grid gap-3" onSubmit={onSubmit}>
               <Input required name="clientName" placeholder="Casa, parceiro ou pessoa de contato" />
               <Input required name="contact" placeholder="WhatsApp ou e-mail para a Ojú retornar" />
@@ -76,12 +83,16 @@ export default function NetworkOriginate() {
                 <article key={item.id} className="mt-3 border border-oju-terra/12 p-4">
                   <p className="text-xs uppercase tracking-[.12em] text-oju-dende">{item.originKind} · {item.status}</p>
                   <p className="mt-2 font-semibold">{item.eventType}</p>
+                  <p className="mt-1 text-xs text-oju-terra-suave">
+                    originatedBy perfil {item.originatedByProfessionalProfileId} · createdBy user {item.createdByUserId ?? "—"} · managedBy {item.managedByUserId ?? "nenhum"}
+                  </p>
                 </article>
               )) : <p className="mt-3 text-sm text-oju-terra-suave">Nenhuma originação ainda.</p>}
             </section>
           </>
         ) : null}
         <Link href="/rede" className="mt-12 inline-block text-sm font-semibold text-oju-dende">Voltar à Rede</Link>
+        <Link href="/rede/convites" className="mt-12 ml-6 inline-block text-sm font-semibold text-oju-dende">Convites</Link>
       </main>
     </div>
   );

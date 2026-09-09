@@ -7,6 +7,7 @@ import { PageMeta } from "@/components/PageMeta";
 import { CityOfOperationSelect, emptyCitySelection } from "@/components/CityOfOperationSelect";
 import { citySelectionText } from "@shared/brazilPlaces";
 import { networkBondsNow, professionalSpecialties, type NetworkBondNowId, type ProfessionalSpecialtyId } from "@shared/professionalSpecialties";
+import { TERMS_OF_USE_VERSION } from "@shared/legalVersions";
 import { trpc } from "@/lib/trpc";
 
 export default function BePartner() {
@@ -40,6 +41,7 @@ export default function BePartner() {
       mediaOutletName: String(data.get("mediaOutletName") || "") || null,
       mediaOutletUrl: String(data.get("mediaOutletUrl") || "") || null,
       message: String(data.get("message")),
+      termsDocumentVersion: TERMS_OF_USE_VERSION,
     });
   }
 

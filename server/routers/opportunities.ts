@@ -1,7 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, authenticatedProcedure, router } from "../_core/trpc";
+import { requireCurrentTermsOfUse } from "../termsOfUse";
 import { opportunityWorkTypes } from "@shared/networkOpportunities";
 import { professionalSpecialtyIds } from "@shared/professionalSpecialties";
 import {
@@ -29,7 +30,7 @@ async function requireDb() {
 const money = z.number().positive().max(99999999);
 
 export const opportunitiesRouter = router({
-  mine: protectedProcedure.query(async ({ ctx }) => {
+  mine: authenticatedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
     try {
       return await myOpportunityInvites(db, ctx.user);
@@ -138,17 +139,19 @@ export const opportunitiesRouter = router({
       hideOpportunitySql(error);
     }
   }),
-  accept: protectedProcedure.input(z.object({ inviteId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+  accept: authenticatedProcedure.input(z.object({ inviteId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
     try {
+      await requireCurrentTermsOfUse(db, ctx.user);
       return await acceptOpportunityInvite(db, ctx.user, input.inviteId);
     } catch (error) {
       hideOpportunitySql(error);
     }
   }),
-  decline: protectedProcedure.input(z.object({ inviteId: z.number().int().positive(), reason: z.string().trim().max(480).nullable().optional() })).mutation(async ({ ctx, input }) => {
+  decline: authenticatedProcedure.input(z.object({ inviteId: z.number().int().positive(), reason: z.string().trim().max(480).nullable().optional() })).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
     try {
+      await requireCurrentTermsOfUse(db, ctx.user);
       return await declineOpportunityInvite(db, ctx.user, input.inviteId, input.reason);
     } catch (error) {
       hideOpportunitySql(error);
