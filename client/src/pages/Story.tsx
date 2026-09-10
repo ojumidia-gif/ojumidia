@@ -7,6 +7,7 @@ import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useEditorialLive } from "@/hooks/useEditorialLive";
 import { parseEditorialBody } from "@/lib/editorialBody";
+import { CompleteProductionLinks } from "@/components/CompleteProductionLinks";
 
 type StoryMedia = {
   id: number;
@@ -125,6 +126,7 @@ export default function Story() {
               </div>
             )) : <EditorialBody text={bodyText} />}
           {leftoverMedia.map(media => <div key={media.id} className="mt-10"><StoryFigure media={media} alt={media.credit || data.title} /></div>)}
+          <CompleteProductionLinks links={data.completeProductions} />
         </section>
       </article>
     </div>

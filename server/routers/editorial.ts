@@ -16,6 +16,7 @@ import { groupDuplicateTeamIds, pickReusableTeam } from "@shared/teamCredits";
 import { toPublicPortalMedia } from "../mediaAccess";
 import { MAX_MINICLIPS, MAX_PHOTOS } from "@shared/const";
 import { resolveCityOfOperation, type CitySelection } from "@shared/brazilPlaces";
+import { parseStoredExternalHttpUrl, parseStoredExternalLabel, toPublicCompleteProductions } from "@shared/externalPublicationLink";
 
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -163,9 +164,36 @@ export function portalAuthorizedSearchPage<T>(permitted: T[], offset: number, li
 }
 
 export function toPortalPublication<T extends typeof publications.$inferSelect>(publication: T, authorization: CommercialEditorialAuthorization | null) {
-  const { commercialRequestId: _commercialRequestId, teamId: _teamId, createdBy: _createdBy, editedBy: _editedBy, approvedBy: _approvedBy, unpublishedAt: _unpublishedAt, unpublishedBy: _unpublishedBy, deletedAt: _deletedAt, deletedBy: _deletedBy, deletionNote: _deletionNote, version: _version, ...safePublication } = publication;
+  const {
+    commercialRequestId: _commercialRequestId,
+    teamId: _teamId,
+    createdBy: _createdBy,
+    editedBy: _editedBy,
+    approvedBy: _approvedBy,
+    unpublishedAt: _unpublishedAt,
+    unpublishedBy: _unpublishedBy,
+    deletedAt: _deletedAt,
+    deletedBy: _deletedBy,
+    deletionNote: _deletionNote,
+    version: _version,
+    externalAlbumUrl,
+    externalAlbumLabel,
+    externalVideoUrl,
+    externalVideoLabel,
+    ...safePublication
+  } = publication;
+  const completeProductions = canExposeOnPublicPortal(publication, authorization)
+    ? toPublicCompleteProductions({
+        contentKind: publication.contentKind,
+        externalAlbumUrl,
+        externalVideoUrl,
+        externalAlbumLabel,
+        externalVideoLabel,
+      })
+    : [];
   return {
     ...safePublication,
+    completeProductions,
     editorialAuthorization: requiresCommercialEditorialAuthorization(publication)
       ? {
           materialFromCommercialCoverage: true as const,
@@ -523,7 +551,7 @@ export const editorialRouter = router({
     return { id: publicationId, slug };
   }),
 
-  update: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), title: z.string().min(4).max(280).optional(), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]).optional(), subtitle: z.string().max(420).nullable().optional(), summary: z.string().max(2000).nullable().optional(), body: z.string().max(30000).nullable().optional(), teamId: z.number().int().positive().nullable().optional(), teamCredit: z.string().min(2).max(160).nullable().optional(), revisionNote: z.string().max(1000).optional(), sponsored: z.boolean().optional(), sponsorDisclosure: z.string().max(280).nullable().optional(), commercialRequestId: z.number().int().positive().nullable().optional(), photoLimit: z.number().int().min(0).max(MAX_PHOTOS).nullable().optional(), videoLimit: z.number().int().min(0).max(MAX_MINICLIPS).nullable().optional(), externalAlbumUrl: z.string().url().nullable().optional(), externalVideoUrl: z.string().url().nullable().optional(), taxonomyIds: z.array(z.number().int().positive()).optional() })).mutation(async ({ ctx, input }) => {
+  update: protectedProcedure.input(z.object({ id: z.number().int().positive(), expectedVersion: z.number().int().positive(), title: z.string().min(4).max(280).optional(), contentKind: z.enum(["História", "Cobertura", "Documentário", "Projeto", "Fotografia documental"]).optional(), subtitle: z.string().max(420).nullable().optional(), summary: z.string().max(2000).nullable().optional(), body: z.string().max(30000).nullable().optional(), teamId: z.number().int().positive().nullable().optional(), teamCredit: z.string().min(2).max(160).nullable().optional(), revisionNote: z.string().max(1000).optional(), sponsored: z.boolean().optional(), sponsorDisclosure: z.string().max(280).nullable().optional(), commercialRequestId: z.number().int().positive().nullable().optional(), photoLimit: z.number().int().min(0).max(MAX_PHOTOS).nullable().optional(), videoLimit: z.number().int().min(0).max(MAX_MINICLIPS).nullable().optional(), externalAlbumUrl: z.string().max(2048).nullable().optional(), externalAlbumLabel: z.string().max(80).nullable().optional(), externalVideoUrl: z.string().max(2048).nullable().optional(), externalVideoLabel: z.string().max(80).nullable().optional(), taxonomyIds: z.array(z.number().int().positive()).optional() })).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
     const current = await db.select().from(publications).where(eq(publications.id, input.id)).limit(1);
     if (!current[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Publicação não encontrada." });
@@ -531,10 +559,24 @@ export const editorialRouter = router({
     if (current[0].quarantinedAt) throw new TRPCError({ code: "FORBIDDEN", message: "Este conteúdo está em quarentena e não pode ser alterado." });
     const role = ctx.user.role as EditorialRole;
     if (!canEditPublication(role, current[0].status as ContentStatus)) throw new TRPCError({ code: "FORBIDDEN", message: "Seu papel não pode editar nesta etapa." });
-    const { id, taxonomyIds, expectedVersion, teamCredit, revisionNote, ...values } = input;
+    const { id, taxonomyIds, expectedVersion, teamCredit, revisionNote, externalAlbumUrl, externalVideoUrl, externalAlbumLabel, externalVideoLabel, ...values } = input;
     if (current[0].version !== expectedVersion) throw new TRPCError({ code: "CONFLICT", message: "Esta publicação foi atualizada por outra pessoa. Reabra-a antes de salvar." });
     const resolvedTeamId = teamCredit ? await resolveTeamId(db, values.teamId, teamCredit, ctx.user.id) : values.teamId;
+    const album = externalAlbumUrl === undefined ? undefined : parseStoredExternalHttpUrl(externalAlbumUrl);
+    const video = externalVideoUrl === undefined ? undefined : parseStoredExternalHttpUrl(externalVideoUrl);
+    const albumLabel = externalAlbumLabel === undefined ? undefined : parseStoredExternalLabel(externalAlbumLabel);
+    const videoLabel = externalVideoLabel === undefined ? undefined : parseStoredExternalLabel(externalVideoLabel);
+    if (album?.ok === false || video?.ok === false) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Informe um endereço http ou https válido. Não use javascript, data, HTML nem esquemas perigosos." });
+    }
+    if (albumLabel?.ok === false || videoLabel?.ok === false) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "O texto do botão precisa ser curto, sem HTML, link, script nem código." });
+    }
     const updateValues: Partial<typeof publications.$inferInsert> = { ...values };
+    if (album) updateValues.externalAlbumUrl = album.value;
+    if (video) updateValues.externalVideoUrl = video.value;
+    if (albumLabel) updateValues.externalAlbumLabel = albumLabel.value;
+    if (videoLabel) updateValues.externalVideoLabel = videoLabel.value;
     let heldForEditorialAuthorization = false;
     if (updateValues.commercialRequestId !== undefined && updateValues.commercialRequestId !== null) {
       const authorization = await commercialAuthorizationByRequestId(db, updateValues.commercialRequestId);

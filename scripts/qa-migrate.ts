@@ -1,5 +1,5 @@
 /**
- * Aplica as migrations oficiais 0000–0056 em oju_midia_qa.
+ * Aplica as migrations oficiais 0000–0057 em oju_midia_qa.
  * Carrega SOMENTE .env.qa. Não usa drizzle-kit migrate: o kit envia
  * arquivos multi-statement (ex.: 0040) numa query só e o MySQL recusa.
  * O SQL dos arquivos não é alterado. Hash = SHA-256 do arquivo intacto

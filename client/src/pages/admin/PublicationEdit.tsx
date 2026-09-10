@@ -14,6 +14,8 @@ import { CoverageTaxonomiesPanel } from "./CoverageTaxonomiesPanel";
 import { InstitutionalCoveragePanel } from "./InstitutionalCoveragePanel";
 import { SiteReadiness } from "./_shared";
 import { EditorialBody } from "@/components/EditorialBody";
+import { completeProductionLabel } from "@shared/externalPublicationLink";
+import { MAX_MINICLIPS, MAX_PHOTOS } from "@shared/const";
 
 const destinations: Record<string, string> = {
   "História": "Portal → Histórias",
@@ -27,9 +29,9 @@ export default function PublicationEdit() {
   const { user } = useAuth();
   const [, params] = useRoute("/admin/editar/:id"); const id = Number(params?.id);
   const utils = trpc.useUtils(); const { data, isLoading } = trpc.editorial.preview.useQuery({ id }, { enabled: Boolean(id) });
-  const [title, setTitle] = useState(""); const [subtitle, setSubtitle] = useState(""); const [summary, setSummary] = useState(""); const [body, setBody] = useState(""); const [teamCredit, setTeamCredit] = useState(""); const [revisionNote, setRevisionNote] = useState(""); const [externalAlbumUrl, setExternalAlbumUrl] = useState(""); const [externalVideoUrl, setExternalVideoUrl] = useState("");
+  const [title, setTitle] = useState(""); const [subtitle, setSubtitle] = useState(""); const [summary, setSummary] = useState(""); const [body, setBody] = useState(""); const [teamCredit, setTeamCredit] = useState(""); const [revisionNote, setRevisionNote] = useState(""); const [externalAlbumUrl, setExternalAlbumUrl] = useState(""); const [externalAlbumLabel, setExternalAlbumLabel] = useState(""); const [externalVideoUrl, setExternalVideoUrl] = useState(""); const [externalVideoLabel, setExternalVideoLabel] = useState("");
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
-  useEffect(() => { if (data) { setTitle(data.title); setSubtitle(data.subtitle || ""); setSummary(data.summary || ""); setBody(data.body || ""); setTeamCredit(data.teamCredit || "Equipe Ojú"); setExternalAlbumUrl(data.externalAlbumUrl || ""); setExternalVideoUrl(data.externalVideoUrl || ""); } }, [data]);
+  useEffect(() => { if (data) { setTitle(data.title); setSubtitle(data.subtitle || ""); setSummary(data.summary || ""); setBody(data.body || ""); setTeamCredit(data.teamCredit || "Equipe Ojú"); setExternalAlbumUrl(data.externalAlbumUrl || ""); setExternalAlbumLabel(data.externalAlbumLabel || ""); setExternalVideoUrl(data.externalVideoUrl || ""); setExternalVideoLabel(data.externalVideoLabel || ""); } }, [data]);
   const [conflict, setConflict] = useState(false);
   const update = trpc.editorial.update.useMutation({
     onSuccess: () => { const published = data?.status === "Publicada"; toast.success(published ? "Revisão publicada." : "Texto salvo."); utils.editorial.adminList.invalidate(); utils.editorial.preview.invalidate({ id }); },
@@ -79,7 +81,7 @@ export default function PublicationEdit() {
   const cover = data.media.find(item => item.isCover) || data.media[0];
   const nextAction = nextEditorialAction(user?.role, data.status);
   const canDirect = canPublishStraight(user?.role);
-  const payload = { id, expectedVersion: data.version, title, subtitle: subtitle || null, summary: summary || null, body: body || null, teamCredit: teamCredit || "Equipe Ojú", externalAlbumUrl: externalAlbumUrl || null, externalVideoUrl: externalVideoUrl || null, revisionNote: revisionNote || undefined };
+  const payload = { id, expectedVersion: data.version, title, subtitle: subtitle || null, summary: summary || null, body: body || null, teamCredit: teamCredit || "Equipe Ojú", externalAlbumUrl: externalAlbumUrl || null, externalAlbumLabel: externalAlbumLabel || null, externalVideoUrl: externalVideoUrl || null, externalVideoLabel: externalVideoLabel || null, revisionNote: revisionNote || undefined };
   const busy = update.isPending || advance.isPending || publishDirect.isPending;
   const saveThenAdvance = () => {
     update.mutate(payload, {
@@ -131,6 +133,7 @@ export default function PublicationEdit() {
         <a href="#texto" className="rounded-full bg-oju-papel px-3 py-1.5">Texto</a>
         <a href="#territorio" className="rounded-full bg-oju-papel px-3 py-1.5">Cidade</a>
         <a href="#midia" className="rounded-full bg-oju-papel px-3 py-1.5">Capa</a>
+        <a href="#link-externo" className="rounded-full bg-oju-papel px-3 py-1.5">Produção completa</a>
         <a href="#home" className="rounded-full bg-oju-papel px-3 py-1.5">Home</a>
       </nav>
     )}
@@ -162,10 +165,7 @@ export default function PublicationEdit() {
         {(body || summary) ? <div className="rounded-xl bg-[#120f0c] p-5"><p className="mb-3 text-[10px] font-semibold uppercase tracking-[.14em] text-[#c9a27a]">Como o portal lê</p><EditorialBody text={body || summary} /></div> : null}
       </div>
       {isPublished ? (
-        <>
-          <section className="rounded-xl border border-oju-terra/10 bg-[#f7f3e9] p-4"><p className="text-sm font-semibold">Links externos opcionais</p><p className="mt-1 text-xs leading-5 text-oju-terra-suave">O portal mantém até 5 fotos e 2 vídeos curtos. Capa atual: {cover ? cover.filename || `#${cover.id}` : "ainda sem capa — marque abaixo."}</p><div className="mt-3 grid gap-3 md:grid-cols-2"><Input type="url" value={externalAlbumUrl} onChange={event => setExternalAlbumUrl(event.target.value)} placeholder="Álbum completo"/><Input type="url" value={externalVideoUrl} onChange={event => setExternalVideoUrl(event.target.value)} placeholder="Vídeo completo"/></div></section>
-          <label className="grid gap-2 text-sm font-medium">Motivo da revisão<Textarea value={revisionNote} onChange={event => setRevisionNote(event.target.value)} /></label>
-        </>
+        <label className="grid gap-2 text-sm font-medium">Motivo da revisão<Textarea value={revisionNote} onChange={event => setRevisionNote(event.target.value)} /></label>
       ) : null}
       <div className="flex flex-wrap justify-end gap-3">
         {isPublished ? <Button type="button" variant="outline" asChild><Link href={`/admin/preview/${id}`}>Prévia como no site</Link></Button> : null}
@@ -173,6 +173,24 @@ export default function PublicationEdit() {
       </div>
     </form>
     ) : null}
+
+    <section id="link-externo" className="admin-card mt-8 grid gap-3 p-6">
+      <p className="text-sm font-semibold">Produção completa</p>
+      <p className="text-xs leading-5 text-oju-terra-suave">Se esta produção possui uma versão completa, álbum, matéria, vídeo ou página relacionada fora do Ojú, adicione o endereço aqui. O Ojú continua com até {MAX_PHOTOS} fotos e {MAX_MINICLIPS} miniclip de até 60 segundos; o endereço abre fora da plataforma e não amplia o acervo interno.</p>
+      <label className="grid gap-2 text-sm font-medium">Link externo
+        <Input type="url" value={externalAlbumUrl} onChange={event => setExternalAlbumUrl(event.target.value)} placeholder="https://..." />
+      </label>
+      <label className="grid gap-2 text-sm font-medium">Texto do botão <span className="font-normal text-oju-terra-suave">(opcional)</span>
+        <Input maxLength={80} value={externalAlbumLabel} onChange={event => setExternalAlbumLabel(event.target.value)} placeholder={completeProductionLabel(data.contentKind, "album")} />
+      </label>
+      <p className="text-xs leading-5 text-oju-terra-suave">Se preenchido, este texto será usado no botão público. Se deixar vazio, o Ojú usará o texto padrão desta publicação.</p>
+      <label className="mt-2 grid gap-2 text-sm font-medium">Link de vídeo completo <span className="font-normal text-oju-terra-suave">(somente se for diferente do endereço acima)</span>
+        <Input type="url" value={externalVideoUrl} onChange={event => setExternalVideoUrl(event.target.value)} placeholder="https://..." />
+      </label>
+      <label className="grid gap-2 text-sm font-medium">Texto do botão de vídeo <span className="font-normal text-oju-terra-suave">(opcional)</span>
+        <Input maxLength={80} value={externalVideoLabel} onChange={event => setExternalVideoLabel(event.target.value)} placeholder={completeProductionLabel(data.contentKind, "video")} />
+      </label>
+    </section>
 
     {(isPublished || wizardStep === 2) ? (
     <section id="territorio" className="mt-10">

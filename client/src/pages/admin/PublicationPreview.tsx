@@ -3,6 +3,8 @@ import { ArrowLeft } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { EditorialBody } from "@/components/EditorialBody";
+import { CompleteProductionLinks } from "@/components/CompleteProductionLinks";
+import { toPublicCompleteProductions } from "@shared/externalPublicationLink";
 
 export default function PublicationPreview() {
   const [, params] = useRoute("/admin/preview/:id");
@@ -24,6 +26,7 @@ export default function PublicationPreview() {
       {data.commercialEditorial && !data.commercialEditorial.authorized ? <aside className="mt-7 border-l-2 border-[#a33a23] bg-[#2a1410] px-5 py-4"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#ef9e59]">Material contratado em guarda privada</p><p className="mt-2 text-sm leading-6 text-white/65">Não vai ao portal até a autorização editorial expressa.</p></aside> : null}
       {data.taxonomies?.length ? <section className="mt-7"><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#ed9c58]">Relações documentais</p><div className="mt-3 flex flex-wrap gap-2">{data.taxonomies.map(item => <span key={item.id} className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/70">{item.dimension} · {item.name}</span>)}</div></section> : null}
       <EditorialBody className="mt-10" text={data.body || data.summary || "Sem texto editorial adicionado."} />
+      <CompleteProductionLinks variant="preview" links={toPublicCompleteProductions({ contentKind: data.contentKind, externalAlbumUrl: data.externalAlbumUrl, externalVideoUrl: data.externalVideoUrl, externalAlbumLabel: data.externalAlbumLabel, externalVideoLabel: data.externalVideoLabel })} />
       <p className="mt-10 border-t border-white/10 pt-4 text-sm text-white/50">Esta prévia é o mesmo olhar do site. Enquanto o status não for Publicada, o público não vê.</p>
     </article> : <p className="container pt-16">Conteúdo não encontrado.</p>}
   </div>;
