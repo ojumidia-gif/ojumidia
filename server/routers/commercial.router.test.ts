@@ -38,10 +38,17 @@ describe("procedures comerciais por papel", () => {
   });
 
   it("permite updateAd para o administrador proprietário", async () => {
-    const where = vi.fn(async () => ({ success: true })); const db = { select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn(async () => [ad]) })) })) })), update: vi.fn(() => ({ set: vi.fn(() => ({ where })) })) };
+    const where = vi.fn(async () => ({ success: true })); const db = { select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn(async () => [ad]) })) })) })), update: vi.fn(() => ({ set: vi.fn(() => ({ where })) })), insert: vi.fn(() => ({ values: vi.fn(async () => ({})) })) };
     getDbMock.mockResolvedValueOnce(db);
     await expect(commercialRouter.createCaller(context(20, "administrador")).updateAd({ id: ad.id, advertiserName: ad.advertiserName, title: ad.title, contact: ad.contact, format: ad.format, startsAt: ad.startsAt, endsAt: ad.endsAt, capturedByUserId: ad.capturedByUserId, contractedAmount: 100, ojuSharePercent: 60, captorSharePercent: 40, status: ad.status })).resolves.toEqual({ success: true });
     expect(db.update).toHaveBeenCalledOnce();
+  });
+
+  it("congela valor e participação depois do rascunho, inclusive para o captador", async () => {
+    const db = { select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn(async () => [ad]) })) })) })), update: vi.fn() };
+    getDbMock.mockResolvedValueOnce(db);
+    await expect(commercialRouter.createCaller(context(20, "administrador")).updateAd({ id: ad.id, advertiserName: ad.advertiserName, title: ad.title, contact: ad.contact, format: ad.format, startsAt: ad.startsAt, endsAt: ad.endsAt, capturedByUserId: ad.capturedByUserId, contractedAmount: 100, ojuSharePercent: 99, captorSharePercent: 1, status: ad.status })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(db.update).not.toHaveBeenCalled();
   });
 
   it("bloqueia updatePayout de administrador comum e permite ao principal", async () => {
@@ -58,5 +65,7 @@ describe("procedures comerciais por papel", () => {
     expect(source).toContain("discardDraftCoverageContract");
     expect(source).toContain('current.status !== "Rascunho"');
     expect(source).toContain("coverage-contract-draft-discarded");
+    expect(source).toContain("commercialCaptureEconomicsFrozen");
+    expect(source).toContain("advertisement-updated-frozen-economics");
   });
 });

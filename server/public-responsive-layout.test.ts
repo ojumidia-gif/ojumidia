@@ -15,5 +15,8 @@ describe("layout público responsivo", () => {
     expect(css).not.toContain("justify-content: flex-end");
     expect(footer).toContain("public-footer-nav");
     expect(footer).toContain("flex-col items-center");
+    expect(footer).toContain("© 2026 Ojú Mídia · Todos os direitos reservados");
+    expect(css).toContain(".public-footer-copyright");
+    expect(css).toContain("text-transform: none");
   });
 });

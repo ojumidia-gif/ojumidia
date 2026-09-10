@@ -53,7 +53,10 @@ export function PublicFooter({
           <>
             <FooterLinks items={footerItems} />
             <div className={`h-px w-12 ${cinematic ? "bg-white/20" : "bg-oju-dourado/50"}`} aria-hidden="true" />
-            <FooterLinks items={legalItems} tone="legal" />
+            <div className="flex flex-col items-center gap-3">
+              <FooterLinks items={legalItems} tone="legal" />
+              <p className="public-footer-copyright">© 2026 Ojú Mídia · Todos os direitos reservados</p>
+            </div>
           </>
         ) : null}
       </div>

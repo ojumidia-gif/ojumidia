@@ -173,11 +173,25 @@
   .public-footer--cinema .public-footer-nav--legal a {
     color: rgb(255 255 255 / 0.5);
   }
+  .public-footer-copyright {
+    margin: 0;
+    max-width: 44rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    text-transform: none;
+    color: color-mix(in srgb, var(--oju-terra-suave) 68%, transparent);
+  }
+  .public-footer--cinema .public-footer-copyright {
+    color: rgb(255 255 255 / 0.38);
+  }
 }
 
 @media (min-width: 640px) {
   .container { padding-left: max(2rem, env(safe-area-inset-left)); padding-right: max(2rem, env(safe-area-inset-right)); }
   .public-footer { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .public-footer-copyright { font-size: 10px; letter-spacing: 0.02em; text-transform: none; }
   .public-footer-nav { column-gap: 0.35rem; max-width: 52rem; }
 }
 @media (max-width: 639px) {
