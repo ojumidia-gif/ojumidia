@@ -12,6 +12,12 @@ describe("conteúdo institucional do portal", () => {
     expect(canManagePortalContent("criador")).toBe(false);
   });
 
+  it("a API pública não entrega copy institucional escondida pelo F12", () => {
+    const router = readFileSync(resolve(process.cwd(), "server/routers/portalContent.ts"), "utf8");
+    expect(router).toContain("toPublicPortalBlocks");
+    expect(router).toContain("contentJson: block.isVisible ? block.contentJson : null");
+  });
+
   it("disponibiliza o catálogo de blocos do portal para o Super Admin editar", () => {
     const catalog = readFileSync(resolve(process.cwd(), "server/portalContentCatalog.ts"), "utf8");
     const router = readFileSync(resolve(process.cwd(), "server/routers/portalContent.ts"), "utf8");

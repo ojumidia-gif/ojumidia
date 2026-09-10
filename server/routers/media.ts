@@ -28,6 +28,7 @@ import {
 import { assertPartnerScope, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 import { DEFAULT_STORAGE_QUOTA, quotaDecision } from "../uploadGuards";
 import { loadStorageQuotaPolicy, saveStorageQuotaPolicy } from "../uploadBudget";
+import { toPublicPortalMedia } from "../mediaAccess";
 
 async function requireDb() {
   const db = await getDb();
@@ -85,8 +86,9 @@ export const mediaRouter = router({
   homeBackgrounds: publicProcedure.query(async () => {
     const db = await requireDb();
     const commercial = await db.select().from(mediaAssets).innerJoin(commercialMiniclips, eq(mediaAssets.id, commercialMiniclips.mediaId)).where(and(eq(commercialMiniclips.status, "Ativo"), eq(commercialMiniclips.homeFeatured, true), eq(commercialMiniclips.authorizedForHome, true), eq(mediaAssets.mediaType, "vídeo"), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(commercialMiniclips.updatedAt)).limit(1);
-    if (commercial[0]) return [commercial[0].mediaAssets];
-    return db.select().from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.backgroundPriority), desc(mediaAssets.createdAt)).limit(HOME_MINICLIP_SEQUENCE_LIMIT);
+    if (commercial[0]) return [toPublicPortalMedia(commercial[0].mediaAssets)];
+    const backgrounds = await db.select().from(mediaAssets).where(and(eq(mediaAssets.backgroundEligible, true), eq(mediaAssets.publicationAllowed, true), eq(mediaAssets.state, "Ativo"), isNull(mediaAssets.deletedAt))).orderBy(desc(mediaAssets.backgroundPriority), desc(mediaAssets.createdAt)).limit(HOME_MINICLIP_SEQUENCE_LIMIT);
+    return backgrounds.map(item => toPublicPortalMedia(item));
   }),
   homeBackgroundConfig: publicProcedure.query(async () => defaultHeroTransition),
   publicBackgroundClip: publicProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => {

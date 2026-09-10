@@ -108,7 +108,7 @@ export const productionsRouter = router({
     authorization: z.enum(["Cessão", "Licença", "Domínio público", "Autoral própria", "Pendente"]),
     purpose: z.string().min(2).max(280),
     durationSeconds: z.number().int().min(1).max(60).optional(),
-    uploadId: z.string().min(12).max(96).optional(),
+    uploadId: z.string().min(12).max(96),
   })).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
     try {

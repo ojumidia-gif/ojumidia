@@ -6,6 +6,7 @@ import {
   networkOpportunities,
   networkProductionMedia,
   networkProductions,
+  uploadSessions,
 } from "../drizzle/schema";
 import {
   canAttachProductionMedia,
@@ -51,6 +52,35 @@ function requireProductionAdmin(role: string) {
   }
 }
 
+export function decideOpportunityProductionAccess(input: {
+  actor: { id: number; role: string };
+  acceptedUserId: number | null;
+  acceptedProfessionalProfileId: number | null;
+  actorProfessionalProfileId: number | null;
+}): "allow" | "partner-admin" | "deny" {
+  if (input.actor.role === "administrador principal") return "allow";
+  if (input.acceptedUserId === input.actor.id) return "allow";
+  if (input.actorProfessionalProfileId && input.acceptedProfessionalProfileId === input.actorProfessionalProfileId) return "allow";
+  if (input.actor.role === "administrador") return "partner-admin";
+  return "deny";
+}
+
+export function decideProductionMediaAttachAccess(input: {
+  actorRole: string;
+  actorId: number;
+  mediaCreatedBy: number;
+  mediaPartnerId: number | null;
+  productionPartnerId: number | null;
+}): "allow" | "partner-admin" | "deny" {
+  if (input.actorRole === "administrador principal") return "allow";
+  if (input.mediaPartnerId && input.productionPartnerId && input.mediaPartnerId !== input.productionPartnerId) return "deny";
+  if (input.mediaCreatedBy === input.actorId) return "allow";
+  if (input.actorRole === "administrador") {
+    return input.mediaPartnerId ? "partner-admin" : "deny";
+  }
+  return "deny";
+}
+
 async function assertProductionScope(db: Db, actor: Actor, production: typeof networkProductions.$inferSelect) {
   if (actor.role === "administrador principal") return;
   const profile = await professionalProfileForUser(db, actor.id);
@@ -88,6 +118,31 @@ export async function createProductionFromAcceptedOpportunity(db: Db, actor: Act
   return withOptionalProductionSchema(async () => {
     const opportunity = (await db.select().from(networkOpportunities).where(eq(networkOpportunities.id, opportunityId)).limit(1))[0];
     if (!opportunity) throw new TRPCError({ code: "NOT_FOUND", message: "Oportunidade não encontrada." });
+    const profile = await professionalProfileForUser(db, actor.id);
+    const access = decideOpportunityProductionAccess({
+      actor,
+      acceptedUserId: opportunity.acceptedUserId,
+      acceptedProfessionalProfileId: opportunity.acceptedProfessionalProfileId,
+      actorProfessionalProfileId: profile?.id ?? null,
+    });
+    if (access === "deny") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Você não pode abrir produção desta oportunidade." });
+    }
+    if (access === "partner-admin") {
+      requireProductionAdmin(actor.role);
+      try {
+        await assertPartnerScope({
+          db,
+          actor,
+          partnerId: opportunity.partnerId,
+          territoryIds: [opportunity.territoryId],
+          resourceLabel: "esta oportunidade",
+          requirePartner: Boolean(opportunity.partnerId),
+        });
+      } catch (error) {
+        throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Fora do território autorizado." });
+      }
+    }
     if (opportunity.status !== "Aceita") throw new TRPCError({ code: "BAD_REQUEST", message: "Só a oportunidade aceita vira produção." });
     if (!opportunity.acceptedProfessionalProfileId) throw new TRPCError({ code: "BAD_REQUEST", message: "A produção exige o perfil profissional que aceitou." });
     const existing = (await db.select({ id: networkProductions.id }).from(networkProductions).where(eq(networkProductions.opportunityId, opportunity.id)).limit(1))[0];
@@ -276,8 +331,29 @@ export async function attachProductionMedia(db: Db, actor: Actor, input: { produ
   }
   const media = (await db.select().from(mediaAssets).where(eq(mediaAssets.id, input.mediaId)).limit(1))[0];
   if (!media || media.deletedAt || media.state !== "Ativo") throw new TRPCError({ code: "BAD_REQUEST", message: "Use uma mídia ativa do Acervo existente. Não há segundo sistema de arquivos." });
-  if (media.partnerId && production.partnerId && media.partnerId !== production.partnerId) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "A mídia precisa do mesmo Parceiro Ojú da produção." });
+  const attachAccess = decideProductionMediaAttachAccess({
+    actorRole: actor.role,
+    actorId: actor.id,
+    mediaCreatedBy: media.createdBy,
+    mediaPartnerId: media.partnerId,
+    productionPartnerId: production.partnerId,
+  });
+  if (attachAccess === "deny") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Esta mídia não pode ser ligada a esta produção." });
+  }
+  if (attachAccess === "partner-admin") {
+    try {
+      await assertPartnerScope({
+        db,
+        actor,
+        partnerId: media.partnerId,
+        territoryIds: media.territoryId ? [media.territoryId] : [],
+        resourceLabel: "esta mídia",
+        requirePartner: true,
+      });
+    } catch (error) {
+      throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Fora do território autorizado." });
+    }
   }
   const already = (await db.select().from(networkProductionMedia).where(eq(networkProductionMedia.mediaId, media.id)).limit(1))[0];
   if (already && already.productionId !== production.id) {
@@ -345,20 +421,30 @@ export async function registerOperationalProductionMedia(db: Db, actor: Actor, i
 }) {
   const production = await loadProduction(db, input.productionId);
   await assertProductionScope(db, actor, production);
+  if (!input.uploadId) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Conclua um upload seu antes de registrar a mídia da produção." });
+  }
+  const upload = (await db.select().from(uploadSessions).where(eq(uploadSessions.id, input.uploadId)).limit(1))[0];
+  if (!upload || upload.userId !== actor.id || !["Pronto", "Aprovado", "Publicado"].includes(upload.status) || !upload.assetUrl || !upload.storageKey) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Conclua um upload seu antes de registrar a mídia da produção." });
+  }
+  if (upload.assetUrl !== input.assetUrl || (input.storageKey && upload.storageKey !== input.storageKey)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "A referência da mídia não corresponde à sessão de upload concluída." });
+  }
   const inserted = await db.insert(mediaAssets).values({
     mediaType: input.mediaType,
-    assetUrl: input.assetUrl,
-    storageKey: input.storageKey,
-    filename: input.filename,
+    assetUrl: upload.assetUrl,
+    storageKey: upload.storageKey,
+    filename: input.filename ?? upload.filename,
     origin: input.origin,
     credit: input.credit,
     authorization: input.authorization,
     purpose: input.purpose,
     publicationAllowed: false,
-    durationSeconds: input.durationSeconds,
+    durationSeconds: input.durationSeconds ?? upload.durationSeconds,
     partnerId: production.partnerId,
     territoryId: production.territoryId,
-    uploadId: input.uploadId ?? null,
+    uploadId: upload.id,
     createdBy: actor.id,
   });
   const mediaId = Number(inserted[0].insertId);

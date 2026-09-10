@@ -36,7 +36,7 @@ test.describe("MISSÃO 3 — Production → Financeiro → Segurança (gate real
     browser,
     ledger,
   }) => {
-    test.setTimeout(420_000);
+    test.setTimeout(480_000);
     const qa = assertQaMysqlTarget(process.env.DATABASE_URL);
     expect(qa.ok, qa.ok ? "" : qa.reason).toBe(true);
     expect(readiness.guard.allowed, readiness.guard.reason).toBe(true);
@@ -149,6 +149,30 @@ test.describe("MISSÃO 3 — Production → Financeiro → Segurança (gate real
       const otherInvite = await trpcMutation(proApi, "opportunities.accept", { inviteId: invite.id });
       expect(denied(otherInvite.status, otherInvite.body) || Boolean(trpcErrorCode(otherInvite.body))).toBe(true);
 
+      const foreignOpp = await trpcMutation(adminApi, "opportunities.create", {
+        title: `RT-IDOR ${ledger.runId}`,
+        briefing: "Oportunidade alheia para prova F12. Sem convite ao profissional A.",
+        workType: "Fotografia",
+        territoryId: boot.territoryId,
+        partnerId: boot.partnerId,
+        totalValue: 500,
+        specialtyIds: ["fotografo"],
+      });
+      expect(foreignOpp.status, `opportunities.create ${trpcErrorCode(foreignOpp.body)} ${trpcErrorMessage(foreignOpp.body)}`).toBeLessThan(400);
+      const foreignOppId = (unwrapTrpcData(foreignOpp.body) as { id?: number }).id;
+      expect(foreignOppId).toBeTruthy();
+      ledger.add("opportunity", foreignOppId!);
+      const stealProduction = await trpcMutation(proApi, "productions.createFromOpportunity", { opportunityId: foreignOppId });
+      expect(denied(stealProduction.status, stealProduction.body), `RES-01 deveria negar: ${trpcErrorCode(stealProduction.body)} ${JSON.stringify(stealProduction.body)}`).toBe(true);
+      expect(JSON.stringify(stealProduction.body)).not.toMatch(/"created"\s*:/);
+      const stolenRows = await db.select({ id: networkProductions.id }).from(networkProductions).where(eq(networkProductions.opportunityId, foreignOppId!));
+      expect(stolenRows).toHaveLength(0);
+      const legitRetry = await trpcMutation(proApi, "productions.createFromOpportunity", { opportunityId: createdOpp.id });
+      expect(legitRetry.status, `RES-01 ALLOW ${trpcErrorCode(legitRetry.body)} ${trpcErrorMessage(legitRetry.body)}`).toBeLessThan(400);
+      const retryPayload = unwrapTrpcData(legitRetry.body) as { id?: number; created?: boolean };
+      expect(retryPayload.id).toBe(production.id);
+      expect(retryPayload.created).toBe(false);
+
       await professionalCtx.newPage().then(async page => {
         await page.goto("/admin/oportunidades", { waitUntil: "domcontentloaded" });
         await expect(page.getByRole("heading", { name: "Acesso não autorizado" })).toBeVisible();
@@ -176,7 +200,61 @@ test.describe("MISSÃO 3 — Production → Financeiro → Segurança (gate real
       if (jpegUpload.status() >= 400) {
         skips.push(`SKIP — upload operacional da Production recusado HTTP ${jpegUpload.status()}. Sem fabricar mídia no SQL.`);
       } else {
-        const uploaded = await jpegUpload.json() as { url?: string; key?: string; filename?: string };
+        const uploaded = await jpegUpload.json() as { url?: string; key?: string; filename?: string; uploadId?: string };
+        expect(uploaded.uploadId, "uploadId obrigatório no contrato operacional").toBeTruthy();
+        const mismatchedKey = await trpcMutation(proApi, "productions.registerOperationalMedia", {
+          productionId: production.id,
+          mediaType: "foto",
+          assetUrl: uploaded.url,
+          storageKey: "qa-auto/stolen-key.jpg",
+          filename: uploaded.filename || `prod-${ledger.runId}.jpg`,
+          origin: "Production operacional QA",
+          credit: boot.displayName,
+          authorization: "Autoral própria",
+          purpose: "Janela operacional da Production. Não é portal.",
+          uploadId: uploaded.uploadId,
+        });
+        expect(mismatchedKey.status >= 400 || Boolean(trpcErrorCode(mismatchedKey.body)), "RES-03 storageKey alheio").toBe(true);
+        const mismatchedUrl = await trpcMutation(proApi, "productions.registerOperationalMedia", {
+          productionId: production.id,
+          mediaType: "foto",
+          assetUrl: "https://example.invalid/stolen.jpg",
+          storageKey: uploaded.key,
+          filename: uploaded.filename || `prod-${ledger.runId}.jpg`,
+          origin: "Production operacional QA",
+          credit: boot.displayName,
+          authorization: "Autoral própria",
+          purpose: "Janela operacional da Production. Não é portal.",
+          uploadId: uploaded.uploadId,
+        });
+        expect(mismatchedUrl.status >= 400 || Boolean(trpcErrorCode(mismatchedUrl.body)), "RES-03 assetUrl alheio").toBe(true);
+        const missingUpload = await trpcMutation(proApi, "productions.registerOperationalMedia", {
+          productionId: production.id,
+          mediaType: "foto",
+          assetUrl: uploaded.url,
+          storageKey: uploaded.key,
+          filename: uploaded.filename || `prod-${ledger.runId}.jpg`,
+          origin: "Production operacional QA",
+          credit: boot.displayName,
+          authorization: "Autoral própria",
+          purpose: "Janela operacional da Production. Não é portal.",
+          uploadId: "upload-inexistente-xyz",
+        });
+        expect(missingUpload.status >= 400 || Boolean(trpcErrorCode(missingUpload.body)), "RES-03 uploadId inexistente").toBe(true);
+        const otherUsersUpload = await trpcMutation(proApi, "productions.registerOperationalMedia", {
+          productionId: production.id,
+          mediaType: "foto",
+          assetUrl: uploaded.url,
+          storageKey: uploaded.key,
+          filename: uploaded.filename || `prod-${ledger.runId}.jpg`,
+          origin: "Production operacional QA",
+          credit: boot.displayName,
+          authorization: "Autoral própria",
+          purpose: "Janela operacional da Production. Não é portal.",
+          uploadId: "someone-elses-upload-id-01",
+        });
+        expect(otherUsersUpload.status >= 400 || Boolean(trpcErrorCode(otherUsersUpload.body)), "RES-03 uploadId de outro ator").toBe(true);
+
         const registered = await trpcMutation(proApi, "productions.registerOperationalMedia", {
           productionId: production.id,
           mediaType: "foto",
@@ -187,10 +265,50 @@ test.describe("MISSÃO 3 — Production → Financeiro → Segurança (gate real
           credit: boot.displayName,
           authorization: "Autoral própria",
           purpose: "Janela operacional da Production. Não é portal.",
+          uploadId: uploaded.uploadId,
         });
         expect(registered.status, JSON.stringify(registered.body)).toBeLessThan(400);
         const registeredPayload = unwrapTrpcData(registered.body) as { mediaId?: number };
         if (registeredPayload.mediaId) ledger.add("mediaAsset", registeredPayload.mediaId, undefined, { kind: "production", id: production.id });
+
+        const adminUpload = await adminApi.post("/api/media/upload", {
+          headers: {
+            origin,
+            "content-type": "image/jpeg",
+            "x-file-name": `admin-${ledger.runId}.jpg`,
+            "x-partner-id": String(boot.partnerId),
+            "x-territory-id": String(boot.territoryId),
+          },
+          data: QA_JPEG_BYTES,
+        });
+        if (adminUpload.status() >= 400) {
+          skips.push(`SKIP — RES-02 upload Super Admin recusado HTTP ${adminUpload.status()}.`);
+        } else {
+          const adminFile = await adminUpload.json() as { url?: string; key?: string; filename?: string; uploadId?: string };
+          const foreignMedia = await trpcMutation(adminApi, "media.create", {
+            mediaType: "foto",
+            assetUrl: adminFile.url,
+            storageKey: adminFile.key,
+            filename: adminFile.filename || `admin-${ledger.runId}.jpg`,
+            origin: "Acervo QA alheio",
+            credit: "Super Admin QA",
+            authorization: "Autoral própria",
+            purpose: "Mídia de outro autor para prova de attach.",
+            publicationAllowed: false,
+            uploadId: adminFile.uploadId,
+            partnerId: boot.partnerId,
+            territoryId: boot.territoryId,
+          });
+          expect(foreignMedia.status, `media.create ${trpcErrorCode(foreignMedia.body)} ${trpcErrorMessage(foreignMedia.body)}`).toBeLessThan(400);
+          const foreignMediaId = (unwrapTrpcData(foreignMedia.body) as { id?: number }).id;
+          expect(foreignMediaId).toBeTruthy();
+          ledger.add("mediaAsset", foreignMediaId!, undefined, { kind: "production", id: production.id });
+          const attachForeign = await trpcMutation(proApi, "productions.attachMedia", { productionId: production.id, mediaId: foreignMediaId, partnerId: boot.partnerId, territoryId: 1, userId: adminMe.user!.id });
+          expect(denied(attachForeign.status, attachForeign.body) || Boolean(trpcErrorCode(attachForeign.body)), `RES-02 attach alheio: ${trpcErrorCode(attachForeign.body)} ${trpcErrorMessage(attachForeign.body)}`).toBe(true);
+          const attachOwn = await trpcMutation(proApi, "productions.attachMedia", { productionId: production.id, mediaId: registeredPayload.mediaId });
+          expect(attachOwn.status >= 400 || Boolean(trpcErrorCode(attachOwn.body)), "mídia própria já ligada não duplica").toBe(true);
+        }
+
         const mediaRow = (await db.select().from(networkProductions).where(eq(networkProductions.id, production.id)).limit(1))[0];
         expect(mediaRow.status === "Aguardando mídia" || mediaRow.status === "Em produção").toBe(true);
         const review = await trpcMutation(proApi, "productions.submitForReview", { id: production.id });
@@ -220,6 +338,55 @@ test.describe("MISSÃO 3 — Production → Financeiro → Segurança (gate real
       expect(badTransition.status >= 400 || Boolean(trpcErrorCode(badTransition.body))).toBe(true);
       const attachMissing = await trpcMutation(adminApi, "productions.attachMedia", { productionId: 999_999_001, mediaId: 1 });
       expect(attachMissing.status >= 400 || Boolean(trpcErrorCode(attachMissing.body))).toBe(true);
+
+      const hiddenSecret = `QA-HIDDEN-${ledger.runId}`;
+      const hiddenSave = await trpcMutation(adminApi, "portalContent.save", {
+        page: "Home",
+        sectionKey: `qa-rt-${ledger.runId}`.slice(0, 120),
+        label: "QA bloco oculto",
+        contentJson: JSON.stringify({ title: hiddenSecret, description: "nao deve vazar no Network" }),
+        isVisible: false,
+        displayOrder: 900,
+      });
+      expect(hiddenSave.status, `portalContent.save ${trpcErrorCode(hiddenSave.body)} ${trpcErrorMessage(hiddenSave.body)}`).toBeLessThan(400);
+      const hiddenId = (unwrapTrpcData(hiddenSave.body) as { id?: number }).id;
+      expect(hiddenId).toBeTruthy();
+      ledger.add("other", `portal-block:${hiddenId}`);
+      const publicHome = await trpcQuery(visitor.request, "portalContent.publicByPage", { page: "Home" });
+      expect(publicHome.status).toBeLessThan(400);
+      const publicHomeJson = JSON.stringify(publicHome.body);
+      expect(publicHomeJson, "RES-04 contentJson oculto").not.toContain(hiddenSecret);
+      expect(publicHomeJson).not.toContain("nao deve vazar no Network");
+
+      const backgrounds = await trpcQuery(visitor.request, "media.homeBackgrounds");
+      expect(backgrounds.status).toBeLessThan(400);
+      const photos = await trpcQuery(visitor.request, "editorial.photoDocumentary", { offset: 0, limit: 4 });
+      expect(photos.status).toBeLessThan(400);
+      const publicMediaJson = `${JSON.stringify(backgrounds.body)}\n${JSON.stringify(photos.body)}`;
+      expect(publicMediaJson, "RES-05 storageKey").not.toContain("\"storageKey\"");
+      expect(publicMediaJson, "RES-05 checksum").not.toContain("\"checksum\"");
+      expect(publicMediaJson, "RES-05 uploadId").not.toContain("\"uploadId\"");
+      expect(publicMediaJson, "RES-05 createdBy").not.toContain("\"createdBy\"");
+
+      const visitorLead = await trpcMutation(visitor.request, "commercial.originateLead", {
+        clientName: "Visitante QA",
+        contact: "11988887777",
+        title: "Lead visitante",
+        briefing: "Visitante não origina demanda autenticada.",
+        workType: "Fotografia",
+      });
+      expect(denied(visitorLead.status, visitorLead.body), "RES-06 visitante").toBe(true);
+      const proLead = await trpcMutation(proApi, "commercial.originateLead", {
+        clientName: "Casa QA",
+        contact: "92988001122",
+        title: `Origem ${ledger.runId}`,
+        briefing: "Originação territorial do profissional autenticado. Não é Opportunity.",
+        workType: "Fotografia",
+      });
+      expect(proLead.status, `RES-06 ALLOW ${trpcErrorCode(proLead.body)} ${trpcErrorMessage(proLead.body)}`).toBeLessThan(400);
+      const leadId = (unwrapTrpcData(proLead.body) as { id?: number }).id;
+      expect(leadId).toBeTruthy();
+      ledger.add("commercialRequest", leadId!);
 
       await adminPage.goto("/admin/producoes", { waitUntil: "domcontentloaded" });
       await expect(adminPage.getByRole("heading", { name: "Minhas produções." })).toBeVisible();

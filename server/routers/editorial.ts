@@ -13,6 +13,7 @@ import { confirmPhrasesMatch } from "@shared/confirmPhrase";
 import { isHomeCurated, isHomeHighlightUnexpired, sortHomeCurated } from "../editorialScale";
 import { decideExecutorPhotographerPage, publicationEligibleForPortal } from "@shared/territorialVisibility";
 import { groupDuplicateTeamIds, pickReusableTeam } from "@shared/teamCredits";
+import { toPublicPortalMedia } from "../mediaAccess";
 import { MAX_MINICLIPS, MAX_PHOTOS } from "@shared/const";
 import { resolveCityOfOperation, type CitySelection } from "@shared/brazilPlaces";
 
@@ -377,7 +378,10 @@ export const editorialRouter = router({
     const collections = await Promise.all(page.map(async ({ publication, authorization }) => {
       const links = await db.select().from(publicationMedia).where(eq(publicationMedia.publicationId, publication.id)).orderBy(publicationMedia.displayOrder);
       const ids = links.map(link => link.mediaId); const media = ids.length ? await db.select().from(mediaAssets).where(and(inArray(mediaAssets.id, ids), isNull(mediaAssets.deletedAt))) : [];
-      return { ...toPortalPublication(publication, authorization), photos: links.map(link => ({ ...media.find(item => item.id === link.mediaId), caption: link.caption, biography: link.biography, location: link.location, capturedAt: link.capturedAt })) };
+      return { ...toPortalPublication(publication, authorization), photos: links.map(link => {
+        const asset = media.find(item => item.id === link.mediaId);
+        return { ...(asset ? toPublicPortalMedia(asset) : {}), caption: link.caption, biography: link.biography, location: link.location, capturedAt: link.capturedAt };
+      }) };
     }));
     return { collections, total: permitted.length, hasMore: input.offset + collections.length < permitted.length };
   }),
@@ -400,7 +404,7 @@ export const editorialRouter = router({
     const orderedMedia = media.sort((a, b) => (links.find(link => link.mediaId === a.id)?.displayOrder ?? 0) - (links.find(link => link.mediaId === b.id)?.displayOrder ?? 0)).map(item => {
       const photographer = item.photographerId ? photographerById.get(item.photographerId) : undefined;
       const displayOrder = links.find(link => link.mediaId === item.id)?.displayOrder ?? 0;
-      return { ...item, isCover: displayOrder === 0, photographer: photographer ? { id: photographer.id, displayName: photographer.displayName, slug: photographer.publicVisible ? photographer.publicSlug : null, profileNote: photographer.publicVisible ? photographer.profileNote : null, instagramHandle: photographer.publicVisible ? photographer.instagramHandle : null } : null };
+      return { ...toPublicPortalMedia(item), isCover: displayOrder === 0, photographer: photographer ? { id: photographer.id, displayName: photographer.displayName, slug: photographer.publicVisible ? photographer.publicSlug : null, profileNote: photographer.publicVisible ? photographer.profileNote : null, instagramHandle: photographer.publicVisible ? photographer.instagramHandle : null } : null };
     });
     return { ...toPortalPublication(result[0], authorization), media: orderedMedia, taxonomies: publicationTaxonomy };
   }),

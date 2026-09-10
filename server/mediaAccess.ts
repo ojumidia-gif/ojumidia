@@ -24,6 +24,28 @@ export function normalizeStorageKey(relKey: string) {
   return relKey.replace(/^\/+/, "").replace(/\\/g, "/");
 }
 
+export function toPublicPortalMedia(media: {
+  id: number;
+  mediaType: string;
+  assetUrl: string;
+  credit: string;
+  origin: string;
+  filename?: string | null;
+  durationSeconds?: number | null;
+  photographerId?: number | null;
+}) {
+  return {
+    id: media.id,
+    mediaType: media.mediaType,
+    assetUrl: media.assetUrl,
+    credit: media.credit,
+    origin: media.origin,
+    filename: media.filename ?? null,
+    durationSeconds: media.durationSeconds ?? null,
+    photographerId: media.photographerId ?? null,
+  };
+}
+
 export async function canPubliclyReleaseMedia(
   db: Db,
   media: { id: number; publicationAllowed: boolean; state: string; deletedAt: Date | null; backgroundEligible: boolean },

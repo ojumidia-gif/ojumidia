@@ -3,7 +3,7 @@ import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
 import { advertisements, authorizationTerms, commercialActivities, commercialEditorialAuthorizations, commercialMiniclips, commercialRequests, contracts, coverageOfferDeclines, publications, users } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, authenticatedProcedure, router } from "../_core/trpc";
 import { canUseOnPortal, isEditorialAuthorizationCurrent } from "../commercialEditorialAuthorization";
 import { activeCommercialPolicy, createPayoutNotification } from "../financialGovernance";
 import { assertPartnerScope, assertTerritoryTaxonomies, partnerTerritoryIds, recordAuditEvent } from "../partnerScope";
@@ -67,7 +67,7 @@ export const commercialRouter = router({
     await recordCommercialActivity(db, id, null, "Solicitação", "Solicitação pública recebida e aguardando análise da Ojú.");
     return { id };
   }),
-  originateLead: publicProcedure.input(z.object({
+  originateLead: authenticatedProcedure.input(z.object({
     clientName: z.string().min(2).max(200),
     contact: z.string().min(5).max(280),
     title: z.string().trim().min(3).max(180),
@@ -76,16 +76,10 @@ export const commercialRouter = router({
     eventDate: z.date().nullable().optional(),
     durationText: z.string().trim().max(120).nullable().optional(),
   })).mutation(async ({ ctx, input }) => {
-    if (!ctx.user || (ctx.user.accountStatus && ctx.user.accountStatus !== "Ativo")) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Entre com a conta vinculada ao seu perfil profissional." });
-    }
     const db = await requireDb();
     return submitProfessionalOrigination(db, ctx.user, input);
   }),
-  myOriginationLeads: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user || (ctx.user.accountStatus && ctx.user.accountStatus !== "Ativo")) {
-      throw new TRPCError({ code: "UNAUTHORIZED", message: "Entre com a conta vinculada ao seu perfil profissional." });
-    }
+  myOriginationLeads: authenticatedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
     return listMyOriginationLeads(db, ctx.user);
   }),

@@ -32,6 +32,26 @@ function requirePrincipal(role: string) {
   if (!canManagePortalContent(role)) throw new TRPCError({ code: "FORBIDDEN", message: "Somente o Super Admin pode alterar o conteúdo institucional do portal." });
 }
 
+export function toPublicPortalBlocks<T extends {
+  id: number;
+  sectionKey: string;
+  contentJson: string;
+  isVisible: boolean;
+  deletedAt: Date | string | null;
+  displayOrder: number;
+}>(blocks: T[]) {
+  return blocks
+    .filter(block => !block.deletedAt)
+    .map(block => ({
+      id: block.id,
+      sectionKey: block.sectionKey,
+      contentJson: block.isVisible ? block.contentJson : null,
+      isVisible: block.isVisible,
+      deletedAt: null,
+      displayOrder: block.displayOrder,
+    }));
+}
+
 function validateJson(value: string) {
   try {
     const parsed: unknown = JSON.parse(value);
@@ -70,16 +90,9 @@ export const portalContentRouter = router({
   publicByPage: publicProcedure.input(z.object({ page: pageInput })).query(async ({ input }) => {
     const db = await requireDb();
     const blocks = await db.select().from(portalContentBlocks)
-      .where(eq(portalContentBlocks.page, input.page))
+      .where(and(eq(portalContentBlocks.page, input.page), isNull(portalContentBlocks.deletedAt)))
       .orderBy(asc(portalContentBlocks.displayOrder), asc(portalContentBlocks.id));
-    return blocks.map(block => ({
-      id: block.id,
-      sectionKey: block.sectionKey,
-      contentJson: block.deletedAt ? null : block.contentJson,
-      isVisible: block.isVisible,
-      deletedAt: block.deletedAt,
-      displayOrder: block.displayOrder,
-    }));
+    return toPublicPortalBlocks(blocks);
   }),
 
   adminList: protectedProcedure.query(async ({ ctx }) => {

@@ -10,6 +10,8 @@ import {
   networkOpportunitySpecialties,
   networkProductionMedia,
   networkProductions,
+  portalContentActivities,
+  portalContentBlocks,
   publicationMedia,
   publicationTaxonomies,
   publications,
@@ -107,5 +109,18 @@ export function registerOperationalCleanup(ledger: TestLedger) {
     await db.delete(commercialPolicies).where(eq(commercialPolicies.id, id));
     const leftover = await db.select({ id: commercialPolicies.id }).from(commercialPolicies).where(eq(commercialPolicies.id, id)).limit(1);
     return leftover.length ? { gone: false, detail: "política ainda existe" } : { gone: true };
+  });
+
+  ledger.setCleanupHandler("other", async entry => {
+    ledger.assertOwned("other", entry.id);
+    const raw = String(entry.id);
+    if (!raw.startsWith("portal-block:")) return { gone: true };
+    const id = Number(raw.slice("portal-block:".length));
+    if (!Number.isInteger(id) || id <= 0) return { gone: false, detail: "bloco institucional inválido" };
+    const db = await requireQaDb();
+    await db.delete(portalContentActivities).where(eq(portalContentActivities.blockId, id));
+    await db.delete(portalContentBlocks).where(eq(portalContentBlocks.id, id));
+    const leftover = await db.select({ id: portalContentBlocks.id }).from(portalContentBlocks).where(eq(portalContentBlocks.id, id)).limit(1);
+    return leftover.length ? { gone: false, detail: "bloco institucional ainda existe" } : { gone: true };
   });
 }

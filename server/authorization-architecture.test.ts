@@ -22,6 +22,8 @@ describe("arquitetura de autorização: conta ≠ gov.br ≠ CMS", () => {
     expect(opportunities).toContain("create: protectedProcedure");
     expect(productions).toContain("mine: authenticatedProcedure");
     expect(productions).toContain("createFromOpportunity: authenticatedProcedure");
+    expect(productions).toContain("uploadId: z.string().min(12).max(96)");
+    expect(productions).not.toContain("uploadId: z.string().min(12).max(96).optional()");
     expect(productions).toContain("list: protectedProcedure");
     expect(productions).toContain("approveReview: protectedProcedure");
   });
