@@ -126,7 +126,7 @@ export const siteDestinations = [
     adminHref: "/admin/midias",
     action: "link" as const,
     contentKind: null,
-    how: "Envie com crédito e autorização. O site usa o que estiver ligado a conteúdo publicado.",
+    how: "O CMS /admin/midias é o Acervo interno. A página pública /acervo é busca do que já foi publicado. Envie com crédito e autorização; o site só usa o que estiver ligado a conteúdo publicado.",
     steps: ["Envie com crédito.", "Ligue ao conteúdo.", "O site mostra o que está publicado."],
   },
 ] as const;

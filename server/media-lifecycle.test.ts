@@ -61,6 +61,8 @@ describe("ciclo de vida de mídia", () => {
     expect(lifecycle).toContain("videoMediaId");
     expect(lifecycle).toContain("commercialMiniclips");
     expect(lifecycle).toContain("revenueLeads");
+    expect(lifecycle).toContain("networkProductionMedia");
+    expect(lifecycle).toContain("networkProductions");
     expect(confirmationMatchesMedia({ id: 12, filename: "IMG_0402-074.jpg" }, "IMG_0402-074.jpg")).toBe(true);
     expect(confirmationMatchesMedia({ id: 12, filename: "IMG_0402-074.jpg" }, "outra")).toBe(false);
     expect(formatMediaUsageBlock([{ kind: "publicationMedia", id: 9, label: "Publicação “Teste”" }])).toContain("publicationMedia");

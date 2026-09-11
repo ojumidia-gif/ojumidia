@@ -1,9 +1,11 @@
-import { count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   commercialMiniclips,
   communityEvents,
   institutions,
   mediaAssets,
+  networkProductionMedia,
+  networkProductions,
   oralMemories,
   partners,
   publicationMedia,
@@ -35,7 +37,13 @@ export const MEDIA_PURGE_PIPELINE = [
   "audit-success",
 ] as const;
 
-export type MediaUsage = { kind: string; id: number; label: string };
+export type MediaUsage = { kind: string; id: number; label: string; title?: string | null; contentKind?: string | null };
+
+function pushUsage(map: Map<number, MediaUsage[]>, mediaId: number, usage: MediaUsage) {
+  const list = map.get(mediaId);
+  if (list) list.push(usage);
+  else map.set(mediaId, [usage]);
+}
 
 export const GENERATED_ARTIFACT_INVENTORY = [
   {
@@ -105,30 +113,55 @@ export function confirmationMatchesMedia(media: Pick<MediaRow, "id" | "filename"
   return confirmPhrasesMatch(expected, confirmation);
 }
 
-export async function collectMediaUsages(db: Database, mediaId: number): Promise<MediaUsage[]> {
-  const [publicationLinks, taxonomies, partnerLogos, partnerProfiles, institutionRows, eventRows, memoryRows, miniclips, leads] = await Promise.all([
-    db.select({ id: publicationMedia.id, publicationId: publicationMedia.publicationId, title: publications.title }).from(publicationMedia).leftJoin(publications, eq(publicationMedia.publicationId, publications.id)).where(eq(publicationMedia.mediaId, mediaId)),
-    db.select({ id: taxonomyMedia.id, taxonomyId: taxonomyMedia.taxonomyId }).from(taxonomyMedia).where(eq(taxonomyMedia.mediaId, mediaId)),
-    db.select({ id: partners.id, displayName: partners.displayName }).from(partners).where(eq(partners.logoMediaId, mediaId)),
-    db.select({ id: partners.id, displayName: partners.displayName }).from(partners).where(eq(partners.profileMediaId, mediaId)),
-    db.select({ id: institutions.id, name: institutions.name }).from(institutions).where(eq(institutions.primaryMediaId, mediaId)),
-    db.select({ id: communityEvents.id, title: communityEvents.title }).from(communityEvents).where(eq(communityEvents.coverMediaId, mediaId)),
-    db.select({ id: oralMemories.id, title: oralMemories.title }).from(oralMemories).where(eq(oralMemories.videoMediaId, mediaId)),
-    db.select({ id: commercialMiniclips.id }).from(commercialMiniclips).where(eq(commercialMiniclips.mediaId, mediaId)),
-    db.select({ id: revenueLeads.id, contactName: revenueLeads.contactName }).from(revenueLeads).where(eq(revenueLeads.mediaId, mediaId)),
+export async function collectMediaUsagesByIds(db: Database, mediaIds: number[]): Promise<Map<number, MediaUsage[]>> {
+  const map = new Map<number, MediaUsage[]>();
+  for (const id of mediaIds) map.set(id, []);
+  if (!mediaIds.length) return map;
+
+  const [publicationLinks, taxonomies, partnerLogos, partnerProfiles, institutionRows, eventRows, memoryRows, miniclips, leads, productionLinks] = await Promise.all([
+    db.select({
+      mediaId: publicationMedia.mediaId,
+      publicationId: publicationMedia.publicationId,
+      title: publications.title,
+      contentKind: publications.contentKind,
+    }).from(publicationMedia).leftJoin(publications, eq(publicationMedia.publicationId, publications.id)).where(inArray(publicationMedia.mediaId, mediaIds)),
+    db.select({ mediaId: taxonomyMedia.mediaId, taxonomyId: taxonomyMedia.taxonomyId }).from(taxonomyMedia).where(inArray(taxonomyMedia.mediaId, mediaIds)),
+    db.select({ id: partners.id, displayName: partners.displayName, mediaId: partners.logoMediaId }).from(partners).where(inArray(partners.logoMediaId, mediaIds)),
+    db.select({ id: partners.id, displayName: partners.displayName, mediaId: partners.profileMediaId }).from(partners).where(inArray(partners.profileMediaId, mediaIds)),
+    db.select({ id: institutions.id, name: institutions.name, mediaId: institutions.primaryMediaId }).from(institutions).where(inArray(institutions.primaryMediaId, mediaIds)),
+    db.select({ id: communityEvents.id, title: communityEvents.title, mediaId: communityEvents.coverMediaId }).from(communityEvents).where(inArray(communityEvents.coverMediaId, mediaIds)),
+    db.select({ id: oralMemories.id, title: oralMemories.title, mediaId: oralMemories.videoMediaId }).from(oralMemories).where(inArray(oralMemories.videoMediaId, mediaIds)),
+    db.select({ id: commercialMiniclips.id, mediaId: commercialMiniclips.mediaId }).from(commercialMiniclips).where(inArray(commercialMiniclips.mediaId, mediaIds)),
+    db.select({ id: revenueLeads.id, contactName: revenueLeads.contactName, mediaId: revenueLeads.mediaId }).from(revenueLeads).where(inArray(revenueLeads.mediaId, mediaIds)),
+    db.select({
+      mediaId: networkProductionMedia.mediaId,
+      productionId: networkProductionMedia.productionId,
+      title: networkProductions.title,
+    }).from(networkProductionMedia).leftJoin(networkProductions, eq(networkProductionMedia.productionId, networkProductions.id)).where(inArray(networkProductionMedia.mediaId, mediaIds)),
   ]);
 
-  const usages: MediaUsage[] = [];
-  publicationLinks.forEach(row => usages.push({ kind: "publicationMedia", id: row.publicationId, label: `Publicação “${row.title || row.publicationId}”` }));
-  taxonomies.forEach(row => usages.push({ kind: "taxonomyMedia", id: row.taxonomyId, label: `Taxonomia #${row.taxonomyId}` }));
-  partnerLogos.forEach(row => usages.push({ kind: "partners.logoMediaId", id: row.id, label: `Logo do parceiro “${row.displayName}”` }));
-  partnerProfiles.forEach(row => usages.push({ kind: "partners.profileMediaId", id: row.id, label: `Perfil do parceiro “${row.displayName}”` }));
-  institutionRows.forEach(row => usages.push({ kind: "institutions.primaryMediaId", id: row.id, label: `Instituição “${row.name}”` }));
-  eventRows.forEach(row => usages.push({ kind: "communityEvents.coverMediaId", id: row.id, label: `Evento “${row.title}”` }));
-  memoryRows.forEach(row => usages.push({ kind: "oralMemories.videoMediaId", id: row.id, label: `Memória oral “${row.title}”` }));
-  miniclips.forEach(row => usages.push({ kind: "commercialMiniclips.mediaId", id: row.id, label: `Miniclip comercial #${row.id}` }));
-  leads.forEach(row => usages.push({ kind: "revenueLeads.mediaId", id: row.id, label: `Lead de licenciamento “${row.contactName}”` }));
-  return usages;
+  publicationLinks.forEach(row => {
+    const title = row.title || String(row.publicationId);
+    pushUsage(map, row.mediaId, { kind: "publicationMedia", id: row.publicationId, title, contentKind: row.contentKind, label: `Publicação “${title}”` });
+  });
+  taxonomies.forEach(row => pushUsage(map, row.mediaId, { kind: "taxonomyMedia", id: row.taxonomyId, title: `Taxonomia #${row.taxonomyId}`, label: `Taxonomia #${row.taxonomyId}` }));
+  partnerLogos.forEach(row => { if (row.mediaId) pushUsage(map, row.mediaId, { kind: "partners.logoMediaId", id: row.id, title: row.displayName, label: `Logo do parceiro “${row.displayName}”` }); });
+  partnerProfiles.forEach(row => { if (row.mediaId) pushUsage(map, row.mediaId, { kind: "partners.profileMediaId", id: row.id, title: row.displayName, label: `Perfil do parceiro “${row.displayName}”` }); });
+  institutionRows.forEach(row => { if (row.mediaId) pushUsage(map, row.mediaId, { kind: "institutions.primaryMediaId", id: row.id, title: row.name, label: `Instituição “${row.name}”` }); });
+  eventRows.forEach(row => { if (row.mediaId) pushUsage(map, row.mediaId, { kind: "communityEvents.coverMediaId", id: row.id, title: row.title, label: `Evento “${row.title}”` }); });
+  memoryRows.forEach(row => { if (row.mediaId) pushUsage(map, row.mediaId, { kind: "oralMemories.videoMediaId", id: row.id, title: row.title, label: `Memória oral “${row.title}”` }); });
+  miniclips.forEach(row => pushUsage(map, row.mediaId, { kind: "commercialMiniclips.mediaId", id: row.id, title: `Miniclip comercial #${row.id}`, label: `Miniclip comercial #${row.id}` }));
+  leads.forEach(row => { if (row.mediaId) pushUsage(map, row.mediaId, { kind: "revenueLeads.mediaId", id: row.id, title: row.contactName, label: `Lead de licenciamento “${row.contactName}”` }); });
+  productionLinks.forEach(row => {
+    const title = row.title || String(row.productionId);
+    pushUsage(map, row.mediaId, { kind: "networkProductionMedia", id: row.productionId, title, label: `Produção da Rede “${title}”` });
+  });
+  return map;
+}
+
+export async function collectMediaUsages(db: Database, mediaId: number): Promise<MediaUsage[]> {
+  const map = await collectMediaUsagesByIds(db, [mediaId]);
+  return map.get(mediaId) ?? [];
 }
 
 export function formatMediaUsageBlock(usages: MediaUsage[]) {

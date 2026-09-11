@@ -38,7 +38,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Conteúdos", partnerLabel: "Escrever", href: "/admin/publicacoes", icon: BookOpenText },
       { label: "Cidades", partnerLabel: "Lugares", href: "/admin/territorios", icon: MapPinned },
       { label: "Fotógrafos", href: "/admin/fotografos", icon: Camera },
-      { label: "Acervo", partnerLabel: "Fotos", href: "/admin/midias", icon: Image },
+      { label: "Acervo interno", partnerLabel: "Fotos", href: "/admin/midias", icon: Image },
       { label: "Miniclipes", href: "/admin/miniclipes", icon: Film },
       { label: "Equipes e créditos", partnerLabel: "Créditos", href: "/admin/equipes", icon: Users },
       { label: "Vozes da Rede", partnerLabel: "Depoimentos", href: "/admin/vozes", icon: Mic2 },

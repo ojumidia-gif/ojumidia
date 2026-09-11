@@ -17,6 +17,7 @@ import {
   cleanupAbandonedUploadSession,
   cleanupExpiredAbandonedUploads,
   collectMediaUsages,
+  collectMediaUsagesByIds,
   GENERATED_ARTIFACT_INVENTORY,
   inspectMediaObject,
   listAbandonedUploadSessions,
@@ -28,7 +29,8 @@ import {
 import { assertPartnerScope, recordAuditEvent, resolveAuthenticatedScope } from "../partnerScope";
 import { DEFAULT_STORAGE_QUOTA, quotaDecision } from "../uploadGuards";
 import { loadStorageQuotaPolicy, saveStorageQuotaPolicy } from "../uploadBudget";
-import { toPublicPortalMedia } from "../mediaAccess";
+import { canPubliclyReleaseMedia, toPublicPortalMedia } from "../mediaAccess";
+import { MEDIA_IN_PUBLIC_USE_ARCHIVE_MESSAGE } from "@shared/acervoFlow";
 
 async function requireDb() {
   const db = await getDb();
@@ -152,7 +154,12 @@ export const mediaRouter = router({
     const whereClause = await scopedMediaWhere(db, ctx.user, false);
     const totalRow = await db.select({ value: count() }).from(mediaAssets).where(whereClause);
     const items = await db.select().from(mediaAssets).where(whereClause).orderBy(desc(mediaAssets.createdAt)).limit(limit).offset(offset);
-    return { items, total: Number(totalRow[0]?.value || 0), hasMore: offset + items.length < Number(totalRow[0]?.value || 0) };
+    const usagesById = await collectMediaUsagesByIds(db, items.map(item => item.id));
+    return {
+      items: items.map(item => ({ ...item, usages: usagesById.get(item.id) ?? [] })),
+      total: Number(totalRow[0]?.value || 0),
+      hasMore: offset + items.length < Number(totalRow[0]?.value || 0),
+    };
   }),
   trashList: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(80).default(40), offset: z.number().int().min(0).default(0) }).optional()).query(async ({ ctx, input }) => {
     requireAdmin(ctx.user.role);
@@ -339,6 +346,9 @@ export const mediaRouter = router({
     if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Mídia não encontrada." });
     if (current.deletedAt) throw new TRPCError({ code: "BAD_REQUEST", message: "A mídia está na lixeira e deve ser restaurada pelo Super Admin." });
     await assertMediaScope(db, ctx.user, current);
+    if (await canPubliclyReleaseMedia(db, current)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: MEDIA_IN_PUBLIC_USE_ARCHIVE_MESSAGE });
+    }
     const archived = await db.update(mediaAssets).set({ state: "Arquivado", backgroundEligible: false, version: current.version + 1 }).where(and(eq(mediaAssets.id, input.id), eq(mediaAssets.version, current.version)));
     if (!archived[0]?.affectedRows) throw new TRPCError({ code: "CONFLICT", message: "Esta mídia foi alterada por outra pessoa. Reabra o Acervo antes de arquivar." });
     await recordAuditEvent(db, { actorId: ctx.user.id, partnerId: current.partnerId, territoryId: current.territoryId, resourceType: "media", resourceId: input.id, action: "media-archived", previousState: { state: current.state }, nextState: { state: "Arquivado" }, detail: "Mídia arquivada e retirada de usos ativos." });

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminPage } from "./_shared";
 import { PRODUCTION_MINICLIP_CAP, PRODUCTION_MINICLIP_SECONDS, PRODUCTION_PHOTO_CAP } from "@shared/networkProductions";
+import { mediaReadyToLinkProduction } from "@shared/acervoFlow";
 
 const buckets = [
   ["planejadas", "Planejadas"],
@@ -71,15 +72,7 @@ export default function ProductionsAdmin() {
               <li key={item.id}>{item.mediaType} #{item.mediaId} · {item.layer} · autorização {item.authorization} · publicationAllowed {String(item.publicationAllowed)}</li>
             ))}
           </ul>
-          <form className="mt-4 flex flex-wrap gap-2" onSubmit={event => {
-            event.preventDefault();
-            const mediaId = Number(new FormData(event.currentTarget).get("mediaId"));
-            if (!mediaId) return toast.error("Informe o ID da mídia já existente no Acervo.");
-            attach.mutate({ productionId: detail.data.production.id, mediaId });
-          }}>
-            <Input name="mediaId" type="number" min={1} placeholder="ID no Acervo" className="max-w-[10rem]" />
-            <Button size="sm" disabled={attach.isPending} className="bg-oju-verde text-oju-branco">Ligar mídia existente</Button>
-          </form>
+          <ProductionAcervoAttach pending={attach.isPending} onAttach={mediaId => attach.mutate({ productionId: detail.data.production.id, mediaId })} />
           <div className="mt-4 flex flex-wrap gap-2">
             {detail.data.production.status === "Planejada" ? <Button size="sm" variant="outline" onClick={() => transition.mutate({ id: detail.data.production.id, status: "Confirmada" })}>Confirmar</Button> : null}
             {detail.data.production.status === "Confirmada" ? <Button size="sm" variant="outline" onClick={() => transition.mutate({ id: detail.data.production.id, status: "Em produção" })}>Iniciar</Button> : null}
@@ -91,5 +84,36 @@ export default function ProductionsAdmin() {
         </section>
       ) : null}
     </AdminPage>
+  );
+}
+
+function ProductionAcervoAttach({ pending, onAttach }: { pending: boolean; onAttach: (mediaId: number) => void }) {
+  const { user } = useAuth();
+  const canListAcervo = user?.role === "administrador" || user?.role === "administrador principal";
+  const library = trpc.media.list.useQuery({ limit: 40, offset: 0 }, { enabled: canListAcervo });
+  const [selectedId, setSelectedId] = useState("");
+  const options = (library.data?.items || []).filter(item => mediaReadyToLinkProduction(item).ok);
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const mediaId = Number(selectedId || new FormData(event.currentTarget).get("mediaId"));
+    if (!mediaId) return toast.error("Selecione uma mídia do Acervo.");
+    onAttach(mediaId);
+  }
+
+  return (
+    <form className="mt-4 flex flex-wrap gap-2" onSubmit={submit}>
+      {canListAcervo ? (
+        <select name="mediaId" className="h-10 min-w-[16rem] rounded-md border bg-white px-3 text-sm" value={selectedId} onChange={event => setSelectedId(event.target.value)}>
+          <option value="">Selecionar mídia do Acervo</option>
+          {options.map(item => (
+            <option key={item.id} value={item.id}>{item.filename || "Arquivo sem nome"} · {item.mediaType}{item.usages?.length ? " · já ligada" : ""}</option>
+          ))}
+        </select>
+      ) : (
+        <Input name="mediaId" type="number" min={1} placeholder="Mídia do Acervo" className="max-w-[10rem]" />
+      )}
+      <Button size="sm" disabled={pending} className="bg-oju-verde text-oju-branco">Ligar mídia existente</Button>
+    </form>
   );
 }

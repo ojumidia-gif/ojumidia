@@ -114,6 +114,15 @@ export function registerOperationalCleanup(ledger: TestLedger) {
   ledger.setCleanupHandler("other", async entry => {
     ledger.assertOwned("other", entry.id);
     const raw = String(entry.id);
+    if (raw.startsWith("upload-session:")) {
+      const uploadId = raw.slice("upload-session:".length);
+      if (uploadId.length < 8 || uploadId.length > 96) return { gone: false, detail: "upload-session inválida" };
+      const db = await requireQaDb();
+      await db.delete(auditEvents).where(and(eq(auditEvents.resourceType, "upload-session"), like(auditEvents.nextState, `%${uploadId}%`)));
+      await db.delete(uploadSessions).where(eq(uploadSessions.id, uploadId));
+      const leftover = await db.select({ id: uploadSessions.id }).from(uploadSessions).where(eq(uploadSessions.id, uploadId)).limit(1);
+      return leftover.length ? { gone: false, detail: "sessão de upload ainda existe" } : { gone: true };
+    }
     if (!raw.startsWith("portal-block:")) return { gone: true };
     const id = Number(raw.slice("portal-block:".length));
     if (!Number.isInteger(id) || id <= 0) return { gone: false, detail: "bloco institucional inválido" };
